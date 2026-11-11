@@ -1,0 +1,19 @@
+{
+  "id": "replace-with-plugin-id",
+  "name": "Replace with plugin name",
+  "version": "0.1.0",
+  "status": "prototype",
+  "description": "Replace with a concise description.",
+  "platforms": {
+    "intended": [],
+    "tested": []
+  },
+  "permissions": [],
+  "dependencies": [],
+  "limitations": [],
+  "testing": {
+    "performed": [],
+    "not_yet_verified": []
+  },
+  "license": "undecided"
+}
