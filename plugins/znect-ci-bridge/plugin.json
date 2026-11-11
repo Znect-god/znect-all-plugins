@@ -68,7 +68,8 @@
       "GitHub Actions npm audit --audit-level=high passed with zero vulnerabilities",
       "GitHub Actions TypeScript typecheck passed on the rate-limited Worker revision",
       "GitHub Actions Vitest suite passed: 20 tests across security helpers and Worker HTTP/authentication/rate-limit boundaries",
-      "GitHub Actions Wrangler 4.160.0 deploy --dry-run recognized the MCP_RATE_LIMITER binding"
+      "GitHub Actions Wrangler 4.160.0 deploy --dry-run recognized the MCP_RATE_LIMITER binding",
+      "Latest GitHub Actions run using the simplified read-only CI workflow passed npm ci, npm audit, TypeScript typecheck, all 20 tests, and Wrangler dry-run"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
