@@ -3,6 +3,7 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import {
   allowedArtifactUrl,
+  fetchAllowedArtifact,
   limitText,
   readBoundedJson,
   readBoundedText,
@@ -149,11 +150,7 @@ function createServer(env: Env) {
           const outputUrl = allowedArtifactUrl(action.output_url);
           if (!outputUrl) continue;
 
-          const logResponse = await fetch(outputUrl.toString(), {
-            method: "GET",
-            redirect: "error",
-            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-          });
+          const logResponse = await fetchAllowedArtifact(outputUrl);
           if (!logResponse.ok) {
             const failureText = `[Log retrieval failed: HTTP ${logResponse.status}]`;
             const failureBudget = MAX_TOTAL_LOG_CHARS - totalOutputChars;
