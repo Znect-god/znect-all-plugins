@@ -44,7 +44,9 @@ These controls reduce risk but do not constitute a complete security audit.
 
 ## API compatibility
 
-The adapter uses CircleCI API v1.1 because the available project read-only token was intended for that API. v1.1 is legacy/deprecated. Do not assume the current token works with API v2 or v3.
+The adapter still uses CircleCI API v1.1. CircleCI now recommends API v3 for new Cloud integrations; v1.1 is legacy, although the announced February 1, 2027 removal applies to specific trigger/rerun endpoints and not every read endpoint. The bridge calls only read endpoints.
+
+A researched migration plan is maintained in [`documentation/CIRCLECI_API_MIGRATION.md`](documentation/CIRCLECI_API_MIGRATION.md). Migration is not implemented yet: API v3 requires a personal API token, project UUIDs, and a verified mapping from legacy build numbers to runs/workflows/jobs. Do not assume the existing token is compatible.
 
 ## Development
 
@@ -89,12 +91,12 @@ Still pending:
 - Live deployment and endpoint checks.
 - Live CircleCI API integration and log retrieval.
 - Review of upstream log-secret exposure and authentication-failure throttling.
-- A migration plan away from CircleCI API v1.1.
+- Implementation of the researched CircleCI API v3 migration plan, including token compatibility, project identity, and read-only response mapping.
 
 ## Known limitations
 
 - Prototype only; not production-ready.
-- CircleCI API v1.1 is legacy.
+- CircleCI API v1.1 is legacy; the migration plan and blockers are documented.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
 - Failed Bearer-token attempts are not covered by the per-token rate limiter.
 - Configured Worker secrets and common credential patterns are redacted heuristically.
