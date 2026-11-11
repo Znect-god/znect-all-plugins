@@ -55,9 +55,8 @@ describe("CircleCI API v3 client", () => {
     await expect(circleV3Get("token", "/api/v3/../v2/me"))
       .rejects.toThrow("Invalid internal CircleCI API v3 path.");
     await expect(circleV3Get("token", "/api/v3//evil"))
-      .resolves.toBeDefined();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toContain("https://circleci.com/api/v3//evil");
+      .rejects.toThrow("Invalid internal CircleCI API v3 path.");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it.each([401, 403, 404, 429])("sanitizes upstream HTTP %i errors", async (status) => {
