@@ -16,8 +16,13 @@ export async function circleGet<T>(
     throw new Error("Invalid internal CircleCI API path.");
   }
 
-  const url = new URL(path, CIRCLECI_API);
-  if (url.origin !== CIRCLECI_API || url.username || url.password) {
+  const url = new URL(`${CIRCLECI_API}${path}`);
+  if (
+    url.origin !== "https://circleci.com" ||
+    !url.pathname.startsWith("/api/v1.1/project/") ||
+    url.username !== "" ||
+    url.password !== ""
+  ) {
     throw new Error("Invalid internal CircleCI API path.");
   }
 
