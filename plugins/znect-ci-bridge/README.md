@@ -1,12 +1,13 @@
 # Znect CI Bridge
 
-<badge>prototype</badge> **Version:** 0.1.0
+**Status:** `prototype`  
+**Version:** `0.1.0`
 
-Znect CI Bridge is an experimental bridge intended to expose read-only CircleCI build information through an MCP-compatible interface hosted on Cloudflare Workers.
+Znect CI Bridge is an experimental, read-only MCP server for CircleCI build information. It runs as a Cloudflare Worker and is intended for use by an MCP-compatible client.
 
-**This repository entry currently documents the prototype. It does not yet contain the complete source project.** The initial project archive was prepared and type-checked locally in an Android/Termux environment, but deployment, end-to-end MCP behavior, CircleCI connectivity, and a full security review have not been verified.
+The complete starter source project is now included in this directory. It has not yet been deployed or tested against live CircleCI credentials.
 
-## Intended architecture
+## Architecture
 
 ```text
 MCP-compatible client
@@ -15,66 +16,108 @@ MCP-compatible client
 Cloudflare Worker — Znect CI Bridge
         |
         v
-CircleCI API
+CircleCI API v1.1
         |
         v
 Build metadata, details, and logs
 ```
 
-GitHub is intended to hold source code and support cloud-based checks/deployment. CircleCI remains the build/test system for the separate Znect Forge project; this plugin must not change or trigger Forge pipelines without explicit authorization.
+The bridge is scoped to `/project/github/Znect-god/znect-forge`. It is independent of the Znect Forge Android source tree and must not modify, trigger, retry, cancel, or deploy Forge pipelines.
 
-## Intended tools
+## Read-only MCP tools
 
-The prototype is designed around three read-only MCP tools:
+- `list_recent_builds(limit)` — latest job runs; limit 1–30.
+- `get_build_details(build_num)` — build metadata and step/action statuses.
+- `get_build_logs(build_num, step_index?, max_actions?)` — bounded console output.
 
-- `list_recent_builds(limit)` — list recent builds, with a bounded limit.
-- `get_build_details(build_num)` — retrieve details for one build.
-- `get_build_logs(build_num, step_index?, max_actions?)` — retrieve bounded logs for a build step.
+There are deliberately no build mutation tools.
 
-The initial prototype targets the CircleCI project `/project/github/Znect-god/znect-forge`. Its current adapter uses CircleCI API v1.1 because the available token was intended for read-only access; that API is deprecated and should be replaceable with a maintained adapter.
+## Source layout
 
-## Current verified state
+- `src/index.ts` — Worker entry point, authentication, MCP tools, and CircleCI adapter.
+- `package.json` — pinned direct dependency versions and scripts.
+- `tsconfig.json` — strict TypeScript configuration.
+- `wrangler.toml` — Worker configuration; no credentials.
+- Root `.github/workflows/znect-ci-bridge.yml` — isolated Linux validation workflow.
 
-- The initial archive was unpacked in Termux on Android.
-- Dependency versions in the local package manifest were adjusted to resolve a peer-dependency mismatch and an unavailable package version.
-- `npm install` completed after those adjustments.
-- `npm run typecheck` completed successfully.
-- Wrangler/workerd could not run in the Android ARM64 Termux environment because the workerd binary reports an unsupported platform.
+## Security controls in this prototype
 
-These checks do **not** establish that the Worker builds, deploys, connects to CircleCI, or serves working MCP requests.
+- `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` are expected as Cloudflare Worker Secrets.
+- CircleCI requests use a fixed project path and GET only.
+- MCP requests require a Bearer token.
+- CircleCI and artifact fetches have 15-second timeouts and reject redirects.
+- Log URLs must use HTTPS and an allowed artifact host suffix.
+- Log response bodies are streamed with an approximately 320 KB byte ceiling before decoding, then limited to approximately 80,000 output characters per action.
+- Tokens and authorization headers are not intentionally logged or returned.
+- CORS is disabled.
 
-## Known limitations and risks
+These are starter safeguards, not a completed security audit. Artifact host allowlisting, authentication, rate limiting, error handling, and log redaction still require review before sensitive use.
 
-- Status remains `prototype`; not production-ready.
-- Cloudflare deployment has not been verified.
-- MCP protocol behavior and all three tools have not been end-to-end tested.
-- CircleCI connectivity and log retrieval have not been verified.
-- CircleCI API v1.1 is deprecated; adapter migration is needed.
-- A full security audit and Worker-side rate limiting have not been completed.
-- CI logs and artifacts may contain sensitive information if upstream jobs print secrets.
-- Real credentials must be stored as Cloudflare Worker Secrets, never in source control.
-- Do not use with sensitive production logs or privileged credentials until security review and testing are complete.
-- The Android Termux environment cannot run the current Wrangler/workerd binary; use a supported Linux CI environment for build and deployment work.
+## API compatibility
 
-## Configuration names
+The adapter uses CircleCI API v1.1 because the available project read-only token was intended for that API. v1.1 is legacy/deprecated. Do not assume the current token works with API v2 or v3.
 
-The prototype expects secret values to be configured outside the repository:
+## Development
+
+Use a supported Linux, macOS, or Windows environment with Node.js 22:
+
+```bash
+npm install
+npm run typecheck
+npx wrangler deploy --dry-run
+```
+
+For local development use `npx wrangler dev`. Android ARM64 Termux cannot run the current Wrangler/workerd binary; use the GitHub Actions Linux workflow for validation instead.
+
+## Cloudflare setup (not yet performed)
+
+Configure these as Worker Secrets; never put their values in Git:
+
 - `CIRCLECI_TOKEN`
 - `MCP_ACCESS_TOKEN`
 
-Only the names are documented here. Never commit or share their values.
+Then deploy from a supported environment after review:
 
-## Next development milestones
+```bash
+npx wrangler secret put CIRCLECI_TOKEN
+npx wrangler secret put MCP_ACCESS_TOKEN
+npm run deploy
+```
 
-1. Review dependency tree and resolve security advisories without unsafe force upgrades.
-2. Restore the complete source project into this plugin directory and review it.
-3. Run reproducible typecheck/build checks in supported Linux CI.
-4. Test Worker health endpoint and authenticated MCP endpoint.
-5. Verify each read-only tool against a safe CircleCI test context.
-6. Review authentication, authorization, rate limiting, input validation, redirects, output limits, and log redaction.
-7. Deploy to a non-production Cloudflare environment and record test evidence.
-8. Complete documentation and only then consider promotion to `testing`.
+The expected routes are `/health` and `/mcp`. The health route does not prove CircleCI connectivity. The MCP route requires Bearer authentication.
 
-## License
+## Verification status
 
-Undecided. Do not assume reuse or redistribution permissions until licensing is explicitly selected.
+Previously confirmed in Termux:
+- Original archive extraction.
+- `npm install` after direct dependency version adjustments.
+- `npm run typecheck` completed successfully.
+- Wrangler/workerd could not run on Android ARM64.
+
+Changes in this repository import:
+- Direct dependency versions are pinned to versions that resolved locally.
+- Log retrieval streams with a byte ceiling rather than downloading an unlimited body before truncation.
+- CircleCI and artifact requests have explicit timeouts.
+- A separate GitHub Actions workflow checks this plugin on Linux and performs a Wrangler dry-run.
+
+Still pending:
+- New Linux workflow result and fresh Linux build.
+- Cloudflare deployment.
+- Health and authenticated MCP endpoint behavior.
+- Live CircleCI API access and tool responses.
+- Full security review and rate limiting.
+
+No live credentials were used and no deployment has been performed.
+
+## Known limitations
+
+- Prototype only; not production-ready.
+- CircleCI API v1.1 is legacy.
+- No persistent storage, scheduled polling, alerts, or push notifications.
+- Worker-side rate limiting is not implemented.
+- Upstream build logs may contain secrets if CI jobs print them.
+- License remains undecided; public visibility does not grant reuse or redistribution rights.
+
+## Relationship to Znect Forge
+
+This plugin only reads CircleCI build information. It does not change Forge source code or CircleCI configuration and does not start or alter Forge builds. The Forge 0.8.0 freeze remains in force unless explicitly changed by the user.
