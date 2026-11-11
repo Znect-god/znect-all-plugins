@@ -114,8 +114,12 @@ describe("CircleCI API v3 client", () => {
   });
 
   it("paginates runs using opaque cursors and caps the result at 30", async () => {
-    const first = Array.from({ length: 20 }, (_, i) => ({ id: `run-${i}` }));
-    const second = Array.from({ length: 20 }, (_, i) => ({ id: `next-${i}` }));
+    const first = Array.from({ length: 20 }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`
+    }));
+    const second = Array.from({ length: 20 }, (_, i) => ({
+      id: `00000000-0000-4000-8001-${String(i + 1).padStart(12, "0")}`
+    }));
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: first, page: { next: "opaque/cursor+value", prev: null }
@@ -129,6 +133,14 @@ describe("CircleCI API v3 client", () => {
     expect(runs).toHaveLength(30);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][0]).toContain("page%5Bcursor%5D=opaque%2Fcursor%2Bvalue");
+  });
+
+  it("rejects malformed run resource IDs returned by the API", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: "not-a-uuid" }], page: { next: null }
+    }), { status: 200 })));
+    await expect(listCircleCiRuns("token", PROJECT_ID, 10))
+      .rejects.toThrow("Invalid CircleCI run ID.");
   });
 
   it("rejects repeated cursors and invalid page sizes", async () => {
