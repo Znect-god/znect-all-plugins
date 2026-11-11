@@ -41,7 +41,8 @@
     "Maximum three allowlisted artifact redirects",
     "Cloudflare Rate Limiting binding: 60 authenticated MCP requests per 60 seconds per Cloudflare location",
     "Rate-limit key is a SHA-256 digest of the configured MCP token; raw token is not used as the key",
-    "Fail-closed HTTP 503 when rate limiting is missing or unavailable"
+    "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
+    "Best-effort pattern redaction for common credential formats in returned logs"
   ],
   "limitations": [
     "Prototype only; not production-ready",
@@ -52,7 +53,8 @@
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
     "Failed authentication attempts are not covered by the authenticated per-token rate limit",
-    "Rate-limit namespace ID must be unique within the user's Cloudflare account"
+    "Rate-limit namespace ID must be unique within the user's Cloudflare account",
+    "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials"
   ],
   "testing": {
     "performed": [
