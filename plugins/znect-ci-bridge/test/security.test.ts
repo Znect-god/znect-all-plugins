@@ -30,6 +30,8 @@ describe("redactKnownSecrets", () => {
   it("redacts common credential patterns in JSON, headers, and environment output", () => {
     const output = [
       'Authorization: Bearer abc.def.ghi',
+      'Authorization: Basic dXNlcjpwYXNzd29yZA==',
+      'SESSION_JWT=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.signature12345',
       'GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz123456',
       'SLACK_TOKEN=xoxb-1234567890-abcdefghijk',
       'AWS_ACCESS_KEY_ID=AKIA1234567890ABCDEF',
@@ -38,6 +40,8 @@ describe("redactKnownSecrets", () => {
     ].join(" ");
     const redacted = redactKnownSecrets(output, {});
     expect(redacted).not.toContain("abc.def.ghi");
+    expect(redacted).not.toContain("dXNlcjpwYXNzd29yZA==");
+    expect(redacted).not.toContain("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.signature12345");
     expect(redacted).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz123456");
     expect(redacted).not.toContain("xoxb-1234567890-abcdefghijk");
     expect(redacted).not.toContain("AKIA1234567890ABCDEF");
