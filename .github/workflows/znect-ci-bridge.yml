@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -23,12 +23,24 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - uses: actions/upload-artifact@v4
-        with:
-          name: znect-ci-bridge-package-lock
-          path: plugins/znect-ci-bridge/package-lock.json
-          if-no-files-found: error
-          retention-days: 7
+      - name: Commit generated lockfile to the Bridge branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feature/znect-ci-bridge-source'
+        working-directory: .
+        env:
+          GH_HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git fetch origin "$GH_HEAD_REF"
+          git checkout -B "$GH_HEAD_REF" "origin/$GH_HEAD_REF"
+          git add plugins/znect-ci-bridge/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already committed."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore(znect-ci-bridge): add npm lockfile"
+            git push origin "HEAD:refs/heads/$GH_HEAD_REF"
+          fi
+      - run: npm ci --no-audit --no-fund
       - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm run test
