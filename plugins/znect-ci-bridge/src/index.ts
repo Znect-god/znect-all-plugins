@@ -3,6 +3,14 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { circleGet } from "./circleci";
 import {
+  getCircleCiJobStepOutput,
+  getCircleCiRun,
+  listCircleCiJobs,
+  listCircleCiRuns,
+  listCircleCiWorkflows,
+  resolveCircleCiProject
+} from "./circleci-v3";
+import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
   limitText,
@@ -165,6 +173,91 @@ function createServer(env: Env) {
         if (actions.length >= max_actions || totalOutputChars >= MAX_TOTAL_LOG_CHARS) break;
       }
       return { content: [{ type: "text", text: JSON.stringify({ build_num, actions }, null, 2) }] };
+    }
+  );
+
+  // CircleCI API v3 tools are exposed alongside the legacy v1.1 tools.
+  // They use UUIDs and never infer a v3 run ID from a legacy build number.
+  server.registerTool(
+    "list_recent_runs",
+    {
+      description: "Read the latest CircleCI API v3 runs for the fixed Znect Forge project. Returns UUID run IDs and current outcomes. Read-only; limit 1–30.",
+      inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
+    },
+    async ({ limit }) => {
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
+      const payload = JSON.stringify({
+        project: { id: project.id, slug: project.attributes?.slug ?? "gh/Znect-god/znect-forge" },
+        runs
+      }, null, 2);
+      const safe = redactKnownSecrets(payload, env);
+      return { content: [{ type: "text", text: limitText(safe, 100_000).text }] };
+    }
+  );
+
+  server.registerTool(
+    "get_run_details",
+    {
+      description: "Read one CircleCI API v3 run by UUID, including its workflows and jobs. Read-only; use a run UUID returned by list_recent_runs.",
+      inputSchema: { run_id: z.string().uuid() }
+    },
+    async ({ run_id }) => {
+      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, run_id);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id);
+      const workflowResults = await Promise.all(workflows.slice(0, 20).map(async (workflow) => {
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
+        return {
+          workflow,
+          jobs: jobs.slice(0, 50)
+        };
+      }));
+      const payload = JSON.stringify({
+        run,
+        workflows: workflowResults,
+        truncated: workflows.length > 20 || workflowResults.some((entry) => entry.jobs.length >= 50)
+      }, null, 2);
+      const safe = redactKnownSecrets(payload, env);
+      return { content: [{ type: "text", text: limitText(safe, 120_000).text }] };
+    }
+  );
+
+  server.registerTool(
+    "get_job_logs",
+    {
+      description: "Read bounded stdout or stderr for a CircleCI API v3 job step. Requires a job UUID and step number. Read-only.",
+      inputSchema: {
+        job_id: z.string().uuid(),
+        step_num: z.number().int().min(0),
+        execution: z.number().int().min(0).default(0),
+        stream: z.enum(["stdout", "stderr"]).default("stdout"),
+        max_chars: z.number().int().min(1).max(80_000).default(30_000)
+      }
+    },
+    async ({ job_id, step_num, execution, stream, max_chars }) => {
+      const result = await getCircleCiJobStepOutput(
+        env.CIRCLECI_TOKEN,
+        job_id,
+        step_num,
+        stream,
+        execution,
+        max_chars * 4
+      );
+      const redacted = redactKnownSecrets(result.text, env);
+      const limited = limitText(redacted, max_chars, result.truncated);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            job_id,
+            step_num,
+            execution,
+            stream,
+            output: limited.text,
+            truncated: limited.truncated
+          }, null, 2)
+        }]
+      };
     }
   );
 
