@@ -71,15 +71,19 @@ describe("redactKnownSecrets", () => {
 });
 
 describe("allowedArtifactUrl", () => {
-  it("accepts HTTPS CircleCI artifact and AWS subdomains", () => {
+  it("accepts HTTPS CircleCI artifact and S3 regional subdomains", () => {
     expect(allowedArtifactUrl("https://123-gh.circle-artifacts.com/0/log.txt")).not.toBeNull();
     expect(allowedArtifactUrl("https://bucket.s3.amazonaws.com/log.txt")).not.toBeNull();
+    expect(allowedArtifactUrl("https://bucket.s3.us-east-1.amazonaws.com/log.txt")).not.toBeNull();
+    expect(allowedArtifactUrl("https://s3.us-east-1.amazonaws.com/bucket/log.txt")).not.toBeNull();
   });
 
   it("rejects non-HTTPS, deceptive hosts, credentials, and non-standard ports", () => {
     expect(allowedArtifactUrl("http://123-gh.circle-artifacts.com/log.txt")).toBeNull();
     expect(allowedArtifactUrl("https://circle-artifacts.com.evil.test/log.txt")).toBeNull();
     expect(allowedArtifactUrl("https://amazonaws.com.evil.test/log.txt")).toBeNull();
+    expect(allowedArtifactUrl("https://ec2.amazonaws.com/log.txt")).toBeNull();
+    expect(allowedArtifactUrl("https://attacker.amazonaws.com/log.txt")).toBeNull();
     expect(allowedArtifactUrl("https://user:pass@bucket.s3.amazonaws.com/log.txt")).toBeNull();
     expect(allowedArtifactUrl("https://bucket.s3.amazonaws.com:8443/log.txt")).toBeNull();
     expect(allowedArtifactUrl("not a URL")).toBeNull();
