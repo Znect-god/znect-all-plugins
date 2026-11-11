@@ -48,7 +48,7 @@ There are deliberately no build mutation tools.
 - CircleCI requests use a fixed project path and GET only; API JSON bodies are streamed with a 1 MB ceiling.
 - MCP requests require a Bearer token; comparison uses fixed-length SHA-256 digests.
 - The recent-build request uses CircleCI's documented `limit` query parameter.
-- CircleCI and artifact fetches have 15-second timeouts and reject redirects.
+- CircleCI API fetches have 15-second timeouts and reject redirects; artifact redirects are followed manually only after each target passes the HTTPS host allowlist.
 - Log URLs must use HTTPS and an allowed artifact host suffix.
 - Log response bodies are streamed with an approximately 320 KB byte ceiling before decoding, then limited to 80,000 output characters per action and 160,000 across the complete log response.
 - Artifact URLs are restricted to HTTPS, approved host suffixes, and the default HTTPS port.
@@ -129,7 +129,7 @@ No live credentials were used and no deployment has been performed.
 - No persistent storage, scheduled polling, alerts, or push notifications.
 - Worker-side rate limiting is not implemented.
 - `package-lock.json` is not yet committed, so transitive dependency resolution is not fully reproducible.
-- Artifact URLs that redirect are currently rejected; safe allowlisted redirect handling remains to be designed.
+- Artifact redirect chains are limited to three hops and revalidated at every hop.
 - Other upstream secrets may still appear in build logs.
 - License remains undecided; public visibility does not grant reuse or redistribution rights.
 
