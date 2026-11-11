@@ -35,3 +35,7 @@
 
 - Implemented manual artifact redirect handling with per-hop HTTPS/host/port validation and a three-hop ceiling.
 - Added regression tests for valid and blocked redirect targets.
+
+- Added a Cloudflare rate-limiting binding for authenticated MCP requests (60 requests per 60 seconds per Cloudflare location), keyed by a SHA-256 digest of the configured MCP token; the Worker fails closed if the binding is missing or unavailable.
+- Added Worker regression tests for missing and exceeded rate limits.
+- Updated the Linux workflow to publish the generated npm lockfile as a short-lived artifact for review and commit.
