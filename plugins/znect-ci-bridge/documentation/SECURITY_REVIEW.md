@@ -49,7 +49,7 @@ The current v1.1 adapter remains read-only. The v3 migration research and compat
 - Verify the artifact URL patterns against actual CircleCI responses without exposing presigned URLs.
 - Configure edge-level throttling for failed authentication attempts.
 - Review MCP transport behavior and SDK security advisories before production use.
-- Complete token/project compatibility checks and API v3 parity tests.
+- Complete token/project compatibility checks and API v3 parity tests.\n- The new v3 client is not yet wired to the MCP tools; do not treat the presence of the adapter as proof of live integration.
 - Perform a separate independent security review before any production deployment.
 
 No deployment, live API call, or real-secret test was performed during this review.
