@@ -35,6 +35,8 @@ There are deliberately no build mutation tools.
 ## Source layout
 
 - `src/index.ts` — Worker entry point, authentication, MCP tools, and CircleCI adapter.
+- `src/security.ts` — reusable authentication, artifact URL validation, bounded stream, redaction, and output-limit helpers.
+- `test/security.test.ts` — automated security-helper regression tests.
 - `package.json` — pinned direct dependency versions and scripts.
 - `tsconfig.json` — strict TypeScript configuration.
 - `wrangler.toml` — Worker configuration; no credentials.
@@ -44,10 +46,12 @@ There are deliberately no build mutation tools.
 
 - `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` are expected as Cloudflare Worker Secrets.
 - CircleCI requests use a fixed project path and GET only.
-- MCP requests require a Bearer token.
+- MCP requests require a Bearer token; comparison uses fixed-length SHA-256 digests.
+- The recent-build request uses CircleCI's documented `limit` query parameter.
 - CircleCI and artifact fetches have 15-second timeouts and reject redirects.
 - Log URLs must use HTTPS and an allowed artifact host suffix.
-- Log response bodies are streamed with an approximately 320 KB byte ceiling before decoding, then limited to approximately 80,000 output characters per action.
+- Log response bodies are streamed with an approximately 320 KB byte ceiling before decoding, then limited to 80,000 output characters per action and 160,000 across the complete log response.
+- Artifact URLs are restricted to HTTPS, approved host suffixes, and the default HTTPS port.
 - The two configured Worker secret values are redacted from returned log text.
 - Tokens and authorization headers are not intentionally logged or returned.
 - CORS is disabled.
@@ -65,6 +69,7 @@ Use a supported Linux, macOS, or Windows environment with Node.js 22:
 ```bash
 npm install
 npm run typecheck
+npm run test
 npx wrangler deploy --dry-run
 ```
 
@@ -101,6 +106,8 @@ Confirmed in GitHub Actions on Linux (commit `2d35753`):
 - `npx wrangler deploy --dry-run` completed successfully.
 - This run included the streaming log byte ceiling, outbound timeouts, and configured-secret redaction in the source.
 
+The current branch adds security-helper regression tests and an aggregate log-output budget; its new GitHub Actions run is pending.
+
 Still pending:
 - Cloudflare deployment.
 - Health and authenticated MCP endpoint behavior.
@@ -115,6 +122,7 @@ No live credentials were used and no deployment has been performed.
 - CircleCI API v1.1 is legacy.
 - No persistent storage, scheduled polling, alerts, or push notifications.
 - Worker-side rate limiting is not implemented.
+- Artifact URLs that redirect are currently rejected; safe allowlisted redirect handling remains to be designed.
 - Other upstream secrets may still appear in build logs.
 - License remains undecided; public visibility does not grant reuse or redistribution rights.
 
