@@ -148,12 +148,15 @@ describe("CircleCI API v3 client", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: WORKFLOW_ID }] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: JOB_ID }] }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: JOB_ID, attributes: { name: "typecheck" } }), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: JOB_ID, attributes: { name: "typecheck" } } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listCircleCiWorkflows("token", RUN_ID)).resolves.toHaveLength(1);
     await expect(listCircleCiJobs("token", WORKFLOW_ID)).resolves.toHaveLength(1);
-    await expect(getCircleCiJob("token", JOB_ID)).resolves.toMatchObject({ id: JOB_ID });
+    await expect(getCircleCiJob("token", JOB_ID)).resolves.toMatchObject({
+      id: JOB_ID,
+      attributes: { name: "typecheck" }
+    });
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
