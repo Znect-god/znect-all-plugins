@@ -1,11 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
+import { circleGet } from "./circleci";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
   limitText,
-  readBoundedJson,
   readBoundedText,
   redactKnownSecrets,
   safeEqual
@@ -19,13 +19,10 @@ interface Env {
   };
 }
 
-const CIRCLECI_API = "https://circleci.com/api/v1.1";
 const PROJECT_PATH = "/project/github/Znect-god/znect-forge";
-const MAX_CIRCLECI_JSON_BYTES = 1_000_000;
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
 const MAX_TOTAL_LOG_CHARS = 160_000;
-const FETCH_TIMEOUT_MS = 15_000;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -37,23 +34,6 @@ function json(data: unknown, status = 200): Response {
       "referrer-policy": "no-referrer"
     }
   });
-}
-
-async function circleGet<T>(env: Env, path: string): Promise<T> {
-  // All paths are assembled internally from fixed constants and validated build numbers.
-  const response = await fetch(`${CIRCLECI_API}${path}`, {
-    method: "GET",
-    headers: { "Circle-Token": env.CIRCLECI_TOKEN, "Accept": "application/json" },
-    redirect: "error",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-  });
-  if (!response.ok) {
-    const safeMessage = response.status === 401 || response.status === 403
-      ? "CircleCI rejected the configured read-only token. Check the Worker secret."
-      : `CircleCI API returned HTTP ${response.status}.`;
-    throw new Error(safeMessage);
-  }
-  return await readBoundedJson<T>(response, MAX_CIRCLECI_JSON_BYTES);
 }
 
 function buildNumber(value: number): number {
@@ -71,7 +51,7 @@ function createServer(env: Env) {
       inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ limit }) => {
-      const builds = await circleGet<unknown[]>(env, `${PROJECT_PATH}?limit=${limit}`);
+      const builds = await circleGet<unknown[]>(env.CIRCLECI_TOKEN, `${PROJECT_PATH}?limit=${limit}`);
       const result = builds.slice(0, limit).map((item: any) => ({
         build_num: item.build_num,
         status: item.status,
@@ -94,7 +74,7 @@ function createServer(env: Env) {
       inputSchema: { build_num: z.number().int().min(1) }
     },
     async ({ build_num }) => {
-      const build = await circleGet<any>(env, `${PROJECT_PATH}/${buildNumber(build_num)}`);
+      const build = await circleGet<any>(env.CIRCLECI_TOKEN, `${PROJECT_PATH}/${buildNumber(build_num)}`);
       const steps = (build.steps ?? []).map((step: any, index: number) => ({
         step_index: index,
         name: step.name,
