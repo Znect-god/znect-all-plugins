@@ -52,9 +52,12 @@ export function allowedArtifactUrl(value: string): URL | null {
   }
 
   const host = url.hostname.toLowerCase();
-  const trustedHost =
-    host.endsWith(".amazonaws.com") ||
-    host.endsWith(".circle-artifacts.com");
+  // CircleCI serves HTML artifacts from project-specific circle-artifacts.com
+  // subdomains and redirects other artifacts to Amazon S3. Do not allow every
+  // AWS hostname: that would unnecessarily include unrelated services.
+  const trustedS3Host =
+    /^(?:s3|.+\\.s3)(?:[.-][a-z0-9-]+){0,2}\\.amazonaws\\.com$/.test(host);
+  const trustedHost = host.endsWith(".circle-artifacts.com") || trustedS3Host;
 
   if (
     url.protocol !== "https:" ||
