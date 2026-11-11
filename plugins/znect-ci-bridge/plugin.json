@@ -6,7 +6,7 @@
   "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
   "platforms": {
     "intended": ["Cloudflare Workers", "MCP-compatible clients"],
-    "tested": ["Android Termux: TypeScript typecheck only"]
+    "tested": ["Android Termux: TypeScript typecheck", "GitHub Actions Ubuntu: TypeScript typecheck and Wrangler dry-run"]
   },
   "permissions": [
     "Network access to the configured Cloudflare Worker and approved CircleCI API endpoints",
@@ -25,6 +25,7 @@
     "Redirect rejection and 15-second outbound request timeouts",
     "HTTPS artifact URL allowlist",
     "Streaming log body byte ceiling and output character limit",
+    "Configured Worker secrets redacted from returned logs",
     "Secrets supplied through Cloudflare Worker Secrets"
   ],
   "limitations": [
@@ -33,17 +34,20 @@
     "CircleCI connectivity and log retrieval not verified",
     "CircleCI API v1.1 is legacy and requires a migration plan",
     "Full security audit and Worker-side rate limiting not completed",
+    "Only configured Worker secrets are explicitly redacted; other upstream secrets may appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment"
   ],
   "testing": {
     "performed": [
       "Local archive extraction in Termux",
       "npm install completed after direct dependency version adjustments",
-      "npm run typecheck completed successfully in Termux"
+      "npm run typecheck completed successfully in Termux",
+      "Linux GitHub Actions npm install completed successfully",
+      "Linux GitHub Actions TypeScript typecheck passed",
+      "Linux GitHub Actions Wrangler deploy --dry-run passed"
     ],
     "pending": [
-      "Linux GitHub Actions typecheck",
-      "Wrangler dry-run in Linux CI",
+      "Validation of latest log-redaction change",
       "Cloudflare Worker deployment",
       "Health endpoint",
       "Authenticated MCP endpoint",
