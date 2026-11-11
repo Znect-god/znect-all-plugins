@@ -45,7 +45,7 @@ There are deliberately no build mutation tools.
 ## Security controls in this prototype
 
 - `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` are expected as Cloudflare Worker Secrets.
-- CircleCI requests use a fixed project path and GET only.
+- CircleCI requests use a fixed project path and GET only; API JSON bodies are streamed with a 1 MB ceiling.
 - MCP requests require a Bearer token; comparison uses fixed-length SHA-256 digests.
 - The recent-build request uses CircleCI's documented `limit` query parameter.
 - CircleCI and artifact fetches have 15-second timeouts and reject redirects.
