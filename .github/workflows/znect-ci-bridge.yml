@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - uses: actions/upload-artifact@v4
+        with:
+          name: znect-ci-bridge-package-lock
+          path: plugins/znect-ci-bridge/package-lock.json
+          if-no-files-found: error
+          retention-days: 7
       - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm run test
