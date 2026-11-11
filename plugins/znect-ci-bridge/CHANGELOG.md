@@ -17,3 +17,10 @@
 ### Security notes
 - The plugin remains a prototype.
 - CircleCI API v1.1 compatibility, artifact host allowlisting, rate limiting, and broader log redaction still need review.
+
+### Security review follow-up
+- Added fixed-length digest comparison for MCP bearer-token checks.
+- Added artifact URL port validation and automated tests for security helpers.
+- Enforced a 160,000-character aggregate log-output budget across actions.
+- Used CircleCI's documented `limit` query parameter for recent-build listing.
+- Added security tests to the Linux GitHub Actions workflow.
