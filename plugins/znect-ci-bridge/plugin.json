@@ -14,27 +14,36 @@
     "Bearer authentication for the MCP endpoint"
   ],
   "dependencies": [
-    "Node.js toolchain for development",
+    "Node.js 22 toolchain for development",
     "Cloudflare Workers runtime",
     "MCP server libraries",
-    "CircleCI API (initial prototype uses deprecated v1.1)"
+    "CircleCI API v1.1 (legacy/deprecated)"
+  ],
+  "security_controls": [
+    "Bearer authentication for /mcp",
+    "Fixed CircleCI project path and read-only GET requests",
+    "Redirect rejection and 15-second outbound request timeouts",
+    "HTTPS artifact URL allowlist",
+    "Streaming log body byte ceiling and output character limit",
+    "Secrets supplied through Cloudflare Worker Secrets"
   ],
   "limitations": [
     "Prototype only; not production-ready",
     "Cloudflare deployment and end-to-end MCP behavior not verified",
     "CircleCI connectivity and log retrieval not verified",
-    "CircleCI API v1.1 adapter requires replacement",
+    "CircleCI API v1.1 is legacy and requires a migration plan",
     "Full security audit and Worker-side rate limiting not completed",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment"
   ],
   "testing": {
     "performed": [
       "Local archive extraction in Termux",
-      "npm install completed after local dependency version adjustments",
-      "npm run typecheck completed successfully"
+      "npm install completed after direct dependency version adjustments",
+      "npm run typecheck completed successfully in Termux"
     ],
-    "not_yet_verified": [
-      "Linux production build",
+    "pending": [
+      "Linux GitHub Actions typecheck",
+      "Wrangler dry-run in Linux CI",
       "Cloudflare Worker deployment",
       "Health endpoint",
       "Authenticated MCP endpoint",
