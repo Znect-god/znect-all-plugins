@@ -9,17 +9,23 @@ It is scoped to the fixed CircleCI project `Znect-god/znect-forge`. It must not 
 
 ## Read-only MCP tools
 
-- `list_recent_builds(limit)` — latest job runs; limit 1–30.
-- `get_build_details(build_num)` — build metadata and step/action statuses.
-- `get_build_logs(build_num, step_index?, max_actions?)` — bounded console output.
+Legacy v1.1 tools remain available for compatibility:
+- `list_recent_builds(limit)` — latest legacy job builds; limit 1–30.
+- `get_build_details(build_num)` — legacy build metadata and step/action statuses.
+- `get_build_logs(build_num, step_index?, max_actions?)` — bounded legacy console output.
 
-There are no build mutation tools.
+New API v3 tools are also exposed:
+- `list_recent_runs(limit)` — latest project runs with UUIDs and current outcomes; limit 1–30.
+- `get_run_details(run_id)` — one run plus its workflows and jobs, addressed by UUID.
+- `get_job_logs(job_id, step_num, execution?, stream?, max_chars?)` — bounded stdout/stderr for a job step.
+
+The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. All tools are read-only; no build mutation tools exist.
 
 ## Source layout
 
 - `src/index.ts` — Worker entry point, authentication, and MCP tools.
 - `src/circleci.ts` — legacy v1.1 fixed-origin, read-only HTTP adapter.
-- `src/circleci-v3.ts` — new Cloud API v3 read-only client foundation; not yet connected to MCP tools pending identity and mapping verification.
+- `src/circleci-v3.ts` — CircleCI Cloud API v3 read-only adapter used by the three v3 MCP tools.
 - `src/security.ts` — authentication comparison, artifact URL validation, bounded streams, redaction, output limits, and safe redirect handling.
 - `test/security.test.ts` — security helper and artifact-host/redirect tests.
 - `test/circleci.test.ts` — mocked v1.1 adapter tests.
@@ -48,11 +54,9 @@ These controls reduce risk but do not constitute a complete security audit.
 
 ## API compatibility
 
-The existing MCP tools still use the legacy CircleCI API v1.1 adapter. A new API v3 client foundation has been added for CircleCI Cloud: Bearer authentication, UUID validation, project slug resolution, cursor-paged runs, run → workflow → job traversal, and bounded stdout/stderr retrieval.
+The Forge project was set up on CircleCI Cloud in the earlier project workflow. CircleCI's current API for new Cloud integrations is v3; the v3 adapter now powers three separate MCP tools. CircleCI Server is not the target for this project.
 
-The v3 client is not connected to the MCP tools yet. The old v1.1 build number is not a v3 UUID, and the exact Forge project slug, hosting type, token compatibility, and historical build mapping have not been verified. See [the migration plan](documentation/CIRCLECI_API_MIGRATION.md).
-
-CircleCI Server does not yet support API v3; if Forge is hosted on Server, API v2 is the correct target.
+The legacy v1.1 tools remain temporarily for compatibility. They use build numbers, while v3 uses UUIDs, so no automatic mapping or fallback is attempted. The exact v3 project resolution and Bearer-token access still require a live check using the user's CircleCI API token. See [the migration plan](documentation/CIRCLECI_API_MIGRATION.md).
 
 ## Development
 
@@ -78,9 +82,9 @@ No live CircleCI token or endpoint has been used, and no Cloudflare deployment h
 ## Known limitations
 
 - Prototype only; not production-ready.
-- Live CircleCI Cloud/Server hosting, token compatibility, and project identity are unverified.
-- The v3 client foundation is tested with mocked HTTP responses only.
-- Legacy build-number mapping and MCP tool migration remain pending.
+- CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
+- The v3 adapter and MCP tools are tested with mocked HTTP responses only; no live CircleCI API request has been made.
+- Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
 - Failed Bearer-token attempts are not covered by the per-token rate limiter.
 - Log redaction is best-effort.
