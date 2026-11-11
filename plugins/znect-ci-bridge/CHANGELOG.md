@@ -32,3 +32,6 @@
 - Added a documented note that a committed lockfile is still required for fully reproducible transitive dependency resolution.
 
 - Added Worker-level tests for the health route, Bearer authentication rejection, unsupported HTTP methods, and missing secrets; all 16 automated tests pass.
+
+- Implemented manual artifact redirect handling with per-hop HTTPS/host/port validation and a three-hop ceiling.
+- Added regression tests for valid and blocked redirect targets.
