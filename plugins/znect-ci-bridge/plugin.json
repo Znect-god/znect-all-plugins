@@ -49,7 +49,7 @@
     "Cloudflare deployment and end-to-end MCP behavior not verified",
     "CircleCI connectivity and log retrieval not verified",
     "CircleCI API v1.1 is legacy and requires a migration plan",
-    "Only configured Worker secrets are explicitly redacted; other upstream secrets may appear in logs",
+    "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
     "Failed authentication attempts are not covered by the authenticated per-token rate limit",
@@ -69,9 +69,9 @@
       "GitHub Actions passed npm ci using the committed package-lock.json",
       "GitHub Actions npm audit --audit-level=high passed with zero vulnerabilities",
       "GitHub Actions TypeScript typecheck passed on the rate-limited Worker revision",
-      "GitHub Actions Vitest suite passed: 20 tests across security helpers and Worker HTTP/authentication/rate-limit boundaries",
+      "GitHub Actions Vitest suite passed: 22 tests across security helpers and Worker HTTP/authentication/rate-limit boundaries",
       "GitHub Actions Wrangler 4.160.0 deploy --dry-run recognized the MCP_RATE_LIMITER binding",
-      "Latest GitHub Actions run using the simplified read-only CI workflow passed npm ci, npm audit, TypeScript typecheck, all 20 tests, and Wrangler dry-run"
+      "Latest GitHub Actions run using the simplified read-only CI workflow passed npm ci, npm audit, TypeScript typecheck, all 22 tests, and Wrangler dry-run"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
