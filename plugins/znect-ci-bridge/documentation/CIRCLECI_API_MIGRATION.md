@@ -1,8 +1,8 @@
 # CircleCI API migration plan
 
-**Status:** v3 client foundation implemented with mocked tests; MCP tool migration remains blocked pending project/token verification and build-number mapping.  
-**Current MCP tools:** still use the v1.1 adapter.  
-**Target:** API v3 for CircleCI Cloud; API v2 remains the supported fallback if the project is CircleCI Server.
+**Status:** CircleCI Cloud target established; v3 read-only adapter and three v3 MCP tools implemented with mocked tests. Live token access and project UUID resolution remain unverified.  
+**Current MCP tools:** legacy v1.1 tools remain for compatibility; three separate v3 tools are now available.  
+**Target:** API v3 for the existing CircleCI Cloud project. No Forge hosting migration is needed.
 
 ## Current documentation findings
 
@@ -22,9 +22,9 @@ Sources:
 
 ## Compatibility gates
 
-1. **Hosting:** confirm the Forge project is CircleCI Cloud. If it is Server, stop v3 migration and design a v2 adapter instead. No migration of Forge hosting is authorized by this plan.
-2. **Token:** inspect the token type in CircleCI settings without sharing its value. V3 requires Bearer authentication; do not assume the existing v1.1 token works.
-3. **Project identity:** resolve the exact slug `gh/Znect-god/znect-forge` using `GET /api/v3/projects?filter[slug]=...`, then verify the returned slug and UUID before saving the UUID as configuration.
+1. **Hosting:** CircleCI Cloud is the established target from the earlier Forge setup; no hosting migration is required.
+2. **Token:** configure a CircleCI personal API token with the required read access as the Worker Secret `CIRCLECI_TOKEN`. V3 uses Bearer authentication. Never paste the token into chat or commit it.
+3. **Project identity:** the v3 tool resolves `gh/Znect-god/znect-forge` using `GET /api/v3/projects?filter[slug]=...` on each recent-runs request and requires exactly one matching project with a valid UUID. Live resolution remains to be tested.
 4. **Read-only scope:** only GET requests may be implemented. Do not add pipeline triggers, reruns, cancellations, environment-variable reads, deploy controls, or any other mutation.
 5. **Legacy build number mapping:** the v1.1 build number is not a v3 UUID. Never pass a build number as a v3 resource ID or guess a match.
 6. **Logs:** v3 exposes stdout/stderr by job UUID, step number and execution index. The implementation must preserve byte limits and redact output before returning it.
@@ -42,7 +42,12 @@ Sources:
 - bounded stdout/stderr retrieval using the documented step and execution filters;
 - sanitized 401/403/404/429 and other upstream errors.
 
-The v3 adapter is deliberately not wired into the existing MCP tools yet. Existing tool inputs and responses are based on v1.1 build numbers and step/action objects. A premature switch would risk returning the wrong build or silently changing tool semantics.
+The v3 adapter is now wired to three new MCP tools, kept separate from the legacy tools:
+- `list_recent_runs(limit)` resolves the fixed project slug and lists v3 runs.
+- `get_run_details(run_id)` reads a run, its workflows and their jobs.
+- `get_job_logs(job_id, step_num, execution, stream, max_chars)` reads bounded stdout/stderr and applies best-effort secret redaction.
+
+Single-resource v3 responses are unwrapped from the documented `data` envelope. Legacy tools remain on v1.1; no automatic mapping from build number to run UUID or silent fallback is performed.
 
 ## Proposed v3 resource traversal
 
@@ -55,13 +60,12 @@ The v3 adapter is deliberately not wired into the existing MCP tools yet. Existi
 
 ## Remaining work
 
-1. Confirm Cloud vs Server and token type in the user's CircleCI account; never paste token values into chat.
-2. Confirm the exact project slug from CircleCI project settings. The current code uses the conventional GitHub slug as a candidate, not as a verified live identity.
-3. Add fixtures based on actual, sanitized v3 response shapes and test run/workflow/job mapping.
-4. Establish whether the old build number can be mapped unambiguously to a run/workflow/job using VCS revision, branch and timestamps. If not, introduce new MCP tool inputs based on v3 UUIDs instead of pretending the old build-number contract is equivalent.
-5. Compare v1.1 and v3 results for the same historical Forge builds after live access is authorized.
-6. Wire the v3 adapter into MCP tools only after mapping parity is demonstrated. Keep v1.1 as a temporary fallback until then; never silently retry v1.1 after a v3 authorization or data error.
-7. Run Linux CI and review results. Keep plugin status `prototype`.
+1. Configure a CircleCI personal API token as the Worker Secret `CIRCLECI_TOKEN` without exposing it in chat.
+2. Configure the MCP access token as `MCP_ACCESS_TOKEN` and verify Cloudflare Worker bindings before any deployment.
+3. Perform a live read-only API v3 smoke test after explicit authorization, verifying exact project slug, UUID, recent runs, workflows, jobs and bounded logs.
+4. Compare one or more historical builds across v1.1 and v3 using commit SHA, branch and timestamps. Do not infer an identity match from build number alone.
+5. If parity is proven, decide whether to deprecate the v1.1 tools in a later version. Do not silently retry v1.1 after a v3 authorization or data error.
+6. Run Linux CI and review results. Keep plugin status `prototype`.
 
 ## Security decisions
 
@@ -71,4 +75,6 @@ The v3 adapter is deliberately not wired into the existing MCP tools yet. Existi
 - No Cloudflare deployment.
 - No Forge workflow changes or triggers.
 - No automatic v1.1 fallback that could hide v3 authorization or mapping errors.
-- Project UUID and token compatibility must be confirmed before live use.
+- Live project UUID resolution and token authorization must be confirmed before production use.
+- MCP v3 tools are implemented but have only been tested with synthetic/mocked responses.
+- The existing v1.1 tools remain separately available during the transition.
