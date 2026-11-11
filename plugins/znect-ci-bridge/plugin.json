@@ -47,7 +47,8 @@
     "Full security audit and Worker-side rate limiting not completed",
     "Only configured Worker secrets are explicitly redacted; other upstream secrets may appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
-    "Artifact URLs that redirect are rejected"
+    "Artifact URLs that redirect are rejected",
+    "package-lock.json is not yet committed; transitive dependency resolution is not fully reproducible"
   ],
   "testing": {
     "performed": [
@@ -56,11 +57,13 @@
       "npm run typecheck completed successfully in Termux",
       "Linux GitHub Actions npm install completed successfully",
       "Linux GitHub Actions TypeScript typecheck passed",
-      "Linux GitHub Actions Wrangler deploy --dry-run passed with bounded log retrieval and configured-secret redaction"
+      "Linux GitHub Actions Wrangler deploy --dry-run passed with bounded log retrieval and configured-secret redaction",
+      "GitHub Actions npm audit --audit-level=high: zero vulnerabilities after dependency updates",
+      "GitHub Actions TypeScript typecheck passed on current branch",
+      "GitHub Actions Vitest security suite passed: 12 tests",
+      "GitHub Actions Wrangler 4.160.0 deploy --dry-run passed"
     ],
     "pending": [
-      "Dependency vulnerability audit on the refreshed package set",
-      "Security-helper regression tests in GitHub Actions",
       "Cloudflare Worker deployment",
       "Health endpoint",
       "Authenticated MCP endpoint",
