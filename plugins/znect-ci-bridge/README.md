@@ -87,7 +87,7 @@ Previously confirmed:
 - GitHub Actions on Linux passed dependency audit, typecheck, 18 automated tests, and Wrangler dry-run on the previous validated revision.
 - No live credentials were used and no Cloudflare deployment has been performed.
 
-Confirmed in GitHub Actions on Linux for the current rate-limited revision: `npm ci` using the committed lockfile, dependency audit with zero vulnerabilities, TypeScript typecheck, all 22 tests, and Wrangler dry-run with the `MCP_RATE_LIMITER` binding.
+Confirmed in GitHub Actions on Linux for the current revision: `npm ci` using the committed lockfile, dependency audit with zero vulnerabilities, TypeScript typecheck, all 29 tests across three files, and Wrangler dry-run with the `MCP_RATE_LIMITER` binding. [Run 43088128444](https://github.com/Znect-god/znect-all-plugins/actions/runs/43088128444).
 
 Still pending:
 - Live deployment and endpoint checks.
