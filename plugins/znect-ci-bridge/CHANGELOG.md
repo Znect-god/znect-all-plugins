@@ -69,3 +69,12 @@
 - Added 15 mocked v3 client tests covering authentication, path validation, project resolution, pagination, resource traversal, output limits, and sanitized upstream failures.
 - Kept the existing MCP tools on v1.1 until the Forge hosting type, token compatibility, exact project identity, and legacy build-number mapping are verified.
 - Updated the migration plan and README to distinguish implemented v3 client groundwork from the still-pending MCP tool migration.
+
+
+### CircleCI API v3 MCP tools
+- Added three separate read-only MCP tools: `list_recent_runs`, `get_run_details`, and `get_job_logs`.
+- Kept the legacy v1.1 build-number tools intact; no build-number-to-UUID guessing or automatic fallback is performed.
+- Corrected single-resource response handling to unwrap CircleCI v3's `data` envelope.
+- Matched the v3 jobs-list request to its documented filter parameters.
+- Applied best-effort secret redaction and response-size ceilings to v3 run/job output.
+- Updated the README and migration plan: the Forge project is already set up on CircleCI Cloud; live v3 token/project access remains to be verified.
