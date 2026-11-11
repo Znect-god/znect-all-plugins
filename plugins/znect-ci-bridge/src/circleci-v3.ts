@@ -29,7 +29,8 @@ function validateApiPath(path: string): URL {
   if (
     !path.startsWith("/api/v3/") ||
     path.startsWith("//") ||
-    path.includes("\\\\") ||
+    path.includes("//") ||
+    path.includes("\\") ||
     /%2f|%5c/i.test(path) ||
     path.split("/").some((part) => part === "." || part === "..")
   ) {
