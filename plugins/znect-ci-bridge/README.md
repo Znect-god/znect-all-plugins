@@ -103,7 +103,7 @@ Previously confirmed in Termux:
 Confirmed in GitHub Actions on Linux (current branch):
 - `npm audit --audit-level=high` reported zero vulnerabilities after dependency upgrades.
 - `npm run typecheck` passed.
-- `npm run test` passed (12 tests).
+- `npm run test` passed (16 tests across two files).
 - `npx wrangler deploy --dry-run` passed.
 
 Previously confirmed in GitHub Actions on Linux (commit `2d35753`):
