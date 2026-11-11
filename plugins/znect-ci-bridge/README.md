@@ -48,10 +48,11 @@ There are deliberately no build mutation tools.
 - CircleCI and artifact fetches have 15-second timeouts and reject redirects.
 - Log URLs must use HTTPS and an allowed artifact host suffix.
 - Log response bodies are streamed with an approximately 320 KB byte ceiling before decoding, then limited to approximately 80,000 output characters per action.
+- The two configured Worker secret values are redacted from returned log text.
 - Tokens and authorization headers are not intentionally logged or returned.
 - CORS is disabled.
 
-These are starter safeguards, not a completed security audit. Artifact host allowlisting, authentication, rate limiting, error handling, and log redaction still require review before sensitive use.
+These are starter safeguards, not a completed security audit. Artifact host allowlisting, authentication, rate limiting, error handling, and broader log redaction still require review before sensitive use. Only the two configured Worker secrets are explicitly redacted; other secrets printed by upstream jobs may still appear.
 
 ## API compatibility
 
@@ -94,14 +95,19 @@ Previously confirmed in Termux:
 - `npm run typecheck` completed successfully.
 - Wrangler/workerd could not run on Android ARM64.
 
-Changes in this repository import:
-- Direct dependency versions are pinned to versions that resolved locally.
+Confirmed in GitHub Actions on Linux (commit `ec8d4d1`):
+- `npm install` completed successfully.
+- `npm run typecheck` completed successfully.
+- `npx wrangler deploy --dry-run` completed successfully.
+
+Additional source safeguards:
+- Direct dependency versions are pinned to compatible versions.
 - Log retrieval streams with a byte ceiling rather than downloading an unlimited body before truncation.
 - CircleCI and artifact requests have explicit timeouts.
-- A separate GitHub Actions workflow checks this plugin on Linux and performs a Wrangler dry-run.
+- The configured Worker secrets are redacted from returned log text.
 
 Still pending:
-- New Linux workflow result and fresh Linux build.
+- Validation of the latest log-redaction change.
 - Cloudflare deployment.
 - Health and authenticated MCP endpoint behavior.
 - Live CircleCI API access and tool responses.
@@ -115,7 +121,7 @@ No live credentials were used and no deployment has been performed.
 - CircleCI API v1.1 is legacy.
 - No persistent storage, scheduled polling, alerts, or push notifications.
 - Worker-side rate limiting is not implemented.
-- Upstream build logs may contain secrets if CI jobs print them.
+- Other upstream secrets may still appear in build logs.
 - License remains undecided; public visibility does not grant reuse or redistribution rights.
 
 ## Relationship to Znect Forge
