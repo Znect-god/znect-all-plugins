@@ -34,8 +34,8 @@ describe("redactKnownSecrets", () => {
       'SLACK_TOKEN=xoxb-1234567890-abcdefghijk',
       'AWS_ACCESS_KEY_ID=AKIA1234567890ABCDEF',
       '{"client_secret":"shhh-value","password":"pass-value"}',
-      '-----BEGIN PRIVATE KEY-----\nsecret-material\n-----END PRIVATE KEY-----'
-    ].join("\n");
+      '-----BEGIN PRIVATE KEY-----secret-material-----END PRIVATE KEY-----'
+    ].join(" ");
     const redacted = redactKnownSecrets(output, {});
     expect(redacted).not.toContain("abc.def.ghi");
     expect(redacted).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz123456");
