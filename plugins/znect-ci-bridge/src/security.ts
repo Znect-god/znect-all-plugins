@@ -114,3 +114,18 @@ export function limitText(
     truncated: true
   };
 }
+
+export async function readBoundedJson<T>(
+  response: Response,
+  maxBytes: number
+): Promise<T> {
+  const bounded = await readBoundedText(response, maxBytes);
+  if (bounded.truncated) {
+    throw new Error("CircleCI API response exceeded the configured size limit.");
+  }
+  try {
+    return JSON.parse(bounded.text) as T;
+  } catch {
+    throw new Error("CircleCI API returned invalid JSON.");
+  }
+}
