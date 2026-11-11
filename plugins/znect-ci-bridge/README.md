@@ -37,7 +37,7 @@ There are deliberately no build mutation tools.
 - `src/index.ts` — Worker entry point, authentication, MCP tools, and CircleCI adapter.
 - `src/security.ts` — reusable authentication, artifact URL validation, bounded stream, redaction, and output-limit helpers.
 - `test/security.test.ts` — automated security-helper regression tests.
-- `package.json` — pinned direct dependency versions and scripts.
+- `package.json` — pinned direct dependency versions and scripts. The MCP/Agents toolchain uses the mutually compatible 0.33.0 / 2.4.0 releases.
 - `tsconfig.json` — strict TypeScript configuration.
 - `wrangler.toml` — Worker configuration; no credentials.
 - Root `.github/workflows/znect-ci-bridge.yml` — isolated Linux validation workflow.
