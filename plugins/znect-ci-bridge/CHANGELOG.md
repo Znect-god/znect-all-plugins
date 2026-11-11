@@ -2,9 +2,13 @@
 
 ## [0.1.0] - 2026-11-11
 ### Added
-- Initial prototype documentation and metadata in the Znect shared plugin library.
-- Recorded current local verification results and known deployment/security gaps.
+- Imported the complete initial Cloudflare Worker/MCP source project.
+- Pinned direct dependency versions based on the successful Termux install.
+- Added a Linux GitHub Actions workflow for TypeScript validation and Wrangler dry-run.
+- Added outbound request timeouts.
+- Added streaming byte limits for CircleCI log responses before decoding.
 
-### Notes
-- The complete source code has not yet been imported into this directory.
-- No Cloudflare deployment or end-to-end integration test is claimed.
+### Security notes
+- The plugin remains a prototype.
+- No live credentials were used and no Cloudflare deployment was performed.
+- CircleCI API v1.1 compatibility, artifact host allowlisting, rate limiting, and log redaction still need review.
