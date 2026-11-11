@@ -14,6 +14,8 @@ The allowlist now accepts:
 - project-specific subdomains of `circle-artifacts.com`;
 - S3-style AWS endpoints, including regional S3 endpoints.
 
+The fixed-origin CircleCI HTTP client was also isolated and given mocked tests for path confinement, authentication errors, sanitized upstream failures, and bounded JSON parsing.
+
 It no longer accepts unrelated AWS service hosts such as `ec2.amazonaws.com` or arbitrary `attacker.amazonaws.com` hosts. Regression tests cover both accepted S3 patterns and rejected unrelated AWS hosts.
 
 Reference: https://circleci.com/docs/guides/security/security/
@@ -43,7 +45,7 @@ The current v1.1 adapter remains read-only. The v3 migration research and compat
 
 ## Remaining verification
 
-- Add mocked CircleCI adapter integration tests and verify 401/403/429, malformed/oversized responses, and timeouts.
+- Expand mocked CircleCI adapter tests to cover timeout/abort behavior and additional response edge cases; current tests cover 401/403/429, malformed/oversized responses, and fixed-origin path validation.
 - Verify the artifact URL patterns against actual CircleCI responses without exposing presigned URLs.
 - Configure edge-level throttling for failed authentication attempts.
 - Review MCP transport behavior and SDK security advisories before production use.
