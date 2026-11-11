@@ -83,10 +83,9 @@ Previously confirmed:
 - GitHub Actions on Linux passed dependency audit, typecheck, 18 automated tests, and Wrangler dry-run on the previous validated revision.
 - No live credentials were used and no Cloudflare deployment has been performed.
 
-The current revision adds authenticated rate limiting and lockfile artifact generation. Its latest GitHub Actions run is being checked.
+Confirmed in GitHub Actions on Linux for the current rate-limited revision: `npm ci` using the committed lockfile, dependency audit with zero vulnerabilities, TypeScript typecheck, all 20 tests, and Wrangler dry-run with the `MCP_RATE_LIMITER` binding.
 
 Still pending:
-- Commit and validate the generated `package-lock.json`.
 - Verify the updated tests and Wrangler dry-run on the current revision.
 - Live deployment and endpoint checks.
 - Live CircleCI API integration and log retrieval.
