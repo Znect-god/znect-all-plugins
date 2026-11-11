@@ -17,6 +17,10 @@ export interface V3Collection<T = Record<string, unknown>> {
   page?: { next?: string | null; prev?: string | null };
 }
 
+export interface V3SingleResource<T = Record<string, unknown>> {
+  data: V3Resource<T>;
+}
+
 export function isCircleCiUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
@@ -208,7 +212,11 @@ export async function getCircleCiJob(
   jobId: string
 ): Promise<V3Resource> {
   assertUuid(jobId, "job ID");
-  return circleV3Get<V3Resource>(token, `/api/v3/jobs/${jobId}`);
+  const result = await circleV3Get<V3SingleResource>(token, `/api/v3/jobs/${jobId}`);
+  if (!result || !result.data || typeof result.data.id !== "string") {
+    throw new Error("CircleCI API v3 returned an invalid job resource.");
+  }
+  return result.data;
 }
 
 export async function getCircleCiJobStepOutput(
