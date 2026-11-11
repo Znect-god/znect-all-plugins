@@ -27,6 +27,26 @@ describe("redactKnownSecrets", () => {
     ).toBe("Circle [REDACTED]; MCP [REDACTED]");
   });
 
+  it("redacts common credential patterns in JSON, headers, and environment output", () => {
+    const output = [
+      'Authorization: Bearer abc.def.ghi',
+      'GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz123456',
+      'SLACK_TOKEN=xoxb-1234567890-abcdefghijk',
+      'AWS_ACCESS_KEY_ID=AKIA1234567890ABCDEF',
+      '{"client_secret":"shhh-value","password":"pass-value"}',
+      '-----BEGIN PRIVATE KEY-----\\nsecret-material\\n-----END PRIVATE KEY-----'
+    ].join("\\n");
+    const redacted = redactKnownSecrets(output, {});
+    expect(redacted).not.toContain("abc.def.ghi");
+    expect(redacted).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz123456");
+    expect(redacted).not.toContain("xoxb-1234567890-abcdefghijk");
+    expect(redacted).not.toContain("AKIA1234567890ABCDEF");
+    expect(redacted).not.toContain("shhh-value");
+    expect(redacted).not.toContain("pass-value");
+    expect(redacted).not.toContain("secret-material");
+    expect(redacted).toContain("[REDACTED]");
+  });
+
   it("leaves unrelated text unchanged when secrets are absent", () => {
     expect(redactKnownSecrets("ordinary output", {})).toBe("ordinary output");
   });
