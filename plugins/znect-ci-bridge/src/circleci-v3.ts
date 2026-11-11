@@ -175,6 +175,7 @@ export async function listCircleCiRuns(
       `/api/v3/runs?${query.toString()}`
     );
     if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid runs collection.");
+    for (const run of page.data) assertUuid(run.id, "run ID");
     runs.push(...page.data);
     const next = page.page?.next;
     if (typeof next !== "string" || next.length === 0) break;
@@ -199,6 +200,7 @@ export async function listCircleCiWorkflows(
     `/api/v3/workflows?${query.toString()}`
   );
   if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid workflows collection.");
+  for (const workflow of page.data) assertUuid(workflow.id, "workflow ID");
   return page.data;
 }
 
@@ -215,6 +217,7 @@ export async function listCircleCiJobs(
     `/api/v3/jobs?${query.toString()}`
   );
   if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid jobs collection.");
+  for (const job of page.data) assertUuid(job.id, "job ID");
   return page.data;
 }
 
