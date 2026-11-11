@@ -14,6 +14,9 @@ import {
 interface Env {
   CIRCLECI_TOKEN: string;
   MCP_ACCESS_TOKEN: string;
+  MCP_RATE_LIMITER: {
+    limit(options: { key: string }): Promise<{ success: boolean }>;
+  };
 }
 
 const CIRCLECI_API = "https://circleci.com/api/v1.1";
@@ -205,6 +208,26 @@ export default {
         status: 401,
         headers: { "www-authenticate": 'Bearer realm="Znect CI Bridge"', "cache-control": "no-store" }
       });
+    }
+
+    if (!env.MCP_RATE_LIMITER) {
+      return json({ error: "Rate limiting is not configured." }, 503);
+    }
+    const tokenDigest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(env.MCP_ACCESS_TOKEN)
+    );
+    const rateLimitKey = Array.from(new Uint8Array(tokenDigest))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    let rateLimit: { success: boolean };
+    try {
+      rateLimit = await env.MCP_RATE_LIMITER.limit({ key: rateLimitKey });
+    } catch {
+      return json({ error: "Rate limiting is temporarily unavailable." }, 503);
+    }
+    if (!rateLimit.success) {
+      return json({ error: "Rate limit exceeded. Retry after the current window." }, 429);
     }
 
     if (!(["GET", "POST", "DELETE"].includes(request.method))) {
