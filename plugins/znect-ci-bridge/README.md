@@ -86,7 +86,6 @@ Previously confirmed:
 Confirmed in GitHub Actions on Linux for the current rate-limited revision: `npm ci` using the committed lockfile, dependency audit with zero vulnerabilities, TypeScript typecheck, all 20 tests, and Wrangler dry-run with the `MCP_RATE_LIMITER` binding.
 
 Still pending:
-- Verify the updated tests and Wrangler dry-run on the current revision.
 - Live deployment and endpoint checks.
 - Live CircleCI API integration and log retrieval.
 - Review of upstream log-secret exposure and authentication-failure throttling.
