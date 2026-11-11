@@ -1,0 +1,6 @@
+name = "znect-ci-bridge"
+main = "src/index.ts"
+compatibility_date = "2026-11-11"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets are added separately in Cloudflare. Never put tokens in this file.
