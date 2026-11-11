@@ -17,9 +17,11 @@ There are no build mutation tools.
 
 ## Source layout
 
-- `src/index.ts` — Worker entry point, authentication, MCP tools, and CircleCI adapter.
+- `src/index.ts` — Worker entry point, authentication, and MCP tools.
+- `src/circleci.ts` — fixed-origin, read-only CircleCI HTTP adapter with timeout and bounded JSON parsing.
 - `src/security.ts` — authentication comparison, artifact URL validation, bounded streams, redaction, output limits, and safe redirect handling.
-- `test/security.test.ts` — security helper tests.
+- `test/security.test.ts` — security helper and artifact-host/redirect tests.
+- `test/circleci.test.ts` — mocked CircleCI HTTP adapter tests; no live token or network request.
 - `test/worker.test.ts` — Worker HTTP, authentication, and rate-limit boundary tests.
 - `package.json` and `package-lock.json` — pinned direct and resolved dependency versions.
 - `wrangler.toml` — Worker configuration and rate-limit binding; no credentials.
@@ -33,7 +35,7 @@ There are no build mutation tools.
 - The MCP endpoint is rate-limited to 60 authenticated requests per 60 seconds per Cloudflare location. The rate-limit key is a SHA-256 digest of the configured MCP token, not the raw token.
 - If the rate-limit binding is absent or unavailable, the MCP endpoint fails closed with HTTP 503.
 - Cloudflare's built-in rate limiter is approximate and local to each Cloudflare location; it is not a strict global quota. Failed authentication attempts are not covered by this per-token limit.
-- Artifact URLs and every redirect target must use HTTPS, an approved host suffix, and the default HTTPS port. Redirect chains are limited to three hops.
+- Artifact URLs and every redirect target must use HTTPS, a CircleCI artifact subdomain or S3-style AWS endpoint, and the default HTTPS port. Redirect chains are limited to three hops.
 - Log response bodies are streamed with a byte ceiling, then limited to 80,000 characters per action and 160,000 across the complete response.
 - The two configured Worker secret values are redacted, along with heuristic patterns for common Bearer/Basic credentials, GitHub/GitLab/Slack tokens, Stripe keys, Google API keys, npm tokens, AWS access-key IDs, JWTs, PEM private keys, and credential-like key/value fields. Pattern matching is best-effort and cannot guarantee detection of every upstream secret.
 - CORS is disabled. No arbitrary artifact URL is accepted from the MCP caller.
@@ -44,7 +46,7 @@ These controls reduce risk but do not constitute a complete security audit.
 
 ## API compatibility
 
-The adapter still uses CircleCI API v1.1. CircleCI now recommends API v3 for new Cloud integrations; v1.1 is legacy, although the announced February 1, 2027 removal applies to specific trigger/rerun endpoints and not every read endpoint. The bridge calls only read endpoints.
+The adapter still uses CircleCI API v1.1. The HTTP adapter is isolated in `src/circleci.ts` and has mocked tests for fixed-origin requests, auth failures, HTTP errors, malformed/oversized JSON, and path validation. CircleCI now recommends API v3 for new Cloud integrations; v1.1 is legacy, although the announced February 1, 2027 removal applies to specific trigger/rerun endpoints and not every read endpoint. The bridge calls only read endpoints.
 
 A researched migration plan is maintained in [`documentation/CIRCLECI_API_MIGRATION.md`](documentation/CIRCLECI_API_MIGRATION.md). Migration is not implemented yet: API v3 requires a personal API token, project UUIDs, and a verified mapping from legacy build numbers to runs/workflows/jobs. Do not assume the existing token is compatible.
 
@@ -91,6 +93,7 @@ Still pending:
 - Live deployment and endpoint checks.
 - Live CircleCI API integration and log retrieval.
 - Review of upstream log-secret exposure and authentication-failure throttling.
+- Live CircleCI API integration remains untested; mocked HTTP adapter coverage is in place.
 - Implementation of the researched CircleCI API v3 migration plan, including token compatibility, project identity, and read-only response mapping.
 
 ## Known limitations
