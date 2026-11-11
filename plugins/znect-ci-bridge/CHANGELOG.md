@@ -10,8 +10,8 @@
 - Added redaction of the configured Worker secret values from returned build logs.
 
 ### Validation
-- A Linux GitHub Actions run passed dependency installation, TypeScript typecheck, and Wrangler dry-run before the final log-redaction change.
-- The final log-redaction change is awaiting a fresh CI run.
+- GitHub Actions passed dependency installation, TypeScript typecheck, and Wrangler dry-run with the log-redaction change included.
+- The current branch's subsequent documentation and metadata updates are also checked by the same workflow.
 - No live credentials were used and no Cloudflare deployment was performed.
 
 ### Security notes
