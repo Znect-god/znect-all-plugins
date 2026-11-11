@@ -3,6 +3,7 @@ import {
   circleV3Get,
   circleV3GetText,
   getCircleCiJob,
+  getCircleCiRun,
   getCircleCiJobStepOutput,
   isCircleCiUuid,
   listCircleCiJobs,
@@ -146,18 +147,23 @@ describe("CircleCI API v3 client", () => {
 
   it("traverses run to workflow to jobs with UUID validation", async () => {
     const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: RUN_ID, attributes: { phase: "ended", current_outcome: "succeeded" } } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: WORKFLOW_ID }] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: JOB_ID }] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: JOB_ID, attributes: { name: "typecheck" } } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
+    await expect(getCircleCiRun("token", RUN_ID)).resolves.toMatchObject({
+      id: RUN_ID,
+      attributes: { current_outcome: "succeeded" }
+    });
     await expect(listCircleCiWorkflows("token", RUN_ID)).resolves.toHaveLength(1);
     await expect(listCircleCiJobs("token", WORKFLOW_ID)).resolves.toHaveLength(1);
     await expect(getCircleCiJob("token", JOB_ID)).resolves.toMatchObject({
       id: JOB_ID,
       attributes: { name: "typecheck" }
     });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it("reads bounded stdout and uses the documented step/execution filters", async () => {
