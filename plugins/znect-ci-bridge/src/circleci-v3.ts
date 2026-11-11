@@ -208,8 +208,7 @@ export async function listCircleCiJobs(
 ): Promise<V3Resource[]> {
   assertUuid(workflowId, "workflow ID");
   const query = new URLSearchParams({
-    "filter[workflow_id]": workflowId,
-    "page[limit]": "100"
+    "filter[workflow_id]": workflowId
   });
   const page = await circleV3Get<V3Collection>(
     token,
