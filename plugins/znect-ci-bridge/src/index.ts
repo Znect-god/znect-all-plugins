@@ -115,7 +115,7 @@ function createServer(env: Env) {
       }
     },
     async ({ build_num, step_index, max_actions }) => {
-      const build = await circleGet<any>(env, `${PROJECT_PATH}/${buildNumber(build_num)}`);
+      const build = await circleGet<any>(env.CIRCLECI_TOKEN, `${PROJECT_PATH}/${buildNumber(build_num)}`);
       const selected = (build.steps ?? [])
         .map((step: any, index: number) => ({ step, index }))
         .filter(({ index }: { index: number }) => step_index === undefined || index === step_index);
