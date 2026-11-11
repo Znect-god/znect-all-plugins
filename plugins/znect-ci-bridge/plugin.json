@@ -5,8 +5,14 @@
   "status": "prototype",
   "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
   "platforms": {
-    "intended": ["Cloudflare Workers", "MCP-compatible clients"],
-    "tested": ["Android Termux: TypeScript typecheck", "GitHub Actions Ubuntu: TypeScript typecheck and Wrangler dry-run"]
+    "intended": [
+      "Cloudflare Workers",
+      "MCP-compatible clients"
+    ],
+    "tested": [
+      "Android Termux: TypeScript typecheck",
+      "GitHub Actions Ubuntu: TypeScript typecheck and Wrangler dry-run"
+    ]
   },
   "permissions": [
     "Network access to the configured Cloudflare Worker and approved CircleCI API endpoints",
@@ -20,11 +26,12 @@
     "CircleCI API v1.1 (legacy/deprecated)"
   ],
   "security_controls": [
-    "Bearer authentication for /mcp",
+    "Bearer authentication for /mcp with fixed-length digest comparison",
     "Fixed CircleCI project path and read-only GET requests",
     "Redirect rejection and 15-second outbound request timeouts",
-    "HTTPS artifact URL allowlist",
-    "Streaming log body byte ceiling and output character limit",
+    "HTTPS artifact URL allowlist and default-port restriction",
+    "Streaming log body byte ceiling",
+    "Per-action and aggregate log output character limits",
     "Configured Worker secrets redacted from returned logs",
     "Secrets supplied through Cloudflare Worker Secrets"
   ],
@@ -35,7 +42,8 @@
     "CircleCI API v1.1 is legacy and requires a migration plan",
     "Full security audit and Worker-side rate limiting not completed",
     "Only configured Worker secrets are explicitly redacted; other upstream secrets may appear in logs",
-    "Wrangler/workerd unsupported in the current Android ARM64 Termux environment"
+    "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
+    "Artifact URLs that redirect are rejected"
   ],
   "testing": {
     "performed": [
@@ -47,6 +55,7 @@
       "Linux GitHub Actions Wrangler deploy --dry-run passed with bounded log retrieval and configured-secret redaction"
     ],
     "pending": [
+      "Security-helper regression tests in GitHub Actions",
       "Cloudflare Worker deployment",
       "Health endpoint",
       "Authenticated MCP endpoint",
