@@ -75,7 +75,8 @@
       "CircleCI API v3 migration research documented; no token or live endpoint was used",
       "Mocked CircleCI HTTP adapter tests cover fixed-origin GET requests, path confinement, 401/403/429 errors, sanitized failures, malformed JSON, and oversized responses",
       "Artifact allowlist regression tests cover regional S3 endpoints and reject unrelated AWS service hosts",
-      "Artifact redirect regression tests cover the configured redirect-hop limit"
+      "Artifact redirect regression tests cover the configured redirect-hop limit",
+      "GitHub Actions run 43088128444 passed npm ci, npm audit with zero vulnerabilities, TypeScript typecheck, 29 tests across three files, and Wrangler dry-run with MCP_RATE_LIMITER"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
