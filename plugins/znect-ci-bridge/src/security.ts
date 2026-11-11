@@ -23,7 +23,7 @@ export function redactKnownSecrets(value: string, env: SecretEnv): string {
   }
 
   const patterns: Array<[RegExp, string]> = [
-    [/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g, "[REDACTED PRIVATE KEY]"],
+    [/-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----/g, "[REDACTED PRIVATE KEY]"],
     [/\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi, "Bearer [REDACTED]"],
     [/\bBasic\s+[A-Za-z0-9+/=]{12,}/gi, "Basic [REDACTED]"],
     [/\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[REDACTED GITHUB TOKEN]"],
