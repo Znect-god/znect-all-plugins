@@ -21,6 +21,21 @@ export function redactKnownSecrets(value: string, env: SecretEnv): string {
   for (const secret of [env.CIRCLECI_TOKEN, env.MCP_ACCESS_TOKEN]) {
     if (secret) redacted = redacted.split(secret).join("[REDACTED]");
   }
+
+  const patterns: Array<[RegExp, string]> = [
+    [/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----[\\s\\S]*?-----END (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g, "[REDACTED PRIVATE KEY]"],
+    [/\\bBearer\\s+[A-Za-z0-9._~+\\/-]+=*/gi, "Bearer [REDACTED]"],
+    [/\\bBasic\\s+[A-Za-z0-9+/=]{12,}/gi, "Basic [REDACTED]"],
+    [/\\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\\b/g, "[REDACTED GITHUB TOKEN]"],
+    [/\\bxox[baprs]-[A-Za-z0-9-]{10,}\\b/g, "[REDACTED SLACK TOKEN]"],
+    [/\\b(?:AKIA|ASIA)[A-Z0-9]{16}\\b/g, "[REDACTED AWS ACCESS KEY ID]"],
+    [/\\beyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\b/g, "[REDACTED JWT]"],
+    [/(["']?\\b(?:api[_-]?key|api[_-]?token|access[_-]?token|refresh[_-]?token|auth[_-]?token|client[_-]?secret|token|password|passwd|secret|private[_-]?key|aws_secret_access_key)\\b["']?\\s*[:=]\\s*["']?)([^"'\\s,;&}]+)(["']?)/gi, "$1[REDACTED]$3"]
+  ];
+
+  for (const [pattern, replacement] of patterns) {
+    redacted = redacted.replace(pattern, replacement);
+  }
   return redacted;
 }
 
