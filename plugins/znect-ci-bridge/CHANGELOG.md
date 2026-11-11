@@ -62,3 +62,5 @@
 - Added mocked adapter tests for request construction, path confinement, 401/403 handling, sanitized HTTP errors, malformed JSON, and oversized responses.
 - Added an explicit redirect-hop-limit regression test.
 - These are mocked tests only; no live CircleCI token or endpoint was used.
+
+- GitHub Actions run [43088128444](https://github.com/Znect-god/znect-all-plugins/actions/runs/43088128444) passed `npm ci`, `npm audit` (zero vulnerabilities), TypeScript typecheck, all 29 tests across three files, and Wrangler dry-run with the rate-limit binding.
