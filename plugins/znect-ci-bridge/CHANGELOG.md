@@ -30,3 +30,5 @@
 - Upgraded the MCP server/client and Agents SDK to compatible 2.4.0 / 0.33.0 releases, Zod to 4.6.7, Wrangler to 4.160.0, Vitest to 5.1.0, and Workers types to 5.20261110.1 after the audit identified vulnerable older dependencies.
 
 - Added a documented note that a committed lockfile is still required for fully reproducible transitive dependency resolution.
+
+- Added Worker-level tests for the health route, Bearer authentication rejection, unsupported HTTP methods, and missing secrets; all 16 automated tests pass.
