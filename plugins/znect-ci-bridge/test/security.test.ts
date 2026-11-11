@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   allowedArtifactUrl,
   limitText,
+  readBoundedJson,
   readBoundedText,
   redactKnownSecrets,
   safeEqual
@@ -64,6 +65,21 @@ describe("readBoundedText", () => {
   it("rejects invalid limits", async () => {
     await expect(readBoundedText(new Response("x"), -1)).rejects.toThrow(
       "maxBytes must be a non-negative safe integer."
+    );
+  });
+});
+
+describe("readBoundedJson", () => {
+  it("parses a bounded JSON response", async () => {
+    await expect(readBoundedJson(new Response('{"ok":true}'), 64)).resolves.toEqual({ ok: true });
+  });
+
+  it("rejects oversized and malformed JSON without exposing response contents", async () => {
+    await expect(readBoundedJson(new Response('"123456789"'), 4)).rejects.toThrow(
+      "CircleCI API response exceeded the configured size limit."
+    );
+    await expect(readBoundedJson(new Response("{broken"), 64)).rejects.toThrow(
+      "CircleCI API returned invalid JSON."
     );
   });
 });
