@@ -56,22 +56,18 @@
       "npm install completed after direct dependency version adjustments",
       "npm run typecheck completed successfully in Termux",
       "Linux GitHub Actions npm install completed successfully",
-      "Linux GitHub Actions TypeScript typecheck passed",
       "Linux GitHub Actions Wrangler deploy --dry-run passed with bounded log retrieval and configured-secret redaction",
       "GitHub Actions npm audit --audit-level=high: zero vulnerabilities after dependency updates",
       "GitHub Actions TypeScript typecheck passed on current branch",
-      "GitHub Actions Vitest security suite passed: 12 tests",
       "GitHub Actions Wrangler 4.160.0 deploy --dry-run passed",
-      "GitHub Actions Vitest suite passed: 18 tests across security helpers and Worker HTTP/authentication boundaries",
       "GitHub Actions Vitest suite passed: 18 tests across security helpers and Worker HTTP/authentication boundaries"
     ],
     "pending": [
       "Cloudflare Worker deployment",
-      "Health endpoint",
-      "Authenticated MCP endpoint",
-      "CircleCI API integration",
-      "Build details and log retrieval",
-      "Security audit and rate-limit behavior"
+      "Live deployed health and authenticated MCP endpoint behavior",
+      "Live CircleCI API integration",
+      "Build details and log retrieval against a safe CircleCI context",
+      "Worker-side rate limiting and full security review"
     ]
   },
   "secrets": [
