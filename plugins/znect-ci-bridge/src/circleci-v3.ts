@@ -26,13 +26,14 @@ function assertUuid(value: string, label: string): void {
 }
 
 function validateApiPath(path: string): URL {
+  const rawPath = path.split("?", 1)[0];
   if (
-    !path.startsWith("/api/v3/") ||
-    path.startsWith("//") ||
-    path.includes("//") ||
-    path.includes("\\") ||
-    /%2f|%5c/i.test(path) ||
-    path.split("/").some((part) => part === "." || part === "..")
+    !rawPath.startsWith("/api/v3/") ||
+    rawPath.startsWith("//") ||
+    rawPath.includes("//") ||
+    rawPath.includes("\\") ||
+    /%2f|%5c/i.test(rawPath) ||
+    rawPath.split("/").some((part) => part === "." || part === "..")
   ) {
     throw new Error("Invalid internal CircleCI API v3 path.");
   }
