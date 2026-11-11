@@ -56,7 +56,7 @@ export function allowedArtifactUrl(value: string): URL | null {
   // subdomains and redirects other artifacts to Amazon S3. Do not allow every
   // AWS hostname: that would unnecessarily include unrelated services.
   const trustedS3Host =
-    /^(?:s3|.+\\.s3)(?:[.-][a-z0-9-]+){0,2}\\.amazonaws\\.com$/.test(host);
+    /^(?:s3|.+\.s3)(?:[.-][a-z0-9-]+){0,2}\.amazonaws\.com$/.test(host);
   const trustedHost = host.endsWith(".circle-artifacts.com") || trustedS3Host;
 
   if (
