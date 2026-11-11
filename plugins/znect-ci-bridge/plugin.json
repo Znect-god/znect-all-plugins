@@ -1,0 +1,51 @@
+{
+  "id": "znect-ci-bridge",
+  "name": "Znect CI Bridge",
+  "version": "0.1.0",
+  "status": "prototype",
+  "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
+  "platforms": {
+    "intended": ["Cloudflare Workers", "MCP-compatible clients"],
+    "tested": ["Android Termux: TypeScript typecheck only"]
+  },
+  "permissions": [
+    "Network access to the configured Cloudflare Worker and approved CircleCI API endpoints",
+    "Read-only CircleCI project/build data using a secret token",
+    "Bearer authentication for the MCP endpoint"
+  ],
+  "dependencies": [
+    "Node.js toolchain for development",
+    "Cloudflare Workers runtime",
+    "MCP server libraries",
+    "CircleCI API (initial prototype uses deprecated v1.1)"
+  ],
+  "limitations": [
+    "Prototype only; not production-ready",
+    "Cloudflare deployment and end-to-end MCP behavior not verified",
+    "CircleCI connectivity and log retrieval not verified",
+    "CircleCI API v1.1 adapter requires replacement",
+    "Full security audit and Worker-side rate limiting not completed",
+    "Wrangler/workerd unsupported in the current Android ARM64 Termux environment"
+  ],
+  "testing": {
+    "performed": [
+      "Local archive extraction in Termux",
+      "npm install completed after local dependency version adjustments",
+      "npm run typecheck completed successfully"
+    ],
+    "not_yet_verified": [
+      "Linux production build",
+      "Cloudflare Worker deployment",
+      "Health endpoint",
+      "Authenticated MCP endpoint",
+      "CircleCI API integration",
+      "Build details and log retrieval",
+      "Security audit and rate-limit behavior"
+    ]
+  },
+  "secrets": [
+    "CIRCLECI_TOKEN",
+    "MCP_ACCESS_TOKEN"
+  ],
+  "license": "undecided"
+}
