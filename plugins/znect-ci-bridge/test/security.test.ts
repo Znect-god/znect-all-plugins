@@ -28,26 +28,40 @@ describe("redactKnownSecrets", () => {
   });
 
   it("redacts common credential patterns in JSON, headers, and environment output", () => {
+    const gitlabToken = "glpat-" + "a".repeat(32);
+    const stripeKey = "sk_" + "test_" + "a".repeat(24);
+    const googleKey = "AIza" + "0".repeat(35);
+    const npmToken = "npm_" + "a".repeat(36);
     const output = [
       'Authorization: Bearer abc.def.ghi',
       'Authorization: Basic dXNlcjpwYXNzd29yZA==',
       'SESSION_JWT=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.signature12345',
       'GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz123456',
+      `GITLAB_TOKEN=${gitlabToken}`,
+      `STRIPE_SECRET=${stripeKey}`,
+      `GOOGLE_API_KEY=${googleKey}`,
+      `NPM_TOKEN=${npmToken}`,
       'SLACK_TOKEN=xoxb-1234567890-abcdefghijk',
       'AWS_ACCESS_KEY_ID=AKIA1234567890ABCDEF',
       '{"client_secret":"shhh-value","password":"pass-value"}',
-      '-----BEGIN PRIVATE KEY-----secret-material-----END PRIVATE KEY-----'
+      '-----BEGIN PRIVATE KEY-----secret-material-----END PRIVATE KEY-----',
+      '-----BEGIN ENCRYPTED PRIVATE KEY-----encrypted-material-----END ENCRYPTED PRIVATE KEY-----'
     ].join(" ");
     const redacted = redactKnownSecrets(output, {});
     expect(redacted).not.toContain("abc.def.ghi");
     expect(redacted).not.toContain("dXNlcjpwYXNzd29yZA==");
     expect(redacted).not.toContain("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.signature12345");
     expect(redacted).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz123456");
+    expect(redacted).not.toContain(gitlabToken);
+    expect(redacted).not.toContain(stripeKey);
+    expect(redacted).not.toContain(googleKey);
+    expect(redacted).not.toContain(npmToken);
     expect(redacted).not.toContain("xoxb-1234567890-abcdefghijk");
     expect(redacted).not.toContain("AKIA1234567890ABCDEF");
     expect(redacted).not.toContain("shhh-value");
     expect(redacted).not.toContain("pass-value");
     expect(redacted).not.toContain("secret-material");
+    expect(redacted).not.toContain("encrypted-material");
     expect(redacted).toContain("[REDACTED]");
   });
 
