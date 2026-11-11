@@ -177,4 +177,18 @@ describe("fetchAllowedArtifact", () => {
     ).rejects.toThrow("Artifact redirect target is not allowed.");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("stops after the configured maximum number of redirects", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValue(new Response(null, {
+        status: 302,
+        headers: { location: "https://bucket.s3.amazonaws.com/next" }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchAllowedArtifact(new URL("https://123-gh.circle-artifacts.com/log.txt"), 2)
+    ).rejects.toThrow("Artifact redirect limit exceeded.");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });
