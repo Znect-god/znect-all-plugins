@@ -83,7 +83,7 @@ Previously confirmed:
 - GitHub Actions on Linux passed dependency audit, typecheck, 18 automated tests, and Wrangler dry-run on the previous validated revision.
 - No live credentials were used and no Cloudflare deployment has been performed.
 
-Confirmed in GitHub Actions on Linux for the current rate-limited revision: `npm ci` using the committed lockfile, dependency audit with zero vulnerabilities, TypeScript typecheck, all 20 tests, and Wrangler dry-run with the `MCP_RATE_LIMITER` binding.
+Confirmed in GitHub Actions on Linux for the current rate-limited revision: `npm ci` using the committed lockfile, dependency audit with zero vulnerabilities, TypeScript typecheck, all 22 tests, and Wrangler dry-run with the `MCP_RATE_LIMITER` binding.
 
 Still pending:
 - Live deployment and endpoint checks.
