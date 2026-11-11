@@ -72,13 +72,16 @@
       "GitHub Actions Vitest suite passed: 22 tests across security helpers and Worker HTTP/authentication/rate-limit boundaries",
       "GitHub Actions Wrangler 4.160.0 deploy --dry-run recognized the MCP_RATE_LIMITER binding",
       "Latest GitHub Actions run using the simplified read-only CI workflow passed npm ci, npm audit, TypeScript typecheck, all 22 tests, and Wrangler dry-run",
-      "CircleCI API v3 migration research documented; no token or live endpoint was used"
+      "CircleCI API v3 migration research documented; no token or live endpoint was used",
+      "Mocked CircleCI HTTP adapter tests cover fixed-origin GET requests, path confinement, 401/403/429 errors, sanitized failures, malformed JSON, and oversized responses",
+      "Artifact allowlist regression tests cover regional S3 endpoints and reject unrelated AWS service hosts",
+      "Artifact redirect regression tests cover the configured redirect-hop limit"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
       "Live CircleCI API integration and log retrieval",
-      "Authentication-failure throttling and broader log-secret exposure review",
-      "Implement and verify API v3 migration after token and project identity checks"
+      "Edge-level throttling for failed authentication attempts and broader log-secret exposure review",
+      "Implement and verify API v3 migration after token and project identity checks; mocked v1.1 adapter tests do not establish live compatibility"
     ]
   },
   "secrets": [
