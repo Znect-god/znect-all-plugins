@@ -42,3 +42,5 @@
 
 - Generated and committed `package-lock.json` from the Linux CI environment; CI then validated clean `npm ci` installs.
 - Reduced CI permissions back to `contents: read` after the one-time lockfile commit.
+
+- Simplified the validation workflow to use only `npm ci` and read-only repository permissions after the lockfile was committed; the resulting GitHub Actions run passed all checks.
