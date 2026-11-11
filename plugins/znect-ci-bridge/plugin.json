@@ -50,7 +50,6 @@
     "CircleCI API v1.1 is legacy and requires a migration plan",
     "Only configured Worker secrets are explicitly redacted; other upstream secrets may appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
-    "package-lock.json is not yet committed; transitive dependency resolution is not fully reproducible",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
     "Failed authentication attempts are not covered by the authenticated per-token rate limit",
     "Rate-limit namespace ID must be unique within the user's Cloudflare account"
@@ -65,10 +64,13 @@
       "GitHub Actions npm audit --audit-level=high: zero vulnerabilities after dependency updates",
       "GitHub Actions TypeScript typecheck passed on current branch",
       "GitHub Actions Wrangler 4.160.0 deploy --dry-run passed",
-      "GitHub Actions Vitest suite passed: 18 tests across security helpers and Worker HTTP/authentication boundaries"
+      "GitHub Actions passed npm ci using the committed package-lock.json",
+      "GitHub Actions npm audit --audit-level=high passed with zero vulnerabilities",
+      "GitHub Actions TypeScript typecheck passed on the rate-limited Worker revision",
+      "GitHub Actions Vitest suite passed: 20 tests across security helpers and Worker HTTP/authentication/rate-limit boundaries",
+      "GitHub Actions Wrangler 4.160.0 deploy --dry-run recognized the MCP_RATE_LIMITER binding"
     ],
     "pending": [
-      "Commit and validate package-lock.json",
       "Live Cloudflare Worker deployment and endpoint checks",
       "Live CircleCI API integration and log retrieval",
       "Authentication-failure throttling and broader log-secret exposure review",
