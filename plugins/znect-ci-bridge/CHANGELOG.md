@@ -24,3 +24,5 @@
 - Enforced a 160,000-character aggregate log-output budget across actions.
 - Used CircleCI's documented `limit` query parameter for recent-build listing.
 - Added security tests to the Linux GitHub Actions workflow.
+
+- Added a 1 MB streaming response-body ceiling and safe JSON parsing for CircleCI API responses.
