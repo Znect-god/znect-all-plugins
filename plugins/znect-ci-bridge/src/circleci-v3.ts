@@ -136,6 +136,18 @@ export async function resolveCircleCiProject(
   return project;
 }
 
+export async function getCircleCiRun(
+  token: string,
+  runId: string
+): Promise<V3Resource> {
+  assertUuid(runId, "run ID");
+  const result = await circleV3Get<V3SingleResource>(token, `/api/v3/runs/${runId}`);
+  if (!result || !result.data || typeof result.data.id !== "string") {
+    throw new Error("CircleCI API v3 returned an invalid run resource.");
+  }
+  return result.data;
+}
+
 export async function listCircleCiRuns(
   token: string,
   projectId: string,
