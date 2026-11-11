@@ -1,6 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
+import {
+  allowedArtifactUrl,
+  limitText,
+  readBoundedText,
+  redactKnownSecrets,
+  safeEqual
+} from "./security";
 
 interface Env {
   CIRCLECI_TOKEN: string;
@@ -11,25 +18,8 @@ const CIRCLECI_API = "https://circleci.com/api/v1.1";
 const PROJECT_PATH = "/project/github/Znect-god/znect-forge";
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
+const MAX_TOTAL_LOG_CHARS = 160_000;
 const FETCH_TIMEOUT_MS = 15_000;
-
-function safeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder();
-  const aa = enc.encode(a);
-  const bb = enc.encode(b);
-  if (aa.length !== bb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < aa.length; i++) diff |= aa[i] ^ bb[i];
-  return diff === 0;
-}
-
-function redactKnownSecrets(value: string, env: Env): string {
-  let redacted = value;
-  for (const secret of [env.CIRCLECI_TOKEN, env.MCP_ACCESS_TOKEN]) {
-    if (secret) redacted = redacted.split(secret).join("[REDACTED]");
-  }
-  return redacted;
-}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -60,40 +50,6 @@ async function circleGet<T>(env: Env, path: string): Promise<T> {
   return await response.json() as T;
 }
 
-async function readBoundedText(response: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
-  if (!response.body) return { text: "", truncated: false };
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  let truncated = false;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const remaining = maxBytes - total;
-      if (value.byteLength > remaining) {
-        if (remaining > 0) chunks.push(value.slice(0, remaining));
-        total += Math.max(remaining, 0);
-        truncated = true;
-        await reader.cancel();
-        break;
-      }
-      chunks.push(value);
-      total += value.byteLength;
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return { text: new TextDecoder().decode(bytes), truncated };
-}
-
 function buildNumber(value: number): number {
   if (!Number.isSafeInteger(value) || value < 1) throw new Error("build_num must be a positive integer.");
   return value;
@@ -109,7 +65,7 @@ function createServer(env: Env) {
       inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ limit }) => {
-      const builds = await circleGet<unknown[]>(env, PROJECT_PATH);
+      const builds = await circleGet<unknown[]>(env, `${PROJECT_PATH}?limit=${limit}`);
       const result = builds.slice(0, limit).map((item: any) => ({
         build_num: item.build_num,
         status: item.status,
@@ -128,7 +84,7 @@ function createServer(env: Env) {
   server.registerTool(
     "get_build_details",
     {
-      description: "Read detailed metadata and step/action statuses for one CircleCI build of Znect-god/znect-forge. Does not retrieve console output.",
+      description: "Read detailed metadata and step/action statuses for one CircleCI build of Znect-god/Znect-forge. Does not retrieve console output.",
       inputSchema: { build_num: z.number().int().min(1) }
     },
     async ({ build_num }) => {
@@ -165,7 +121,7 @@ function createServer(env: Env) {
   server.registerTool(
     "get_build_logs",
     {
-      description: "Read console output for a CircleCI build step/action. Fetches the presigned output URL returned by CircleCI; never accepts arbitrary URLs. Output is bounded to approximately 80,000 characters per action.",
+      description: "Read console output for a CircleCI build step/action. Fetches the presigned output URL returned by CircleCI; never accepts arbitrary URLs. Output is bounded to 80,000 characters per action and 160,000 characters total per response.",
       inputSchema: {
         build_num: z.number().int().min(1),
         step_index: z.number().int().min(0).optional(),
@@ -182,15 +138,14 @@ function createServer(env: Env) {
       }
 
       const actions: Array<{ step_index: number; step_name: string; action_name: string; status?: string; output: string }> = [];
+      let totalOutputChars = 0;
       for (const { step, index } of selected) {
+        if (totalOutputChars >= MAX_TOTAL_LOG_CHARS) break;
         for (const action of (step.actions ?? [])) {
-          if (actions.length >= max_actions) break;
+          if (actions.length >= max_actions || totalOutputChars >= MAX_TOTAL_LOG_CHARS) break;
           if (action.has_output !== true || typeof action.output_url !== "string") continue;
-          let outputUrl: URL;
-          try { outputUrl = new URL(action.output_url); } catch { continue; }
-          const host = outputUrl.hostname.toLowerCase();
-          const trustedHost = host.endsWith(".amazonaws.com") || host.endsWith(".circle-artifacts.com");
-          if (outputUrl.protocol !== "https:" || !trustedHost || outputUrl.username || outputUrl.password) continue;
+          const outputUrl = allowedArtifactUrl(action.output_url);
+          if (!outputUrl) continue;
 
           const logResponse = await fetch(outputUrl.toString(), {
             method: "GET",
@@ -198,22 +153,30 @@ function createServer(env: Env) {
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
           });
           if (!logResponse.ok) {
-            actions.push({ step_index: index, step_name: step.name ?? "", action_name: action.name ?? "", status: action.status, output: `[Log retrieval failed: HTTP ${logResponse.status}]` });
+            const failure = `[Log retrieval failed: HTTP ${logResponse.status}]`;
+            actions.push({ step_index: index, step_name: step.name ?? "", action_name: action.name ?? "", status: action.status, output: failure });
+            totalOutputChars += failure.length;
             continue;
           }
-          const bounded = await readBoundedText(logResponse, MAX_LOG_BYTES);
+
+          const remainingChars = MAX_TOTAL_LOG_CHARS - totalOutputChars;
+          const byteBudget = Math.min(MAX_LOG_BYTES, remainingChars * 4);
+          const bounded = await readBoundedText(logResponse, byteBudget);
           const raw = bounded.text;
           let output = raw;
           try {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) output = parsed.map((entry: any) => entry?.message ?? JSON.stringify(entry)).join("\n");
           } catch { /* Some CircleCI output URLs return plain text. */ }
+
           output = redactKnownSecrets(output, env);
-          if (output.length > MAX_LOG_CHARS) output = output.slice(0, MAX_LOG_CHARS);
-          if (bounded.truncated || output.length >= MAX_LOG_CHARS) output += `\n[TRUNCATED at approximately ${MAX_LOG_CHARS} characters]`;
+          const actionBudget = Math.min(MAX_LOG_CHARS, remainingChars);
+          const limited = limitText(output, actionBudget, bounded.truncated);
+          output = limited.text;
           actions.push({ step_index: index, step_name: step.name ?? "", action_name: action.name ?? "", status: action.status, output });
+          totalOutputChars += output.length;
         }
-        if (actions.length >= max_actions) break;
+        if (actions.length >= max_actions || totalOutputChars >= MAX_TOTAL_LOG_CHARS) break;
       }
       return { content: [{ type: "text", text: JSON.stringify({ build_num, actions }, null, 2) }] };
     }
@@ -232,8 +195,9 @@ export default {
     if (!env.CIRCLECI_TOKEN || !env.MCP_ACCESS_TOKEN) return json({ error: "Worker secrets are not configured." }, 503);
 
     const authorization = request.headers.get("authorization") ?? "";
-    const supplied = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-    if (!safeEqual(supplied, env.MCP_ACCESS_TOKEN)) {
+    const match = /^Bearer\s+(.+)$/i.exec(authorization);
+    const supplied = match?.[1] ?? "";
+    if (!(await safeEqual(supplied, env.MCP_ACCESS_TOKEN))) {
       return new Response("Unauthorized", {
         status: 401,
         headers: { "www-authenticate": 'Bearer realm="Znect CI Bridge"', "cache-control": "no-store" }
