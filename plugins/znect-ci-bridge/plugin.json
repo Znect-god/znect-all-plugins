@@ -22,7 +22,10 @@
   "dependencies": [
     "Node.js 22 toolchain for development",
     "Cloudflare Workers runtime",
-    "MCP server libraries",
+    "Cloudflare Agents SDK 0.33.0",
+    "MCP TypeScript server/client SDK 2.4.0",
+    "Zod 4.6.7",
+    "Wrangler 4.160.0",
     "CircleCI API v1.1 (legacy/deprecated)"
   ],
   "security_controls": [
@@ -56,6 +59,7 @@
       "Linux GitHub Actions Wrangler deploy --dry-run passed with bounded log retrieval and configured-secret redaction"
     ],
     "pending": [
+      "Dependency vulnerability audit on the refreshed package set",
       "Security-helper regression tests in GitHub Actions",
       "Cloudflare Worker deployment",
       "Health endpoint",
