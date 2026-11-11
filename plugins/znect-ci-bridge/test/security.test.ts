@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   allowedArtifactUrl,
+  fetchAllowedArtifact,
   limitText,
   readBoundedJson,
   readBoundedText,
@@ -96,5 +97,46 @@ describe("limitText", () => {
     const result = limitText("short", 32, true);
     expect(result.truncated).toBe(true);
     expect(result.text).toContain("TRUNCATED");
+  });
+});
+
+describe("fetchAllowedArtifact", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("follows a redirect only when the destination remains allowlisted", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, {
+        status: 302,
+        headers: { location: "https://bucket.s3.amazonaws.com/log.txt?sig=test" }
+      }))
+      .mockResolvedValueOnce(new Response("log output"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await fetchAllowedArtifact(
+      new URL("https://123-gh.circle-artifacts.com/log.txt")
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("log output");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: "GET",
+      redirect: "manual"
+    });
+  });
+
+  it("rejects a redirect to a non-allowlisted host", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(null, {
+      status: 302,
+      headers: { location: "https://attacker.example/log.txt" }
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchAllowedArtifact(new URL("https://123-gh.circle-artifacts.com/log.txt"))
+    ).rejects.toThrow("Artifact redirect target is not allowed.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
