@@ -44,10 +44,9 @@
       "npm run typecheck completed successfully in Termux",
       "Linux GitHub Actions npm install completed successfully",
       "Linux GitHub Actions TypeScript typecheck passed",
-      "Linux GitHub Actions Wrangler deploy --dry-run passed"
+      "Linux GitHub Actions Wrangler deploy --dry-run passed with bounded log retrieval and configured-secret redaction"
     ],
     "pending": [
-      "Validation of latest log-redaction change",
       "Cloudflare Worker deployment",
       "Health endpoint",
       "Authenticated MCP endpoint",
