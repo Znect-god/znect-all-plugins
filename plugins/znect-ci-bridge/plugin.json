@@ -42,7 +42,7 @@
     "Cloudflare Rate Limiting binding: 60 authenticated MCP requests per 60 seconds per Cloudflare location",
     "Rate-limit key is a SHA-256 digest of the configured MCP token; raw token is not used as the key",
     "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
-    "Best-effort pattern redaction for common credential formats in returned logs"
+    "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats"
   ],
   "limitations": [
     "Prototype only; not production-ready",
