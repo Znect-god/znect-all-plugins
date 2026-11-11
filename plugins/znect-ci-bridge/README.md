@@ -100,7 +100,13 @@ Previously confirmed in Termux:
 - `npm run typecheck` completed successfully.
 - Wrangler/workerd could not run on Android ARM64.
 
-Confirmed in GitHub Actions on Linux (commit `2d35753`):
+Confirmed in GitHub Actions on Linux (current branch):
+- `npm audit --audit-level=high` reported zero vulnerabilities after dependency upgrades.
+- `npm run typecheck` passed.
+- `npm run test` passed (12 tests).
+- `npx wrangler deploy --dry-run` passed.
+
+Previously confirmed in GitHub Actions on Linux (commit `2d35753`):
 - `npm install` completed successfully.
 - `npm run typecheck` completed successfully.
 - `npx wrangler deploy --dry-run` completed successfully.
@@ -122,6 +128,7 @@ No live credentials were used and no deployment has been performed.
 - CircleCI API v1.1 is legacy.
 - No persistent storage, scheduled polling, alerts, or push notifications.
 - Worker-side rate limiting is not implemented.
+- `package-lock.json` is not yet committed, so transitive dependency resolution is not fully reproducible.
 - Artifact URLs that redirect are currently rejected; safe allowlisted redirect handling remains to be designed.
 - Other upstream secrets may still appear in build logs.
 - License remains undecided; public visibility does not grant reuse or redistribution rights.
