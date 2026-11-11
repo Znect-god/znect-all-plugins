@@ -48,7 +48,7 @@
     "Prototype only; not production-ready",
     "Cloudflare deployment and end-to-end MCP behavior not verified",
     "CircleCI connectivity and log retrieval not verified",
-    "CircleCI API v1.1 is legacy and requires a migration plan",
+    "CircleCI API v1.1 is legacy; API v3 migration is researched but blocked on token type, project UUID, and response-mapping verification",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
@@ -71,13 +71,14 @@
       "GitHub Actions TypeScript typecheck passed on the rate-limited Worker revision",
       "GitHub Actions Vitest suite passed: 22 tests across security helpers and Worker HTTP/authentication/rate-limit boundaries",
       "GitHub Actions Wrangler 4.160.0 deploy --dry-run recognized the MCP_RATE_LIMITER binding",
-      "Latest GitHub Actions run using the simplified read-only CI workflow passed npm ci, npm audit, TypeScript typecheck, all 22 tests, and Wrangler dry-run"
+      "Latest GitHub Actions run using the simplified read-only CI workflow passed npm ci, npm audit, TypeScript typecheck, all 22 tests, and Wrangler dry-run",
+      "CircleCI API v3 migration research documented; no token or live endpoint was used"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
       "Live CircleCI API integration and log retrieval",
       "Authentication-failure throttling and broader log-secret exposure review",
-      "Migration plan from CircleCI API v1.1"
+      "Implement and verify API v3 migration after token and project identity checks"
     ]
   },
   "secrets": [
