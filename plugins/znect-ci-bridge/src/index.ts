@@ -23,6 +23,14 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+function redactKnownSecrets(value: string, env: Env): string {
+  let redacted = value;
+  for (const secret of [env.CIRCLECI_TOKEN, env.MCP_ACCESS_TOKEN]) {
+    if (secret) redacted = redacted.split(secret).join("[REDACTED]");
+  }
+  return redacted;
+}
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -200,6 +208,7 @@ function createServer(env: Env) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) output = parsed.map((entry: any) => entry?.message ?? JSON.stringify(entry)).join("\n");
           } catch { /* Some CircleCI output URLs return plain text. */ }
+          output = redactKnownSecrets(output, env);
           if (output.length > MAX_LOG_CHARS) output = output.slice(0, MAX_LOG_CHARS);
           if (bounded.truncated || output.length >= MAX_LOG_CHARS) output += `\n[TRUNCATED at approximately ${MAX_LOG_CHARS} characters]`;
           actions.push({ step_index: index, step_name: step.name ?? "", action_name: action.name ?? "", status: action.status, output });
