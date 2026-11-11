@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   validate:
-    name: Typecheck and Worker dry-run
+    name: Typecheck, tests, and Worker dry-run
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,4 +30,5 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run test
       - run: npx wrangler deploy --dry-run
