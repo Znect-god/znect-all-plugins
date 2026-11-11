@@ -15,7 +15,7 @@ Sources:
 
 ## Important compatibility gates
 
-1. **Token type:** CircleCI API v3 accepts personal API tokens with Bearer authentication. Do not assume a project token or the current v1.1 token is accepted. The current token must not be exposed or copied into tests.
+1. **Token type:** CircleCI API v3 uses Bearer authentication and its current developer guide says it accepts a personal API token or another CircleCI API token. Do not assume the current v1.1 token is accepted until its type, scope, and access are verified. The token must not be exposed or copied into tests.
 2. **Project identity:** v1.1 uses a path such as `/project/github/Znect-god/znect-forge`. API v3 uses UUID resource IDs. Resolve the project with `GET /api/v3/projects?filter[slug]=...` using the exact slug shown in the CircleCI project settings, then validate the returned project identity before persisting its UUID.
 3. **Cloud-only:** API v3 is for CircleCI Cloud. If the project is hosted on CircleCI Server, use API v2 instead.
 4. **Read-only scope:** implement only GET endpoints. Do not add pipeline triggers, reruns, cancels, environment-variable access, deploy controls, or any other mutation operation.
@@ -42,7 +42,7 @@ Relevant v3 reference areas:
 
 1. Confirm CircleCI Cloud vs Server and inspect the token type without sharing its value.
 2. Confirm the exact project slug in CircleCI project settings.
-3. Verify that a dedicated least-privilege personal API token can read the project through v3. Do this manually in the user's CircleCI account; never ask the user to paste the token into chat.
+3. Verify that a dedicated least-privilege CircleCI API token can read the project through v3. The official v3 guide accepts personal or other CircleCI API tokens; still verify the exact token type and effective access. Do this in the user's CircleCI account; never ask the user to paste the token into chat.
 4. Add a v3 client with Bearer auth, fixed host/path construction, 15-second timeout, bounded JSON bodies, strict UUID validation, cursor pagination limits, and sanitized error handling.
 5. Add mocked integration tests for project resolution, pagination, run → workflow → job traversal, HTTP 401/403/404/429 handling, malformed responses, timeouts, and ambiguous build mapping.
 6. Add a read-only artifact/log adapter only after confirming the v3 response schema and trusted artifact host patterns. Preserve per-action and aggregate output limits and redirect validation.
