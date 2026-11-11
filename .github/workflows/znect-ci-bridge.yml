@@ -1,12 +1,6 @@
 name: Znect CI Bridge checks
 
 on:
-  push:
-    branches:
-      - 'feature/znect-ci-bridge-source'
-    paths:
-      - 'plugins/znect-ci-bridge/**'
-      - '.github/workflows/znect-ci-bridge.yml'
   pull_request:
     paths:
       - 'plugins/znect-ci-bridge/**'
