@@ -55,3 +55,10 @@
 - Added a CircleCI API v3 migration plan covering authentication, UUID-based project identity, run/workflow/job mapping, pagination, read-only scope, and blockers.
 - Confirmed from CircleCI's current documentation that API v3 is the recommended API for new Cloud integrations, requires personal API token authentication, and is not available on CircleCI Server.
 - No API version switch, live token test, or Cloudflare deployment was performed.
+
+### Security and integration-test follow-up
+- Narrowed the artifact host allowlist from all AWS subdomains to CircleCI artifact subdomains and S3-style endpoints; added regional S3 and unrelated-AWS-host regression coverage.
+- Isolated the fixed-origin, read-only CircleCI HTTP client in `src/circleci.ts`.
+- Added mocked adapter tests for request construction, path confinement, 401/403 handling, sanitized HTTP errors, malformed JSON, and oversized responses.
+- Added an explicit redirect-hop-limit regression test.
+- These are mocked tests only; no live CircleCI token or endpoint was used.
