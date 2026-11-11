@@ -95,19 +95,13 @@ Previously confirmed in Termux:
 - `npm run typecheck` completed successfully.
 - Wrangler/workerd could not run on Android ARM64.
 
-Confirmed in GitHub Actions on Linux (commit `ec8d4d1`):
+Confirmed in GitHub Actions on Linux (commit `2d35753`):
 - `npm install` completed successfully.
 - `npm run typecheck` completed successfully.
 - `npx wrangler deploy --dry-run` completed successfully.
-
-Additional source safeguards:
-- Direct dependency versions are pinned to compatible versions.
-- Log retrieval streams with a byte ceiling rather than downloading an unlimited body before truncation.
-- CircleCI and artifact requests have explicit timeouts.
-- The configured Worker secrets are redacted from returned log text.
+- This run included the streaming log byte ceiling, outbound timeouts, and configured-secret redaction in the source.
 
 Still pending:
-- Validation of the latest log-redaction change.
 - Cloudflare deployment.
 - Health and authenticated MCP endpoint behavior.
 - Live CircleCI API access and tool responses.
