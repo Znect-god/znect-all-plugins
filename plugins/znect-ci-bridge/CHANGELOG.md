@@ -26,3 +26,5 @@
 - Added security tests to the Linux GitHub Actions workflow.
 
 - Added a 1 MB streaming response-body ceiling and safe JSON parsing for CircleCI API responses.
+
+- Upgraded the MCP server/client and Agents SDK to compatible 2.4.0 / 0.33.0 releases, Zod to 4.6.7, Wrangler to 4.160.0, Vitest to 5.1.0, and Workers types to 5.20261110.1 after the audit identified vulnerable older dependencies.
