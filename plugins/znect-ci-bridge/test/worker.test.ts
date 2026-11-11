@@ -58,6 +58,22 @@ describe("Worker HTTP boundary", () => {
     });
   });
 
+  it("fails closed when the rate-limit service is unavailable", async () => {
+    const limiter = { limit: async () => { throw new Error("backend unavailable"); } };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/mcp", {
+        method: "PATCH",
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      { ...env, MCP_RATE_LIMITER: limiter },
+      ctx
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Rate limiting is temporarily unavailable."
+    });
+  });
+
   it("returns 429 when the authenticated token exceeds its rate limit", async () => {
     const limiter = { limit: vi.fn(async () => ({ success: false })) };
     const response = await worker.fetch(
