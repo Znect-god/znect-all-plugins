@@ -155,9 +155,13 @@ function createServer(env: Env) {
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
           });
           if (!logResponse.ok) {
-            const failure = `[Log retrieval failed: HTTP ${logResponse.status}]`;
-            actions.push({ step_index: index, step_name: step.name ?? "", action_name: action.name ?? "", status: action.status, output: failure });
-            totalOutputChars += failure.length;
+            const failureText = `[Log retrieval failed: HTTP ${logResponse.status}]`;
+            const failureBudget = MAX_TOTAL_LOG_CHARS - totalOutputChars;
+            const failure = limitText(failureText, failureBudget).text;
+            if (failure.length > 0) {
+              actions.push({ step_index: index, step_name: step.name ?? "", action_name: action.name ?? "", status: action.status, output: failure });
+              totalOutputChars += failure.length;
+            }
             continue;
           }
 
