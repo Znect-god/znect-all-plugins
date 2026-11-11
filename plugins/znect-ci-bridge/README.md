@@ -35,7 +35,7 @@ There are no build mutation tools.
 - Cloudflare's built-in rate limiter is approximate and local to each Cloudflare location; it is not a strict global quota. Failed authentication attempts are not covered by this per-token limit.
 - Artifact URLs and every redirect target must use HTTPS, an approved host suffix, and the default HTTPS port. Redirect chains are limited to three hops.
 - Log response bodies are streamed with a byte ceiling, then limited to 80,000 characters per action and 160,000 across the complete response.
-- The two configured Worker secret values are redacted, along with heuristic patterns for common Bearer/Basic credentials, GitHub and Slack tokens, AWS access-key IDs, JWTs, PEM private keys, and credential-like key/value fields. Pattern matching is best-effort and cannot guarantee detection of every upstream secret.
+- The two configured Worker secret values are redacted, along with heuristic patterns for common Bearer/Basic credentials, GitHub/GitLab/Slack tokens, Stripe keys, Google API keys, npm tokens, AWS access-key IDs, JWTs, PEM private keys, and credential-like key/value fields. Pattern matching is best-effort and cannot guarantee detection of every upstream secret.
 - CORS is disabled. No arbitrary artifact URL is accepted from the MCP caller.
 
 The rate-limit namespace ID in `wrangler.toml` must be unique within the Cloudflare account. Check it against existing Worker rate-limit namespaces before deployment; change it if already in use.
