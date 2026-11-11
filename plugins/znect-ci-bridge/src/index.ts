@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   allowedArtifactUrl,
   limitText,
+  readBoundedJson,
   readBoundedText,
   redactKnownSecrets,
   safeEqual
@@ -16,6 +17,7 @@ interface Env {
 
 const CIRCLECI_API = "https://circleci.com/api/v1.1";
 const PROJECT_PATH = "/project/github/Znect-god/znect-forge";
+const MAX_CIRCLECI_JSON_BYTES = 1_000_000;
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
 const MAX_TOTAL_LOG_CHARS = 160_000;
@@ -47,7 +49,7 @@ async function circleGet<T>(env: Env, path: string): Promise<T> {
       : `CircleCI API returned HTTP ${response.status}.`;
     throw new Error(safeMessage);
   }
-  return await response.json() as T;
+  return await readBoundedJson<T>(response, MAX_CIRCLECI_JSON_BYTES);
 }
 
 function buildNumber(value: number): number {
