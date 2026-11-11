@@ -31,13 +31,14 @@
   "security_controls": [
     "Bearer authentication for /mcp with fixed-length digest comparison",
     "Fixed CircleCI project path and read-only GET requests",
-    "Redirect rejection and 15-second outbound request timeouts",
+    "CircleCI redirect rejection and 15-second outbound request timeouts; artifact redirects are manually revalidated",
     "HTTPS artifact URL allowlist and default-port restriction",
     "Streaming log body byte ceiling",
     "Per-action and aggregate log output character limits",
     "Configured Worker secrets redacted from returned logs",
     "Secrets supplied through Cloudflare Worker Secrets",
-    "CircleCI API JSON response body size ceiling"
+    "CircleCI API JSON response body size ceiling",
+    "Maximum three allowlisted artifact redirects"
   ],
   "limitations": [
     "Prototype only; not production-ready",
@@ -47,7 +48,6 @@
     "Full security audit and Worker-side rate limiting not completed",
     "Only configured Worker secrets are explicitly redacted; other upstream secrets may appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
-    "Artifact URLs that redirect are rejected",
     "package-lock.json is not yet committed; transitive dependency resolution is not fully reproducible"
   ],
   "testing": {
@@ -65,6 +65,7 @@
       "GitHub Actions Vitest suite passed: 16 tests across security helpers and Worker HTTP/authentication boundaries"
     ],
     "pending": [
+      "Artifact redirect-chain regression tests in GitHub Actions",
       "Cloudflare Worker deployment",
       "Health endpoint",
       "Authenticated MCP endpoint",
