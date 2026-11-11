@@ -33,7 +33,8 @@
     "Streaming log body byte ceiling",
     "Per-action and aggregate log output character limits",
     "Configured Worker secrets redacted from returned logs",
-    "Secrets supplied through Cloudflare Worker Secrets"
+    "Secrets supplied through Cloudflare Worker Secrets",
+    "CircleCI API JSON response body size ceiling"
   ],
   "limitations": [
     "Prototype only; not production-ready",
