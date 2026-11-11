@@ -129,3 +129,46 @@ export async function readBoundedJson<T>(
     throw new Error("CircleCI API returned invalid JSON.");
   }
 }
+
+export async function fetchAllowedArtifact(
+  initialUrl: URL,
+  maxRedirects = 3
+): Promise<Response> {
+  let currentUrl = initialUrl;
+  for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
+    const response = await fetch(currentUrl.toString(), {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000)
+    });
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      return response;
+    }
+
+    const location = response.headers.get("location");
+    try {
+      await response.body?.cancel();
+    } catch {
+      // The redirect response body is discarded; cancellation failure is non-fatal.
+    }
+    if (!location) {
+      throw new Error("Artifact redirect did not include a Location header.");
+    }
+    if (redirectCount === maxRedirects) {
+      throw new Error("Artifact redirect limit exceeded.");
+    }
+
+    let nextUrl: URL;
+    try {
+      nextUrl = new URL(location, currentUrl);
+    } catch {
+      throw new Error("Artifact redirect target is invalid.");
+    }
+    const allowedUrl = allowedArtifactUrl(nextUrl.toString());
+    if (!allowedUrl) {
+      throw new Error("Artifact redirect target is not allowed.");
+    }
+    currentUrl = allowedUrl;
+  }
+  throw new Error("Artifact redirect limit exceeded.");
+}
