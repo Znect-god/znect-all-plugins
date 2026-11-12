@@ -265,18 +265,18 @@ function createServer(env: Env) {
     },
     async ({ run_id }) => {
       const run = await getCircleCiRun(env.CIRCLECI_TOKEN, run_id);
-      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id);
-      const workflowResults = await Promise.all(workflows.slice(0, 20).map(async (workflow) => {
-        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id, 2);
+      const workflowResults = await Promise.all(workflows.slice(0, 10).map(async (workflow) => {
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
         return {
           workflow,
-          jobs: jobs.slice(0, 50)
+          jobs: jobs.slice(0, 40)
         };
       }));
       const payload = JSON.stringify({
         run,
         workflows: workflowResults,
-        truncated: workflows.length > 20 || workflowResults.some((entry) => entry.jobs.length > 50)
+        truncated: workflows.length > 10
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
       return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(safe), 120_000) }] };
@@ -422,14 +422,16 @@ function createServer(env: Env) {
     },
     async ({ run_id }) => {
       const run = await getCircleCiRun(env.CIRCLECI_TOKEN, run_id);
-      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id, 2);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
       let failedJobLimitReached = false;
-      const workflowsInspected = workflows.slice(0, 20);
+      let logActionsInspected = 0;
+      let logActionLimitReached = false;
+      const workflowsInspected = workflows.slice(0, 5);
 
       for (const workflow of workflowsInspected) {
-        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
         const failedJobs = jobs.filter((job) => {
           const attributes = job.attributes as Record<string, unknown> | undefined;
           return attributes?.outcome === "failed" || attributes?.status === "failed";
@@ -437,7 +439,7 @@ function createServer(env: Env) {
         const diagnostics: Array<Record<string, unknown>> = [];
 
         for (const job of failedJobs) {
-          if (failedJobsInspected >= 5) {
+          if (failedJobsInspected >= 3) {
             failedJobLimitReached = true;
             break;
           }
@@ -474,9 +476,14 @@ function createServer(env: Env) {
             const actions = Array.isArray(step.actions)
               ? step.actions as Array<Record<string, unknown>>
               : [];
-            for (const action of actions.slice(0, 5)) {
+            for (const action of actions) {
+              if (logActionsInspected >= 3) {
+                logActionLimitReached = true;
+                break;
+              }
               const stepNum = action.step_num;
               if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) continue;
+              logActionsInspected++;
               const execution = typeof step.execution_index === "number" && Number.isInteger(step.execution_index)
                 ? step.execution_index
                 : 0;
@@ -505,6 +512,7 @@ function createServer(env: Env) {
                 stderr: output.stderr
               });
             }
+            if (logActionLimitReached) break;
           }
 
           let testResults = "";
@@ -524,7 +532,7 @@ function createServer(env: Env) {
               const path = artifact.attributes?.path ?? "";
               const size = artifact.attributes?.size ?? 0;
               return /(?:junit|test-results).*\.xml$/i.test(path) && size <= 500_000;
-            }).slice(0, 2);
+            }).slice(0, 1);
             for (const artifact of reports) {
               const path = artifact.attributes?.path ?? "";
               try {
@@ -571,9 +579,11 @@ function createServer(env: Env) {
           workflows_truncated: workflowLimitReached,
           failed_jobs_inspected: failedJobsInspected,
           failed_job_limit_reached: failedJobLimitReached,
-          incomplete: workflowLimitReached || failedJobLimitReached
+          incomplete: workflowLimitReached || failedJobLimitReached || logActionLimitReached,
+          log_actions_inspected: logActionsInspected,
+          log_action_limit_reached: logActionLimitReached
         },
-        limits: { max_workflows: 20, max_failed_jobs_per_run: 5, max_report_artifacts_per_job: 2, max_report_bytes: 500_000 }
+        limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
       }, null, 2), env);
       const diagnosticData = JSON.parse(safePayload) as Record<string, unknown>;
       return { content: [{ type: "text", text: stringifyBoundedJson(diagnosticData, 120_000) }] };
