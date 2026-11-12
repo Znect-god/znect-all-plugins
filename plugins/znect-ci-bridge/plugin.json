@@ -2,7 +2,7 @@
   "id": "znect-ci-bridge",
   "name": "Znect CI Bridge",
   "version": "0.1.0",
-  "status": "prototype",
+  "status": "in-development",
   "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
   "platforms": {
     "intended": [
@@ -20,7 +20,7 @@
     "Bearer authentication for the MCP endpoint"
   ],
   "dependencies": [
-    "Node.js 22 toolchain for development",
+    "Node.js 24 toolchain for development",
     "Cloudflare Workers runtime",
     "Cloudflare Agents SDK 0.33.0",
     "MCP TypeScript server/client SDK 2.4.0",
@@ -46,8 +46,8 @@
   ],
   "limitations": [
     "Prototype only; not production-ready",
-    "Cloudflare deployment and end-to-end MCP behavior not verified",
-    "CircleCI connectivity and log retrieval not verified",
+    "Production Cloudflare deployment and end-to-end production MCP behavior not verified; current branch Preview deployment is verified",
+    "Live CircleCI connectivity, token authentication, and log retrieval not verified",
     "CircleCI API v1.1 is legacy; API v3 migration is researched but blocked on token type, project UUID, and response-mapping verification",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
