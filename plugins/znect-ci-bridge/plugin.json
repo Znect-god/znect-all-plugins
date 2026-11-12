@@ -30,6 +30,7 @@
   ],
   "security_controls": [
     "Bearer authentication for /mcp with fixed-length digest comparison",
+    "Streamable HTTP Origin validation delegated to Cloudflare Agents SDK v2; rejects malformed, opaque, and untrusted browser origins",
     "Fixed CircleCI project path and read-only GET requests",
     "CircleCI redirect rejection and 15-second outbound request timeouts; artifact redirects are manually revalidated",
     "HTTPS artifact URL allowlist and default-port restriction",
@@ -80,7 +81,8 @@
       "GitHub Actions run 43088128444 passed npm ci, npm audit with zero vulnerabilities, TypeScript typecheck, 29 tests across three files, and Wrangler dry-run with MCP_RATE_LIMITER",
       "Worker API regression test verifies configured CircleCI, MCP, and browser credentials are redacted from upstream error responses",
       "Security helper regression tests verify oversized diagnostic JSON remains parseable and is marked as truncated",
-      "Current CI validates the latest read-only MCP Worker bundle with dependency audit, TypeScript, Vitest, and Wrangler dry-run"
+      "Current CI validates the latest read-only MCP Worker bundle with dependency audit, TypeScript, Vitest, and Wrangler dry-run",
+      "MCP transport regression tests reject untrusted, null, and file Origin headers with HTTP 403"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
