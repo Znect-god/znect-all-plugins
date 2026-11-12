@@ -39,15 +39,12 @@
     "Secrets supplied through Cloudflare Worker Secrets",
     "CircleCI API JSON response body size ceiling",
     "Maximum three allowlisted artifact redirects",
-    "Rate-limit key is a SHA-256 digest of the configured MCP token; raw token is not used as the key",
     "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
     "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats",
     "Separate Bearer authentication for /mcp (MCP_ACCESS_TOKEN) and /api/v1/* (WEB_ACCESS_TOKEN)",
     "Cloudflare Rate Limiting binding: 60 authenticated MCP and browser API requests per 60 seconds per Cloudflare location",
     "Authenticated rate-limit keys are SHA-256 digests of their respective access tokens; raw tokens are not used as keys",
-    "Failed MCP and browser API authentication attempts use a separate SHA-256 client-IP digest bucket",
-    "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
-    "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats"
+    "Failed MCP and browser API authentication attempts use a separate SHA-256 client-IP digest bucket"
   ],
   "limitations": [
     "In development; not production-ready",
