@@ -72,14 +72,14 @@ Single-resource v3 responses are unwrapped from the documented `data` envelope. 
 4. Re-diagnose the known historical Forge failure using its existing run UUID; do not trigger a new build.
 5. Compare historical build metadata across v1.1 and v3 using commit SHA, branch, and timestamps. Do not infer an identity match from build number alone.
 6. Decide later whether to deprecate v1.1 tools; do not silently retry v1.1 after a v3 authorization or data error.
-7. Complete Linux CI and review all results. Keep plugin status `prototype` until live verification is complete.
+7. Complete Linux CI and review all results. Keep plugin status `in-development` until live verification is complete.
 
 ## Security decisions
 
 - No token values in logs, fixtures, command output, PR descriptions, or committed files.
 - No arbitrary URL input from the MCP caller.
 - No non-GET API v3 calls.
-- No Cloudflare deployment.
+- No production Cloudflare deployment without explicit authorization; Preview verification is a separate step.
 - No Forge workflow changes or triggers.
 - No automatic v1.1 fallback that could hide v3 authorization or mapping errors.
 - Live project UUID resolution and token authorization must be confirmed before production use.
