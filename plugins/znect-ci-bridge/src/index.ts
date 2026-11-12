@@ -49,6 +49,21 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+function boundedJson(serialized: string, maxChars: number): Response {
+  if (serialized.length > maxChars) {
+    return json({ error: "The requested result exceeds the API response size limit." }, 413);
+  }
+  return new Response(serialized, {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer"
+    }
+  });
+}
+
 function buildNumber(value: number): number {
   if (!Number.isSafeInteger(value) || value < 1) throw new Error("build_num must be a positive integer.");
   return value;
@@ -573,7 +588,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
       const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, slug: project.attributes?.slug ?? "gh/Znect-god/znect-forge" }, runs }), env);
-      return json(JSON.parse(limitText(safe, 100_000).text));
+      return boundedJson(safe, 100_000);
     }
     const segments = url.pathname.split("/");
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "runs") {
@@ -597,7 +612,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           jobs_truncated: workflowReports.some((entry) => entry.jobs_truncated)
         }
       }), env);
-      return json(JSON.parse(limitText(safe, 120_000).text));
+      return boundedJson(safe, 120_000);
     }
     return json({ error: "API route not found." }, 404);
   } catch (error) {
