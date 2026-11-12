@@ -1,0 +1,16 @@
+name = "znect-ci-bridge"
+main = "src/index.ts"
+compatibility_date = "2026-11-11"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets are added separately in Cloudflare. Never put tokens in this file.
+
+# Approximate per-token limit: 60 MCP requests per 60 seconds per Cloudflare location.
+# Choose a namespace_id unique within your Cloudflare account before deployment.
+[[ratelimits]]
+name = "MCP_RATE_LIMITER"
+namespace_id = "2026111101"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60

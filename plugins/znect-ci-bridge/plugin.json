@@ -5,8 +5,14 @@
   "status": "prototype",
   "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
   "platforms": {
-    "intended": ["Cloudflare Workers", "MCP-compatible clients"],
-    "tested": ["Android Termux: TypeScript typecheck only"]
+    "intended": [
+      "Cloudflare Workers",
+      "MCP-compatible clients"
+    ],
+    "tested": [
+      "Android Termux: TypeScript typecheck",
+      "GitHub Actions Ubuntu: TypeScript typecheck and Wrangler dry-run"
+    ]
   },
   "permissions": [
     "Network access to the configured Cloudflare Worker and approved CircleCI API endpoints",
@@ -14,33 +20,69 @@
     "Bearer authentication for the MCP endpoint"
   ],
   "dependencies": [
-    "Node.js toolchain for development",
+    "Node.js 22 toolchain for development",
     "Cloudflare Workers runtime",
-    "MCP server libraries",
-    "CircleCI API (initial prototype uses deprecated v1.1)"
+    "Cloudflare Agents SDK 0.33.0",
+    "MCP TypeScript server/client SDK 2.4.0",
+    "Zod 4.6.7",
+    "Wrangler 4.160.0",
+    "CircleCI API v1.1 (legacy/deprecated)"
+  ],
+  "security_controls": [
+    "Bearer authentication for /mcp with fixed-length digest comparison",
+    "Fixed CircleCI project path and read-only GET requests",
+    "CircleCI redirect rejection and 15-second outbound request timeouts; artifact redirects are manually revalidated",
+    "HTTPS artifact URL allowlist and default-port restriction",
+    "Streaming log body byte ceiling",
+    "Per-action and aggregate log output character limits",
+    "Configured Worker secrets redacted from returned logs",
+    "Secrets supplied through Cloudflare Worker Secrets",
+    "CircleCI API JSON response body size ceiling",
+    "Maximum three allowlisted artifact redirects",
+    "Cloudflare Rate Limiting binding: 60 authenticated MCP requests per 60 seconds per Cloudflare location",
+    "Rate-limit key is a SHA-256 digest of the configured MCP token; raw token is not used as the key",
+    "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
+    "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats"
   ],
   "limitations": [
     "Prototype only; not production-ready",
     "Cloudflare deployment and end-to-end MCP behavior not verified",
     "CircleCI connectivity and log retrieval not verified",
-    "CircleCI API v1.1 adapter requires replacement",
-    "Full security audit and Worker-side rate limiting not completed",
-    "Wrangler/workerd unsupported in the current Android ARM64 Termux environment"
+    "CircleCI API v1.1 is legacy; API v3 migration is researched but blocked on token type, project UUID, and response-mapping verification",
+    "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
+    "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
+    "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
+    "Failed authentication attempts are not covered by the authenticated per-token rate limit",
+    "Rate-limit namespace ID must be unique within the user's Cloudflare account",
+    "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials"
   ],
   "testing": {
     "performed": [
       "Local archive extraction in Termux",
-      "npm install completed after local dependency version adjustments",
-      "npm run typecheck completed successfully"
+      "npm install completed after direct dependency version adjustments",
+      "npm run typecheck completed successfully in Termux",
+      "Linux GitHub Actions npm install completed successfully",
+      "Linux GitHub Actions Wrangler deploy --dry-run passed with bounded log retrieval and configured-secret redaction",
+      "GitHub Actions npm audit --audit-level=high: zero vulnerabilities after dependency updates",
+      "GitHub Actions TypeScript typecheck passed on current branch",
+      "GitHub Actions Wrangler 4.160.0 deploy --dry-run passed",
+      "GitHub Actions passed npm ci using the committed package-lock.json",
+      "GitHub Actions npm audit --audit-level=high passed with zero vulnerabilities",
+      "GitHub Actions TypeScript typecheck passed on the rate-limited Worker revision",
+      "GitHub Actions Vitest suite passed: 22 tests across security helpers and Worker HTTP/authentication/rate-limit boundaries",
+      "GitHub Actions Wrangler 4.160.0 deploy --dry-run recognized the MCP_RATE_LIMITER binding",
+      "Latest GitHub Actions run using the simplified read-only CI workflow passed npm ci, npm audit, TypeScript typecheck, all 22 tests, and Wrangler dry-run",
+      "CircleCI API v3 migration research documented; no token or live endpoint was used",
+      "Mocked CircleCI HTTP adapter tests cover fixed-origin GET requests, path confinement, 401/403/429 errors, sanitized failures, malformed JSON, and oversized responses",
+      "Artifact allowlist regression tests cover regional S3 endpoints and reject unrelated AWS service hosts",
+      "Artifact redirect regression tests cover the configured redirect-hop limit",
+      "GitHub Actions run 43088128444 passed npm ci, npm audit with zero vulnerabilities, TypeScript typecheck, 29 tests across three files, and Wrangler dry-run with MCP_RATE_LIMITER"
     ],
-    "not_yet_verified": [
-      "Linux production build",
-      "Cloudflare Worker deployment",
-      "Health endpoint",
-      "Authenticated MCP endpoint",
-      "CircleCI API integration",
-      "Build details and log retrieval",
-      "Security audit and rate-limit behavior"
+    "pending": [
+      "Live Cloudflare Worker deployment and endpoint checks",
+      "Live CircleCI API integration and log retrieval",
+      "Edge-level throttling for failed authentication attempts and broader log-secret exposure review",
+      "Implement and verify API v3 migration after token and project identity checks; mocked v1.1 adapter tests do not establish live compatibility"
     ]
   },
   "secrets": [
