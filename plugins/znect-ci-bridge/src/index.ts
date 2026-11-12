@@ -518,10 +518,8 @@ function createServer(env: Env) {
           failed_jobs_total: failedJobs.length,
           failed_jobs: diagnostics
         });
-        if (failedJobsInspected >= 5) {
-          if (workflowReports.length < workflowsInspected.length) failedJobLimitReached = true;
-          break;
-        }
+        // Keep scanning later workflow job metadata after the fifth failure.
+        // Only mark the report incomplete when a sixth failed job is actually found.
       }
 
       const workflowLimitReached = workflows.length > workflowsInspected.length;
