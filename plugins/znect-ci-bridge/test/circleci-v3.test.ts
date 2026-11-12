@@ -210,7 +210,7 @@ describe("CircleCI API v3 client", () => {
   });
 
   it("reads bounded structured test results as JSON Lines", async () => {
-    const body = '{"name":"sampleTest","result":"failure"}\\n';
+    const body = '{"name":"sampleTest","result":"failure"}\n';
     const fetchMock = vi.fn().mockResolvedValue(new Response(body, { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(getCircleCiJobTests("token", JOB_ID, 128))
