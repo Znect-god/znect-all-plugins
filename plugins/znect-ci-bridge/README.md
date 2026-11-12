@@ -12,7 +12,7 @@ It is scoped to the fixed CircleCI project `Znect-god/znect-forge`. It must not 
 Legacy v1.1 tools remain available for compatibility:
 - `list_recent_builds(limit)` — latest legacy job builds; limit 1–30.
 - `get_build_details(build_num)` — legacy build metadata and step/action statuses.
-- `get_build_logs(build_num, step_index?, max_actions?)` — bounded legacy console output.
+- `get_build_logs(build_num, step_index?, max_actions?)` — bounded legacy console output; at most 10 actions are fetched per call.
 
 New API v3 tools are also exposed:
 - `check_connection()` — verifies read-only API v3 access and resolves the fixed project slug to its UUID.
@@ -23,7 +23,7 @@ New API v3 tools are also exposed:
 - `get_job_test_results(job_id, max_chars?)` — structured test results as bounded JSON Lines.
 - `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
 - `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.
-- `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
+- `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum three failed jobs per run).
 
 The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. Workflow and job collection endpoints follow opaque pagination cursors with a hard ceiling of 200 resources per collection; repeated cursors and collections exceeding that ceiling fail explicitly rather than silently returning partial data. Nested run inspection applies tighter page budgets: `get_run_details` inspects at most 10 workflows and 40 jobs per workflow; `diagnose_run` inspects at most five workflows, 40 jobs per workflow, three failed jobs per run, logs for three failed actions total, and one small JUnit/test-report artifact per failed job. These tighter limits keep the worst-case diagnostic path below Cloudflare Workers Free's 50-subrequest per-invocation ceiling, including up to three artifact redirects. Its `diagnostics_summary` reports total versus inspected workflows, failed-job and log-action limits, and an `incomplete` flag so a bounded report cannot be mistaken for exhaustive diagnostics. All tools are read-only; no build mutation tools exist.
 
@@ -42,7 +42,7 @@ Read-only JSON endpoints (all require `Authorization: Bearer <WEB_ACCESS_TOKEN>`
 - `GET /api/v1/runs?limit=10` — list 1–30 recent runs.
 - `GET /api/v1/runs/{run_uuid}` — inspect run workflows and jobs.
 
-The API rejects non-GET methods, validates UUIDs and limits, applies the Worker rate limiter, redacts known secrets, and enforces response-size ceilings. This initial browser release does not expose pipeline mutation actions.
+The API rejects non-GET methods, validates UUIDs and limits, applies the Worker rate limiter, redacts known secrets, and enforces response-size ceilings. Run details inspect at most 10 workflows and 40 jobs per workflow, matching the MCP run-details limits and staying within the Worker subrequest budget. This initial browser release does not expose pipeline mutation actions.
 
 See [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage guide](documentation/USAGE_GUIDE.md).
 
@@ -70,7 +70,7 @@ See [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage gui
 - If the rate-limit binding is absent or unavailable, both the MCP endpoint and browser JSON API fail closed with HTTP 503.
 - Cloudflare's built-in rate limiter is approximate and local to each Cloudflare location; it is not a strict global quota. Authenticated requests are keyed by a SHA-256 digest of the relevant access token; failed authentication attempts are separately keyed by a SHA-256 digest of Cloudflare's client-IP header, so repeated token guesses from one address are rate-limited without storing the raw address as the limiter key.
 - Artifact URLs and every redirect target must use HTTPS, a CircleCI artifact subdomain or S3-style AWS endpoint, and the default HTTPS port. Redirect chains are limited to three hops.
-- Log response bodies are streamed with a byte ceiling, then limited to 80,000 characters per action and 160,000 across the complete response.
+- Log response bodies are streamed with a byte ceiling, then limited to 80,000 characters per action and 160,000 across the complete response. Legacy log retrieval is capped at 10 output actions per call to keep worst-case artifact redirect requests below the Worker subrequest ceiling.
 - Configured Worker secrets and common credential patterns are redacted heuristically. This is best-effort and cannot guarantee detection of every upstream secret.
 - CORS is disabled. No arbitrary artifact URL is accepted from the MCP caller.
 
