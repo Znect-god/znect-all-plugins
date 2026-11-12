@@ -78,7 +78,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       setMessage("Connected to "+(data.project.slug||"CircleCI project")+". Read-only access confirmed.","good");
       runsPanel.hidden=false;
       loadRuns();
-    }).catch(function(error){token="";setMessage(error.message,"error");});
+    }).catch(function(error){token="";tokenInput.value="";setMessage(error.message,"error");});
   }
   function loadRuns(){
     if(!token)return;
