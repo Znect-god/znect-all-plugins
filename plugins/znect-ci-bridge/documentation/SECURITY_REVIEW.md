@@ -20,11 +20,11 @@ It no longer accepts unrelated AWS service hosts such as `ec2.amazonaws.com` or 
 
 Reference: https://circleci.com/docs/guides/security/security/
 
-### Failed authentication attempts are not rate-limited — open
+### Failed authentication attempts are rate-limited — partially addressed
 
-The Cloudflare token limiter runs only after successful Bearer authentication. This prevents unauthenticated requests from consuming the legitimate token's quota, but it does not mitigate repeated guesses against the endpoint.
+Failed Bearer authentication on both MCP and browser API routes now consumes a separate Cloudflare rate-limit bucket keyed by a SHA-256 digest of the Cloudflare-provided client-IP header. The raw address is not used as the limiter key. The configured threshold is 60 requests per 60 seconds per Cloudflare location, matching the existing binding.
 
-Do not add a low per-IP application limit without considering shared NATs and legitimate clients. Preferred follow-up: configure a Cloudflare WAF/rate-limiting rule at the zone/Worker edge, with a conservative threshold and monitoring, then document its behavior. Until configured, this remains an explicit prototype limitation.
+This mitigates repeated token guesses from one address, but Cloudflare's built-in limiter is approximate and location-local. Clients behind a shared NAT also share a bucket, and distributed attempts can use multiple locations or addresses. A dedicated Cloudflare WAF/rate-limiting rule with monitoring remains a useful additional edge control.
 
 ### Log redaction remains best-effort — open
 
@@ -37,7 +37,7 @@ The read-only v3 adapter is now wired to MCP tools for project resolution, recen
 ### Other controls reviewed
 
 - CircleCI API calls are GET-only, use a fixed project path, have a timeout, and have a streaming JSON body ceiling.
-- MCP authentication is checked before dispatch; the configured token is not used directly as the rate-limit key.
+- MCP and browser authentication are checked before dispatch; authenticated traffic uses per-token digest keys, while failed attempts use a separate per-client-IP digest key.
 - Artifact redirects are manual, revalidated at every hop, limited to three hops, and use HTTPS/default-port checks.
 - Log streams and final output have byte/character budgets.
 - CORS is disabled and caller-supplied artifact URLs are not accepted.
@@ -47,7 +47,7 @@ The read-only v3 adapter is now wired to MCP tools for project resolution, recen
 
 - Expand mocked CircleCI adapter tests to cover timeout/abort behavior and additional response edge cases; current tests cover 401/403/429, malformed/oversized responses, and fixed-origin path validation.
 - Verify the artifact URL patterns against actual CircleCI responses without exposing presigned URLs.
-- Configure edge-level throttling for failed authentication attempts.
+- Consider an additional Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects.
 - Review MCP transport behavior and SDK security advisories before production use.
 - Complete token/project compatibility checks and API v3 parity tests.
 - Confirm that the actual CircleCI account/token can resolve `gh/Znect-god/znect-forge` and read run, job, test, and artifact resources.
