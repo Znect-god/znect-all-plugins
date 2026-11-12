@@ -286,6 +286,57 @@ describe("Worker HTTP boundary", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("bounds browser run details to ten workflows and two job pages per workflow", async () => {
+    const runId = "123e4567-e89b-42d3-a456-426614174001";
+    const workflowIds = Array.from({ length: 11 }, (_, index) =>
+      "123e4567-e89b-42d3-a456-" + String(index + 100).padStart(12, "0")
+    );
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === `/api/v3/runs/${runId}`) {
+        return new Response(JSON.stringify({ data: { id: runId, attributes: { status: "success" } } }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/workflows") {
+        return new Response(JSON.stringify({
+          data: workflowIds.map((id) => ({ id, attributes: { name: "workflow" } })),
+          page: { next: null }
+        }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/jobs") {
+        const workflowId = url.searchParams.get("filter[workflow_id]")!;
+        return new Response(JSON.stringify({
+          data: [{ id: "123e4567-e89b-42d3-a456-426614174999", attributes: { status: "success", workflow_id: workflowId } }],
+          page: { next: null }
+        }), { status: 200 });
+      }
+      throw new Error("Unexpected CircleCI request.");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request(`https://bridge.example/api/v1/runs/${runId}`, {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      workflows: unknown[];
+      diagnostics_summary: { workflows_total: number; workflows_inspected: number; workflows_truncated: boolean; incomplete: boolean };
+      limits: { max_workflows: number; max_jobs_per_workflow: number };
+    };
+    expect(body.workflows).toHaveLength(10);
+    expect(body.diagnostics_summary).toMatchObject({
+      workflows_total: 11,
+      workflows_inspected: 10,
+      workflows_truncated: true,
+      incomplete: true
+    });
+    expect(body.limits).toEqual({ max_workflows: 10, max_jobs_per_workflow: 40 });
+    expect(fetchMock).toHaveBeenCalledTimes(12);
+  });
+
   it("redacts configured credentials from browser API upstream errors", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
       new Error("upstream transport failed: circle-test-token web-test-token bridge-test-token")
