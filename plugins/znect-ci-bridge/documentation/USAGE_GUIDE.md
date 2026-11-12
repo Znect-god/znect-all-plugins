@@ -29,7 +29,7 @@ Bridge не является GitHub-плагином для управления
 - исходный код, тесты и документация находятся в отдельной ветке \`feature/ci-bridge-test-reports\` репозитория \`Znect-god/znect-all-plugins\`;
 - статус разработки — \`in-development\`, версия — \`0.1.0\`;
 - бесплатный браузерный интерфейс и read-only JSON API добавлены в рабочую ветку; они используют отдельный секрет \`WEB_ACCESS_TOKEN\`;
-- GitHub Actions прошёл успешно на source commit `5db3d90524680836bf9ed39a610d408cef0b3ba5` (run [#258](https://github.com/Znect-god/znect-all-plugins/actions/runs/43211114233)): установка зависимостей, npm audit, TypeScript typecheck, unit tests и Wrangler Worker dry-run;
+- GitHub Actions проверяет каждую ревизию PR: установку зависимостей, npm audit, TypeScript typecheck, unit tests, синтаксис Preview smoke-test и Wrangler Worker bundle dry-run; актуальный результат следует смотреть в [проверках PR №2](https://github.com/Znect-god/znect-all-plugins/pull/2);
 - PR №2 остаётся Draft и не слит в основную ветку;
 - GitHub Actions проверяет установку зависимостей, аудит npm, TypeScript, unit-тесты и Wrangler dry-run;
 - успешный Wrangler dry-run или Cloudflare Workers Build **не означает**, что Worker развёрнут;
