@@ -25,7 +25,7 @@ New API v3 tools are also exposed:
 - `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output .
 - `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
 
-The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. `diagnose_run` collects failed-step metadata, bounded stdout/stderr, structured test results, and up to two small JUnit/test-report artifacts per failed job. All tools are read-only; no build mutation tools exist.
+The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. Workflow and job collection endpoints follow opaque pagination cursors with a hard ceiling of 200 resources per collection; repeated cursors and collections exceeding that ceiling fail explicitly rather than silently returning partial data. `diagnose_run` examines at most 20 workflows and five failed jobs per run, collecting failed-step metadata, bounded stdout/stderr, structured test results, and up to two small JUnit/test-report artifacts per failed job. All tools are read-only; no build mutation tools exist.
 
 ## Source layout
 
@@ -83,7 +83,7 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
-No live CircleCI token or API request has been used. Cloudflare Workers Builds reported a successful Preview build and deployment for source commit `bebf8cd44ca125fa2941924f02da4ce839037625` on 2026-11-12. Subsequent commits extend the source and tests; Preview deployment of the current PR head is not yet confirmed. This confirms Preview deployment only; production deployment and live MCP/CircleCI authentication and API access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
+No live CircleCI token or API request has been used. Cloudflare Workers Builds reported a successful Preview build and deployment for current PR head commit `6ae0902dad253dae807d2e22cafc1b4cf21b0196` on 2026-11-12. The Preview URL is `https://816c685c-znect-ci-bridge.znect699.workers.dev`. This confirms Preview deployment only; production deployment and live MCP/CircleCI authentication and API access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
 
 ## Known limitations
 
