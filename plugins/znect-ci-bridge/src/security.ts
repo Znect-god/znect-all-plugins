@@ -1,3 +1,32 @@
+/** Normalize network failures so runtime internals and request details never reach callers. */
+export async function fetchWithSafeErrors(
+  url: string,
+  init: RequestInit,
+  label = "CircleCI API"
+): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "";
+    if (name === "TimeoutError" || name === "AbortError") {
+      throw new Error(`${label} request timed out.`);
+    }
+    throw new Error(`${label} request failed due to a network or TLS error.`);
+  }
+}
+
+/** Parse Retry-After without reflecting arbitrary upstream header contents. */
+export function retryAfterSeconds(value: string | null, now = Date.now()): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^\\d+(?:\\.\\d+)?$/.test(trimmed)) {
+    const seconds = Number(trimmed);
+    return Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds) : null;
+  }
+  const timestamp = Date.parse(trimmed);
+  return Number.isFinite(timestamp) ? Math.max(0, Math.ceil((timestamp - now) / 1000)) : null;
+}
+
 export interface SecretEnv {
   CIRCLECI_TOKEN?: string;
   MCP_ACCESS_TOKEN?: string;
