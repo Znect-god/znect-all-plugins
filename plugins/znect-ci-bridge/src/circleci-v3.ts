@@ -135,7 +135,7 @@ export async function resolveCircleCiProject(
   const project = result.data[0];
   assertUuid(project.id, "project ID");
   const slug = project.attributes?.slug;
-  if (typeof slug === "string" && slug !== projectSlug) {
+  if (typeof slug !== "string" || slug !== projectSlug) {
     throw new Error("CircleCI project identity did not match the configured slug.");
   }
   return project;
