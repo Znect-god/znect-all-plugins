@@ -57,7 +57,7 @@ These controls reduce risk but do not constitute a complete security audit.
 
 ## API compatibility
 
-The Forge project was set up on CircleCI Cloud in the earlier project workflow. CircleCI's current API for new Cloud integrations is v3; the v3 adapter now powers three separate MCP tools. CircleCI Server is not the target for this project.
+The Forge project was set up on CircleCI Cloud in the earlier project workflow. CircleCI's current API for new Cloud integrations is v3; the v3 adapter powers the run, job, test-result, artifact, and automatic-diagnosis tools. CircleCI Server is not the target for this project.
 
 The legacy v1.1 tools remain temporarily for compatibility. They use build numbers, while v3 uses UUIDs, so no automatic mapping or fallback is attempted. The exact v3 project resolution and Bearer-token access still require a live check using the user's CircleCI API token. See [the migration plan](documentation/CIRCLECI_API_MIGRATION.md).
 
@@ -80,7 +80,7 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
-No live CircleCI token or endpoint has been used, and no Cloudflare deployment has been performed.
+No live CircleCI token or endpoint has been used. A Cloudflare Preview deployment succeeded for an earlier branch commit; deployment of the current commit and any production deployment remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
 
 ## Known limitations
 
