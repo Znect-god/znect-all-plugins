@@ -3,6 +3,7 @@ import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
   limitText,
+  stringifyBoundedJson,
   readBoundedJson,
   readBoundedText,
   redactKnownSecrets,
@@ -204,5 +205,23 @@ describe("fetchAllowedArtifact", () => {
       fetchAllowedArtifact(new URL("https://123-gh.circle-artifacts.com/log.txt"), 2)
     ).rejects.toThrow("Artifact redirect limit exceeded.");
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+
+describe("stringifyBoundedJson", () => {
+  it("keeps oversized diagnostic JSON valid and marks omitted content", () => {
+    const output = stringifyBoundedJson({
+      run_id: "example",
+      diagnostics: [{ stdout: "long output ".repeat(20_000), stderr: "error" }]
+    }, 1_000);
+    expect(output.length).toBeLessThanOrEqual(1_000);
+    expect(JSON.parse(output)).toMatchObject({ response_truncated: true, run_id: "example" });
+  });
+
+  it("rejects invalid response budgets", () => {
+    expect(() => stringifyBoundedJson({ ok: true }, 0)).toThrow(
+      "maxChars must be a positive safe integer."
+    );
   });
 });
