@@ -346,4 +346,33 @@ describe("Worker HTTP boundary", () => {
     expect(response.headers.get("content-type")).toMatch(/application\/json|text\/event-stream/);
   });
 
+  it("rejects untrusted and opaque Origin headers at the MCP transport boundary", async () => {
+    for (const origin of ["https://attacker.example", "null", "file://"]) {
+      const response = await worker.fetch(
+        new Request("https://znect-ci-bridge.znect699.workers.dev/mcp", {
+          method: "POST",
+          headers: {
+            authorization: "Bearer bridge-test-token",
+            origin,
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream"
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: {
+              protocolVersion: "2025-03-26",
+              capabilities: {},
+              clientInfo: { name: "origin-test", version: "1.0.0" }
+            }
+          })
+        }),
+        env,
+        ctx
+      );
+      expect(response.status).toBe(403);
+    }
+  });
+
 });
