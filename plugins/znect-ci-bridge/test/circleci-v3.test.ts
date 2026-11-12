@@ -65,7 +65,10 @@ describe("CircleCI API v3 client", () => {
 
   it.each([401, 403, 404, 429])("sanitizes upstream HTTP %i errors", async (status) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response("sensitive upstream details", { status })
+      new Response("sensitive upstream details", {
+        status,
+        headers: status === 429 ? { "retry-after": "17" } : undefined
+      })
     ));
     const expected = status === 401
       ? "CircleCI API v3 authentication failed (HTTP 401). Check whether CIRCLECI_TOKEN is a valid, unexpired Personal API Token."
@@ -73,8 +76,22 @@ describe("CircleCI API v3 client", () => {
         ? "CircleCI API v3 authorization failed (HTTP 403). The authenticated account or token does not have access to this project."
         : status === 404
           ? "The requested CircleCI API v3 resource was not found or is not accessible."
-          : "CircleCI API v3 rate limit exceeded. Retry after the indicated interval.";
+          : "CircleCI API v3 rate limit exceeded. Retry after 17 seconds.";
     await expect(circleV3Get("token", "/api/v3/runs")).rejects.toThrow(expected);
+  });
+
+  it("normalizes upstream network and timeout failures", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new DOMException("sensitive runtime detail", "TimeoutError")
+    ));
+    await expect(circleV3Get("token", "/api/v3/runs"))
+      .rejects.toThrow("CircleCI API request timed out.");
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new TypeError("sensitive socket detail")
+    ));
+    await expect(circleV3GetText("token", "/api/v3/jobs/" + JOB_ID + "/stdout"))
+      .rejects.toThrow("CircleCI API request failed due to a network or TLS error.");
   });
 
   it("rejects malformed and oversized JSON bodies", async () => {
