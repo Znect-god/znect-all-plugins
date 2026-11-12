@@ -511,7 +511,7 @@ function createServer(env: Env) {
           try {
             const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 200_000);
             testResults = result.text;
-            if (result.truncated) testResults += "\\n[TRUNCATED]";
+            if (result.truncated) testResults += "\n[TRUNCATED]";
           } catch {
             testResultsError = "Unable to retrieve structured test results.";
           }
@@ -641,7 +641,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
     return json({ error: "API route not found." }, 404);
   } catch (error) {
     const message = error instanceof Error ? error.message : "CircleCI request failed.";
-    return json({ error: limitText(message, 500).text }, 502);
+    return json({ error: limitText(redactKnownSecrets(message, env), 500).text }, 502);
   }
 }
 
