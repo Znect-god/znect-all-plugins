@@ -50,9 +50,9 @@ Bridge не является GitHub-плагином для управления
 
 1. Проект Forge, уже подключённый к CircleCI Cloud.
 2. CircleCI Personal API Token, который будет храниться только как секрет Cloudflare Worker.
-3. Cloudflare Worker с двумя секретами:
+3. Cloudflare Worker с тремя секретами:
    - \`CIRCLECI_TOKEN\` — токен CircleCI;
-   - \`MCP_ACCESS_TOKEN\` — отдельный секрет для авторизации MCP-клиента.
+   - \`MCP_ACCESS_TOKEN\` — отдельный секрет для авторизации MCP-клиента;\n   - \`WEB_ACCESS_TOKEN\` — отдельный секрет для браузерного интерфейса.
 4. Рабочий Worker deployment и доступный HTTPS MCP endpoint.
 5. MCP-клиент, тариф и интерфейс которого поддерживают подключение пользовательских MCP-серверов.
 
@@ -150,16 +150,16 @@ https://chatgpt.com/plugins/plugins_6af57327949081918faf5b31a8d4d7a0
 | Имя | Для чего нужен |
 |---|---|
 | \`CIRCLECI_TOKEN\` | Авторизация запросов Worker к CircleCI API |
-| \`MCP_ACCESS_TOKEN\` | Bearer-аутентификация MCP-клиента к Worker |
+| \`MCP_ACCESS_TOKEN\` | Bearer-аутентификация MCP-клиента к Worker |\n| \`WEB_ACCESS_TOKEN\` | Отдельная Bearer-аутентификация браузерного JSON API |
 
-В Cloudflare Dashboard откройте нужный аккаунт и Worker \`znect-ci-bridge\`, затем раздел настроек Variables/Secrets. Добавьте оба значения именно как **Secrets**, а не как обычные открытые Variables.
+В Cloudflare Dashboard откройте нужный аккаунт и Worker \`znect-ci-bridge\`, затем раздел настроек Variables/Secrets. Добавьте все три значения именно как **Secrets**, а не как обычные открытые Variables. Для бесплатного браузерного сценария особенно важно задать отдельный \`WEB_ACCESS_TOKEN\`; не используйте для этого CircleCI token.
 
 Альтернативный способ через Wrangler из каталога \`plugins/znect-ci-bridge\` на поддерживаемом компьютере:
 
 \`\`\`bash
 npx wrangler login
 npx wrangler secret put CIRCLECI_TOKEN
-npx wrangler secret put MCP_ACCESS_TOKEN\nnpx wrangler secret put WEB_ACCESS_TOKEN
+npx wrangler secret put MCP_ACCESS_TOKEN\nnpx wrangler secret put WEB_ACCESS_TOKEN\nnpx wrangler secret put WEB_ACCESS_TOKEN
 \`\`\`
 
 Wrangler запросит значения интерактивно. Не вставляйте реальные токены в командную строку как аргументы, не коммитьте их и не отправляйте в чат.
