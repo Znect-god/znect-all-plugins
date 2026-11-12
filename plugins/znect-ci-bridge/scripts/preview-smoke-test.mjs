@@ -65,7 +65,8 @@ async function rpc(mcpToken, id, method, params = {}) {
       authorization: "Bearer " + mcpToken,
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
-      "MCP-Protocol-Version": PROTOCOL_VERSION
+      "MCP-Protocol-Version": PROTOCOL_VERSION,
+      "Mcp-Method": method
     },
     body: JSON.stringify({ jsonrpc: "2.0", id, method, params })
   });
