@@ -34,10 +34,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 <header><div><h1>Znect CI Bridge</h1><p class="sub">Read-only CircleCI dashboard · Znect Forge</p></div><span class="pill">FREE WEB ACCESS</span></header>
 <section class="panel" aria-labelledby="access-title">
 <h2 id="access-title" style="font-size:1.05rem;margin:0 0 12px">Secure access</h2>
-<label for="token">Bridge access token</label>
+<label for="token">Web access token</label>
 <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Enter your Bridge token">
 <div class="actions"><button id="connect">Connect</button><button id="disconnect" type="button">Clear token</button></div>
-<p id="message" class="status" role="status" aria-live="polite">Your token stays in this tab's memory and is not saved to browser storage.</p>
+<p id="message" class="status" role="status" aria-live="polite">Your web token stays in this tab's memory and is not saved to browser storage.</p>
 </section>
 <section class="panel" id="runs-panel" hidden>
 <div class="actions" style="justify-content:space-between;margin-top:0"><h2 style="font-size:1.05rem;margin:0">Recent runs</h2><button id="refresh">Refresh</button></div>
