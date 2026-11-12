@@ -191,22 +191,55 @@ export async function listCircleCiRuns(
   return runs.slice(0, limit);
 }
 
+const COLLECTION_PAGE_SIZE = 20;
+const MAX_COLLECTION_PAGES = 10;
+
+/** Fetch a bounded collection completely, following only opaque API cursors. */
+async function listCircleCiCollection(
+  pathForCursor: (cursor: string | null) => string,
+  resourceLabel: "workflow" | "job",
+  token: string
+): Promise<V3Resource[]> {
+  const resources: V3Resource[] = [];
+  const seenCursors = new Set<string>();
+  let cursor: string | null = null;
+
+  for (let pageIndex = 0; pageIndex < MAX_COLLECTION_PAGES; pageIndex++) {
+    const page = await circleV3Get<V3Collection>(
+      token,
+      pathForCursor(cursor)
+    );
+    if (!Array.isArray(page.data)) {
+      throw new Error(`CircleCI API v3 returned an invalid ${resourceLabel}s collection.`);
+    }
+    for (const resource of page.data) assertUuid(resource.id, `${resourceLabel} ID`);
+    resources.push(...page.data);
+
+    const next = page.page?.next;
+    if (typeof next !== "string" || next.length === 0) return resources;
+    if (seenCursors.has(next)) {
+      throw new Error(`CircleCI API v3 repeated a pagination cursor while listing ${resourceLabel}s.`);
+    }
+    seenCursors.add(next);
+    cursor = next;
+  }
+
+  throw new Error(`CircleCI API v3 ${resourceLabel}s collection exceeded the safety limit of ${MAX_COLLECTION_PAGES * COLLECTION_PAGE_SIZE} items.`);
+}
+
 export async function listCircleCiWorkflows(
   token: string,
   runId: string
 ): Promise<V3Resource[]> {
   assertUuid(runId, "run ID");
-  const query = new URLSearchParams({
-    "filter[run_id]": runId,
-    "page[limit]": "20"
-  });
-  const page = await circleV3Get<V3Collection>(
-    token,
-    `/api/v3/workflows?${query.toString()}`
-  );
-  if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid workflows collection.");
-  for (const workflow of page.data) assertUuid(workflow.id, "workflow ID");
-  return page.data;
+  return listCircleCiCollection((cursor) => {
+    const query = new URLSearchParams({
+      "filter[run_id]": runId,
+      "page[limit]": String(COLLECTION_PAGE_SIZE)
+    });
+    if (cursor) query.set("page[cursor]", cursor);
+    return `/api/v3/workflows?${query.toString()}`;
+  }, "workflow", token);
 }
 
 export async function listCircleCiJobs(
@@ -214,16 +247,14 @@ export async function listCircleCiJobs(
   workflowId: string
 ): Promise<V3Resource[]> {
   assertUuid(workflowId, "workflow ID");
-  const query = new URLSearchParams({
-    "filter[workflow_id]": workflowId
-  });
-  const page = await circleV3Get<V3Collection>(
-    token,
-    `/api/v3/jobs?${query.toString()}`
-  );
-  if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid jobs collection.");
-  for (const job of page.data) assertUuid(job.id, "job ID");
-  return page.data;
+  return listCircleCiCollection((cursor) => {
+    const query = new URLSearchParams({
+      "filter[workflow_id]": workflowId,
+      "page[limit]": String(COLLECTION_PAGE_SIZE)
+    });
+    if (cursor) query.set("page[cursor]", cursor);
+    return `/api/v3/jobs?${query.toString()}`;
+  }, "job", token);
 }
 
 export async function getCircleCiJob(
