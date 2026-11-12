@@ -1,4 +1,4 @@
-import { allowedArtifactUrl, fetchAllowedArtifact, readBoundedJson, readBoundedText } from "./security";
+import { allowedArtifactUrl, fetchAllowedArtifact, fetchWithSafeErrors, readBoundedJson, readBoundedText, retryAfterSeconds } from "./security";
 
 const CIRCLECI_V3_API = "https://circleci.com/api/v3";
 const FETCH_TIMEOUT_MS = 15_000;
@@ -57,7 +57,7 @@ function validateApiPath(path: string): URL {
 /** Fixed-origin, GET-only CircleCI API v3 request with bounded JSON parsing. */
 export async function circleV3Get<T>(token: string, path: string): Promise<T> {
   const url = validateApiPath(path);
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithSafeErrors(url.toString(), {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -75,7 +75,7 @@ export async function circleV3Get<T>(token: string, path: string): Promise<T> {
         : response.status === 404
         ? "The requested CircleCI API v3 resource was not found or is not accessible."
         : response.status === 429
-          ? "CircleCI API v3 rate limit exceeded. Retry after the indicated interval."
+          ? `CircleCI API v3 rate limit exceeded.${retryAfterSeconds(response.headers.get("retry-after")) === null ? " Retry after the indicated interval." : ` Retry after ${retryAfterSeconds(response.headers.get("retry-after"))} seconds.`}`
           : `CircleCI API v3 returned HTTP ${response.status}.`;
     throw new Error(safeMessage);
   }
@@ -90,7 +90,7 @@ export async function circleV3GetText(
   maxBytes = MAX_TEXT_BYTES
 ): Promise<{ text: string; truncated: boolean }> {
   const url = validateApiPath(path);
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithSafeErrors(url.toString(), {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
