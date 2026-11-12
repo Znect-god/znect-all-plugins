@@ -457,7 +457,7 @@ describe("Worker HTTP boundary", () => {
 
     expect(response.status).toBe(200);
     const responseText = await response.text();
-    const dataLine = responseText.split("\\n").find((line) => line.startsWith("data:"));
+    const dataLine = responseText.split("\n").find((line) => line.startsWith("data:"));
     const payload = dataLine
       ? JSON.parse(dataLine.slice("data:".length).trim())
       : JSON.parse(responseText);
@@ -501,12 +501,16 @@ describe("Worker HTTP boundary", () => {
 
     expect(response.status).toBe(200);
     const responseText = await response.text();
-    const dataLine = responseText.split("\\n").find((line) => line.startsWith("data:"));
+    const dataLine = responseText.split("\n").find((line) => line.startsWith("data:"));
     const payload = dataLine
       ? JSON.parse(dataLine.slice("data:".length).trim())
       : JSON.parse(responseText);
     const tools = payload.result?.tools;
     expect(Array.isArray(tools)).toBe(true);
+    expect(tools).toHaveLength(12);
+    expect(tools.every((tool: { annotations?: { readOnlyHint?: boolean } }) =>
+      tool.annotations?.readOnlyHint === true
+    )).toBe(true);
     const names = tools.map((tool: { name: string }) => tool.name);
     expect(names).toContain("check_connection");
     expect(names).toContain("list_recent_runs");
