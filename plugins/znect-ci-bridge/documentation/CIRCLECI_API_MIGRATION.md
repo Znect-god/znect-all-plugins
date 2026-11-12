@@ -1,7 +1,7 @@
 # CircleCI API migration plan
 
-**Status:** CircleCI Cloud target established; v3 read-only adapter and three v3 MCP tools implemented with mocked tests. Live token access and project UUID resolution remain unverified.  
-**Current MCP tools:** legacy v1.1 tools remain for compatibility; three separate v3 tools are now available.  
+**Status:** CircleCI Cloud target established; v3 read-only adapter and ten v3 MCP tools implemented with mocked tests. Live token access and project UUID resolution remain unverified.  
+**Current MCP tools:** legacy v1.1 tools remain for compatibility; ten separate v3 tools are now available.  
 **Target:** API v3 for the existing CircleCI Cloud project. No Forge hosting migration is needed.
 
 ## Current documentation findings
@@ -42,14 +42,20 @@ Sources:
 - bounded stdout/stderr retrieval using the documented step and execution filters;
 - sanitized 401/403/404/429 and other upstream errors.
 
-The v3 adapter is now wired to three new MCP tools, kept separate from the legacy tools:
+The v3 adapter is now wired to ten new MCP tools, kept separate from the legacy tools:
+- `check_connection()` verifies read access to the fixed project and returns its UUID and slug.
 - `list_recent_runs(limit)` resolves the fixed project slug and lists v3 runs.
 - `get_run_details(run_id)` reads a run, its workflows and their jobs.
+- `get_job_details(job_id)` reads one job resource.
 - `get_job_logs(job_id, step_num, execution, stream, max_chars)` reads bounded stdout/stderr and applies best-effort secret redaction.
+- `get_job_test_results(job_id, max_chars)` reads structured JSON Lines test results.
+- `list_job_artifacts(job_id)` returns artifact metadata without exposing presigned URLs.
+- `get_job_artifact(job_id, artifact_path, max_chars)` downloads a specifically listed artifact through the internal HTTPS host allowlist.
+- `diagnose_run(run_id)` combines failed job/step metadata, failed-step logs, structured test results, and up to two small JUnit reports per failed job.
 
 Single-resource v3 responses are unwrapped from the documented `data` envelope. Legacy tools remain on v1.1; no automatic mapping from build number to run UUID or silent fallback is performed.
 
-## Proposed v3 resource traversal
+## Implemented v3 resource traversal
 
 1. Resolve the fixed project slug to one UUID.
 2. List runs using `GET /api/v3/runs?filter[project_id]=...`.
@@ -60,12 +66,13 @@ Single-resource v3 responses are unwrapped from the documented `data` envelope. 
 
 ## Remaining work
 
-1. Configure a CircleCI personal API token as the Worker Secret `CIRCLECI_TOKEN` without exposing it in chat.
-2. Configure the MCP access token as `MCP_ACCESS_TOKEN` and verify Cloudflare Worker bindings before any deployment.
-3. Perform a live read-only API v3 smoke test after explicit authorization, verifying exact project slug, UUID, recent runs, workflows, jobs and bounded logs.
-4. Compare one or more historical builds across v1.1 and v3 using commit SHA, branch and timestamps. Do not infer an identity match from build number alone.
-5. If parity is proven, decide whether to deprecate the v1.1 tools in a later version. Do not silently retry v1.1 after a v3 authorization or data error.
-6. Run Linux CI and review results. Keep plugin status `prototype`.
+1. Confirm the configured CircleCI personal API token as the Worker Secret `CIRCLECI_TOKEN` without exposing it in chat.
+2. Verify the existing `MCP_ACCESS_TOKEN` secret and Cloudflare Worker bindings without changing production.
+3. Perform a live read-only API v3 smoke test, verifying exact project slug, UUID, recent runs, workflows, jobs, test results, and bounded logs.
+4. Re-diagnose the known historical Forge failure using its existing run UUID; do not trigger a new build.
+5. Compare historical build metadata across v1.1 and v3 using commit SHA, branch, and timestamps. Do not infer an identity match from build number alone.
+6. Decide later whether to deprecate v1.1 tools; do not silently retry v1.1 after a v3 authorization or data error.
+7. Complete Linux CI and review all results. Keep plugin status `prototype` until live verification is complete.
 
 ## Security decisions
 
