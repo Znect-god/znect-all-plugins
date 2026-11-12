@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
+  fetchWithSafeErrors,
+  retryAfterSeconds,
   limitText,
   stringifyBoundedJson,
   readBoundedJson,
@@ -9,6 +11,34 @@ import {
   redactKnownSecrets,
   safeEqual
 } from "../src/security";
+
+describe("fetchWithSafeErrors", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("normalizes timeout and network failures without reflecting runtime details", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new DOMException("sensitive runtime detail", "TimeoutError")
+    ));
+    await expect(fetchWithSafeErrors("https://circleci.com/api/v3/runs", {}))
+      .rejects.toThrow("CircleCI API request timed out.");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new TypeError("sensitive socket and request details")
+    ));
+    await expect(fetchWithSafeErrors("https://circleci.com/api/v3/runs", {}))
+      .rejects.toThrow("CircleCI API request failed due to a network or TLS error.");
+  });
+});
+
+describe("retryAfterSeconds", () => {
+  it("parses numeric and HTTP-date Retry-After values without reflecting invalid input", () => {
+    const now = Date.parse("2026-11-12T12:00:00Z");
+    expect(retryAfterSeconds("17", now)).toBe(17);
+    expect(retryAfterSeconds("1.2", now)).toBe(2);
+    expect(retryAfterSeconds("Thu, 12 Nov 2026 12:00:30 GMT", now)).toBe(30);
+    expect(retryAfterSeconds("invalid\nheader", now)).toBeNull();
+    expect(retryAfterSeconds(null, now)).toBeNull();
+  });
+});
 
 describe("safeEqual", () => {
   it("accepts identical values and rejects different values", async () => {
