@@ -22,10 +22,14 @@ New API v3 tools are also exposed:
 - `get_job_logs(job_id, step_num, execution?, stream?, max_chars?)` — bounded stdout/stderr for a job step.
 - `get_job_test_results(job_id, max_chars?)` — structured test results as bounded JSON Lines.
 - `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
-- `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output .
+- `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.
 - `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
 
 The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. Workflow and job collection endpoints follow opaque pagination cursors with a hard ceiling of 200 resources per collection; repeated cursors and collections exceeding that ceiling fail explicitly rather than silently returning partial data. `diagnose_run` examines at most 20 workflows and five failed jobs per run, collecting failed-step metadata, bounded stdout/stderr, structured test results, and up to two small JUnit/test-report artifacts per failed job. Its `diagnostics_summary` reports total versus inspected workflows, whether either inspection limit was reached, and an `incomplete` flag so a bounded report cannot be mistaken for exhaustive diagnostics. All tools are read-only; no build mutation tools exist.
+
+## User guide
+
+See [USAGE_GUIDE.md](documentation/USAGE_GUIDE.md) for step-by-step setup, ChatGPT connection requirements, Cloudflare secrets, MCP tool usage, diagnostics, troubleshooting, and safety rules.
 
 ## Source layout
 
@@ -83,7 +87,7 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
-Cloudflare Workers Builds and the Cloudflare Preview deployment both succeeded for the current branch head commit `3e3262c7b7664f19b436d67537150f5bba4e78e0` on 2026-11-12. Preview URL: `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev`. This is a branch Preview only; no production deployment has been performed. No live CircleCI token or API request has been used, so CircleCI authentication, project resolution, and end-to-end MCP access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
+Cloudflare Workers Builds succeeded for branch commit `3e3262c7b7664f19b436d67537150f5bba4e78e0` on 2026-11-12. This confirms a Cloudflare build, not a deployment. The last explicitly confirmed Preview deployment belongs to the earlier commit `4a755640a3c2c9490f2590a0326fe2947c579c7e`; Preview URL: `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev`. A Preview deployment for the current branch head has not been independently confirmed. No production deployment has been performed. No live CircleCI token or API request has been used, so CircleCI authentication, project resolution, and end-to-end MCP access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
 
 ## Known limitations
 
