@@ -31,9 +31,23 @@ The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its 
 
 See [USAGE_GUIDE.md](documentation/USAGE_GUIDE.md) for step-by-step setup, ChatGPT connection requirements, Cloudflare secrets, MCP tool usage, diagnostics, troubleshooting, and safety rules.
 
-## Free browser dashboard\n\nOpen the Worker root URL in any modern browser, including Android. Enter the dedicated `WEB_ACCESS_TOKEN` to view recent runs and workflow/job details without ChatGPT or an MCP client. The browser token is kept in tab memory only; it is not written to localStorage, cookies, or the URL. `CIRCLECI_TOKEN` remains a server-side Worker Secret.\n\nRead-only JSON endpoints (all require `Authorization: Bearer <WEB_ACCESS_TOKEN>`):\n- `GET /api/v1/status` — verify CircleCI project access.\n- `GET /api/v1/runs?limit=10` — list 1–30 recent runs.\n- `GET /api/v1/runs/{run_uuid}` — inspect run workflows and jobs.\n\nThe API rejects non-GET methods, validates UUIDs and limits, applies the Worker rate limiter, redacts known secrets, and enforces response-size ceilings. This initial browser release does not expose pipeline mutation actions.\n\nSee [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage guide](documentation/USAGE_GUIDE.md).\n\n## Source layout
+## Free browser dashboard
 
-- `src/index.ts` — Worker entry point, authentication, read-only JSON API, and MCP tools.\n- `src/ui.ts` — standalone browser dashboard.
+Open the Worker root URL in any modern browser, including Android. Enter the dedicated `WEB_ACCESS_TOKEN` to view recent runs and workflow/job details without ChatGPT or an MCP client. The browser token is kept in tab memory only; it is not written to localStorage, cookies, or the URL. `CIRCLECI_TOKEN` remains a server-side Worker Secret.
+
+Read-only JSON endpoints (all require `Authorization: Bearer <WEB_ACCESS_TOKEN>`):
+- `GET /api/v1/status` — verify CircleCI project access.
+- `GET /api/v1/runs?limit=10` — list 1–30 recent runs.
+- `GET /api/v1/runs/{run_uuid}` — inspect run workflows and jobs.
+
+The API rejects non-GET methods, validates UUIDs and limits, applies the Worker rate limiter, redacts known secrets, and enforces response-size ceilings. This initial browser release does not expose pipeline mutation actions.
+
+See [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage guide](documentation/USAGE_GUIDE.md).
+
+## Source layout
+
+- `src/index.ts` — Worker entry point, authentication, read-only JSON API, and MCP tools.
+- `src/ui.ts` — standalone browser dashboard.
 - `src/circleci.ts` — legacy v1.1 fixed-origin, read-only HTTP adapter.
 - `src/circleci-v3.ts` — CircleCI Cloud API v3 read-only adapter used by the v3 MCP tools, including structured test results and safe artifact retrieval.
 - `src/security.ts` — authentication comparison, artifact URL validation, bounded streams, redaction, output limits, and safe redirect handling.
@@ -50,7 +64,7 @@ See [USAGE_GUIDE.md](documentation/USAGE_GUIDE.md) for step-by-step setup, ChatG
 - `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN`, and `WEB_ACCESS_TOKEN` are expected as Cloudflare Worker Secrets. The browser and MCP use separate access tokens.
 - CircleCI API requests are GET-only, use fixed origins, 15-second timeouts, and bounded response bodies.
 - MCP requests require `MCP_ACCESS_TOKEN`; browser API requests require the separate `WEB_ACCESS_TOKEN`. Comparison uses fixed-length SHA-256 digests.
-- The MCP endpoint is rate-limited to 60 authenticated requests per 60 seconds per Cloudflare location. The rate-limit key is a SHA-256 digest of the configured MCP token, not the raw token.
+- MCP and browser API requests are rate-limited to 60 authenticated requests per 60 seconds per Cloudflare location. Each endpoint uses a SHA-256 digest of its own access token as the rate-limit key, never the raw token.
 - If the rate-limit binding is absent or unavailable, the MCP endpoint fails closed with HTTP 503.
 - Cloudflare's built-in rate limiter is approximate and local to each Cloudflare location; it is not a strict global quota. Failed authentication attempts are not covered by this per-token limit.
 - Artifact URLs and every redirect target must use HTTPS, a CircleCI artifact subdomain or S3-style AWS endpoint, and the default HTTPS port. Redirect chains are limited to three hops.
@@ -84,7 +98,7 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 ## Deployment and live verification
 
 1. Check that the rate-limit namespace ID in `wrangler.toml` is unique in your Cloudflare account.
-2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
+2. Configure `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN`, and `WEB_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
 Cloudflare Workers Builds succeeded for branch commit `3e3262c7b7664f19b436d67537150f5bba4e78e0` on 2026-11-12. This confirms a Cloudflare build, not a deployment. The last explicitly confirmed Preview deployment belongs to the earlier commit `4a755640a3c2c9490f2590a0326fe2947c579c7e`; Preview URL: `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev`. A Preview deployment for the current branch head has not been independently confirmed. No production deployment has been performed. No live CircleCI token or API request has been used, so CircleCI authentication, project resolution, and end-to-end MCP access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
