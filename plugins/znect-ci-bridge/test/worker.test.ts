@@ -533,7 +533,8 @@ describe("Worker HTTP boundary", () => {
           "content-type": "application/json",
           accept: "application/json, text/event-stream",
           "MCP-Protocol-Version": "2026-07-28",
-          "Mcp-Method": "tools/call"
+          "Mcp-Method": "tools/call",
+          "Mcp-Name": "check_connection"
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
