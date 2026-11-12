@@ -108,12 +108,17 @@ describe("CircleCI API v3 client", () => {
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: [{ id: PROJECT_ID, attributes: { slug: "gh/other/repo" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: PROJECT_ID, attributes: {} }]
       }), { status: 200 })));
 
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
       .rejects.toThrow("did not resolve to exactly one project");
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
       .rejects.toThrow("did not resolve to exactly one project");
+    await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
+      .rejects.toThrow("did not match the configured slug");
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
       .rejects.toThrow("did not match the configured slug");
   });
