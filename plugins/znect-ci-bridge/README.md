@@ -20,7 +20,8 @@ New API v3 tools are also exposed:
 - `get_job_logs(job_id, step_num, execution?, stream?, max_chars?)` — bounded stdout/stderr for a job step.
 - `get_job_test_results(job_id, max_chars?)` — structured test results as bounded JSON Lines.
 - `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
-- `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.\n- `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
+- `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output .
+- `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
 
 The `check_connection` tool verifies that the configured CircleCI Personal API Token can resolve the exact fixed project slug before diagnostics are attempted.
 
