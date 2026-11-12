@@ -29,11 +29,11 @@ Bridge не является GitHub-плагином для управления
 - исходный код, тесты и документация находятся в отдельной ветке \`feature/ci-bridge-test-reports\` репозитория \`Znect-god/znect-all-plugins\`;
 - статус разработки — \`in-development\`, версия — \`0.1.0\`;
 - бесплатный браузерный интерфейс и read-only JSON API добавлены в рабочую ветку; они используют отдельный секрет \`WEB_ACCESS_TOKEN\`;
-- GitHub Actions прошёл успешно на commit \`0747d9a\`: npm audit, TypeScript, 76 тестов из пяти файлов и Wrangler dry-run;
+- GitHub Actions прошёл успешно на source commit \`3463df5\`: npm audit, TypeScript, 76 тестов из пяти файлов и Wrangler dry-run;
 - PR №2 остаётся Draft и не слит в основную ветку;
 - GitHub Actions проверяет установку зависимостей, аудит npm, TypeScript, unit-тесты и Wrangler dry-run;
 - успешный Wrangler dry-run или Cloudflare Workers Build **не означает**, что Worker развёрнут;
-- Production-развёртывание не выполнялось. Последний подтверждённый Cloudflare Preview deployment относится к commit \`51ea707\` (2026-11-12 11:14 UTC), а текущий head \`3463df5\` новее и отдельным Preview deployment пока не подтверждён;
+- Production-развёртывание не выполнялось. Последний подтверждённый Cloudflare Preview deployment относится к commit \`51ea707\` (2026-11-12 11:14 UTC), а текущая версия ветки новее и отдельным Preview deployment пока не подтверждена;
 - живой доступ к CircleCI, проверка токена, разрешение project UUID и сквозная диагностика через реальные данные CircleCI ещё не подтверждены;
 - тесты CircleCI API используют mock-ответы, а не реальные данные Forge;
 - Android ARM64 Termux не поддерживает используемую версию Wrangler/workerd для полноценного локального запуска и развёртывания; для проверок сборки предусмотрен Linux GitHub Actions.
