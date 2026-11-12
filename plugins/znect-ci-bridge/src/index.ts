@@ -237,7 +237,7 @@ function createServer(env: Env) {
       const payload = JSON.stringify({
         run,
         workflows: workflowResults,
-        truncated: workflows.length > 20 || workflowResults.some((entry) => entry.jobs.length >= 50)
+        truncated: workflows.length > 20 || workflowResults.some((entry) => entry.jobs.length > 50)
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
       return { content: [{ type: "text", text: limitText(safe, 120_000).text }] };
