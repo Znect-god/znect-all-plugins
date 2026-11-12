@@ -83,7 +83,7 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
-No live CircleCI token or API request has been used. Cloudflare Workers Builds reported a successful Preview build and deployment for current PR head commit `6ae0902dad253dae807d2e22cafc1b4cf21b0196` on 2026-11-12. The Preview URL is `https://816c685c-znect-ci-bridge.znect699.workers.dev`. This confirms Preview deployment only; production deployment and live MCP/CircleCI authentication and API access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
+No live CircleCI token or API request has been used. Cloudflare Workers Builds completed successfully for PR head commit `dbac3c87525a1c52d63b1cfb91a6e579b66db122` on 2026-11-12. This confirms that the current source builds in Cloudflare, but a Preview deployment for this exact commit has not been independently confirmed. The last explicitly confirmed Preview deployment belongs to earlier commit `4a755640a3c2c9490f2590a0326fe2947c579c7e`; its branch Preview URL is `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev`. Do not treat that older Preview as a deployment of the current head. Production deployment and live MCP/CircleCI authentication and API access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
 
 ## Known limitations
 
