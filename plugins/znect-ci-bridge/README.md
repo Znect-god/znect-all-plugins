@@ -57,6 +57,7 @@ See [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage gui
 - `test/circleci.test.ts` — mocked v1.1 adapter tests.
 - `test/circleci-v3.test.ts` — mocked v3 authentication, project resolution, pagination, resource traversal, and bounded job-output tests.
 - `test/worker.test.ts` — Worker HTTP, authentication, and rate-limit boundary tests.
+- `scripts/preview-smoke-test.mjs` — opt-in, Preview-only read-only smoke test for health, browser auth, MCP discovery, tool annotations, and CircleCI access.
 - `package.json` and `package-lock.json` — pinned direct and resolved dependency versions.
 - `wrangler.toml` — Worker configuration and rate-limit binding.
 - Root `.github/workflows/znect-ci-bridge.yml` — Linux validation workflow.
