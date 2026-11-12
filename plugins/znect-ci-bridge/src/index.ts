@@ -65,6 +65,27 @@ function boundedJson(serialized: string, maxChars: number): Response {
   });
 }
 
+async function rateLimitFailedAuthentication(request: Request, env: Env): Promise<Response | null> {
+  if (!env.MCP_RATE_LIMITER) return json({ error: "Rate limiting is not configured." }, 503);
+  // Cloudflare overwrites CF-Connecting-IP at the edge. Hash the address before
+  // using it as a limiter key so the raw client address is never stored as a key.
+  const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode("failed-auth:" + clientIp)
+  );
+  const key = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  try {
+    const result = await env.MCP_RATE_LIMITER.limit({ key });
+    if (!result.success) return json({ error: "Too many failed authentication attempts. Retry after the current window." }, 429);
+  } catch {
+    return json({ error: "Rate limiting is temporarily unavailable." }, 503);
+  }
+  return null;
+}
+
 function buildNumber(value: number): number {
   if (!Number.isSafeInteger(value) || value < 1) throw new Error("build_num must be a positive integer.");
   return value;
@@ -565,6 +586,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
   const authorization = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(.+)$/i.exec(authorization);
   if (!(await safeEqual(match?.[1] ?? "", env.WEB_ACCESS_TOKEN))) {
+    const limited = await rateLimitFailedAuthentication(request, env);
+    if (limited) return limited;
     return new Response("Unauthorized", { status: 401, headers: { "www-authenticate": 'Bearer realm="Znect CI Bridge API"', "cache-control": "no-store" } });
   }
   if (!env.MCP_RATE_LIMITER) return json({ error: "Rate limiting is not configured." }, 503);
@@ -648,6 +671,8 @@ export default {
     const match = /^Bearer\s+(.+)$/i.exec(authorization);
     const supplied = match?.[1] ?? "";
     if (!(await safeEqual(supplied, env.MCP_ACCESS_TOKEN))) {
+      const limited = await rateLimitFailedAuthentication(request, env);
+      if (limited) return limited;
       return new Response("Unauthorized", {
         status: 401,
         headers: { "www-authenticate": 'Bearer realm="Znect CI Bridge"', "cache-control": "no-store" }
