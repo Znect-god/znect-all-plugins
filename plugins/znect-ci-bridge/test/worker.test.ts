@@ -286,4 +286,23 @@ describe("Worker HTTP boundary", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("redacts configured credentials from browser API upstream errors", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new Error("upstream transport failed: circle-test-token web-test-token bridge-test-token")
+    ));
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/status", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(502);
+    const body = await response.text();
+    expect(body).not.toContain(env.CIRCLECI_TOKEN);
+    expect(body).not.toContain(env.WEB_ACCESS_TOKEN);
+    expect(body).not.toContain(env.MCP_ACCESS_TOKEN);
+    expect(body).toContain("[REDACTED]");
+  });
+
 });
