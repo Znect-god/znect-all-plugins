@@ -182,7 +182,7 @@ export async function listCircleCiRuns(
     if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid runs collection.");
     for (const run of page.data) assertUuid(run.id, "run ID");
     runs.push(...page.data);
-    const next = page.page?.next;
+    const next: string | null | undefined = page.page?.next;
     if (typeof next !== "string" || next.length === 0) break;
     if (seenCursors.has(next)) throw new Error("CircleCI API v3 repeated a pagination cursor.");
     seenCursors.add(next);
@@ -205,7 +205,7 @@ async function listCircleCiCollection(
   let cursor: string | null = null;
 
   for (let pageIndex = 0; pageIndex < MAX_COLLECTION_PAGES; pageIndex++) {
-    const page = await circleV3Get<V3Collection>(
+    const page: V3Collection = await circleV3Get<V3Collection>(
       token,
       pathForCursor(cursor)
     );
