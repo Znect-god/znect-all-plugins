@@ -39,6 +39,7 @@
     "Configured Worker secrets redacted from returned logs",
     "Secrets supplied through Cloudflare Worker Secrets",
     "CircleCI API JSON response body size ceiling",
+    "Nested workflow/job inspection and automatic diagnostics have explicit page, failed-job, log-action, and artifact budgets to remain below the 50-subrequest Workers Free ceiling",
     "Maximum three allowlisted artifact redirects",
     "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
     "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats",
@@ -82,7 +83,9 @@
       "Worker API regression test verifies configured CircleCI, MCP, and browser credentials are redacted from upstream error responses",
       "Security helper regression tests verify oversized diagnostic JSON remains parseable and is marked as truncated",
       "Current CI validates the latest read-only MCP Worker bundle with dependency audit, TypeScript, Vitest, and Wrangler dry-run",
-      "MCP transport regression tests reject untrusted, null, and file Origin headers with HTTP 403"
+      "MCP transport regression tests reject untrusted, null, and file Origin headers with HTTP 403",
+      "CircleCI timeout/network errors and Retry-After parsing covered by mocked tests",
+      "Nested CircleCI pagination enforces caller-selected page ceilings; run diagnostics are bounded to fit Workers Free subrequest limits"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
