@@ -1,4 +1,4 @@
-import { readBoundedJson, readBoundedText } from "./security";
+import { allowedArtifactUrl, fetchAllowedArtifact, readBoundedJson, readBoundedText } from "./security";
 
 const CIRCLECI_V3_API = "https://circleci.com/api/v3";
 const FETCH_TIMEOUT_MS = 15_000;
@@ -299,4 +299,33 @@ export async function listCircleCiJobArtifacts(
     throw new Error("CircleCI job returned more than 100 artifacts; refusing an unbounded response.");
   }
   return result.data;
+}
+
+
+/** Fetch one artifact by its exact listed path; caller cannot supply a URL. */
+export async function getCircleCiJobArtifact(
+  token: string,
+  jobId: string,
+  artifactPath: string,
+  maxBytes = MAX_TEXT_BYTES
+): Promise<{ path: string; text: string; truncated: boolean }> {
+  if (typeof artifactPath !== "string" || artifactPath.length < 1 || artifactPath.length > 512 ||
+      artifactPath.startsWith("/") || artifactPath.split("/").some((part) => part === "." || part === "..")) {
+    throw new Error("Invalid CircleCI artifact path.");
+  }
+  const artifacts = await listCircleCiJobArtifacts(token, jobId);
+  const matches = artifacts.filter((artifact) => artifact.attributes?.path === artifactPath);
+  if (matches.length !== 1) {
+    throw new Error(matches.length === 0
+      ? "The requested artifact path was not found for this job."
+      : "The requested artifact path is ambiguous for this job.");
+  }
+  const rawUrl = matches[0].attributes?.url;
+  if (typeof rawUrl !== "string") throw new Error("CircleCI artifact does not include a download URL.");
+  const url = allowedArtifactUrl(rawUrl);
+  if (!url) throw new Error("CircleCI artifact URL is not on an allowed HTTPS host.");
+  const response = await fetchAllowedArtifact(url);
+  if (!response.ok) throw new Error(`CircleCI artifact download failed (HTTP ${response.status}).`);
+  const bounded = await readBoundedText(response, maxBytes);
+  return { path: artifactPath, ...bounded };
 }
