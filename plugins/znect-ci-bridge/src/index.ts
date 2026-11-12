@@ -21,7 +21,8 @@ import {
   limitText,
   readBoundedText,
   redactKnownSecrets,
-  safeEqual
+  safeEqual,
+  stringifyBoundedJson
 } from "./security";
 
 interface Env {
@@ -561,7 +562,7 @@ function createServer(env: Env) {
       }
 
       const workflowLimitReached = workflows.length > workflowsInspected.length;
-      const payload = redactKnownSecrets(JSON.stringify({
+      const safePayload = redactKnownSecrets(JSON.stringify({
         run,
         workflows: workflowReports,
         diagnostics_summary: {
@@ -574,7 +575,8 @@ function createServer(env: Env) {
         },
         limits: { max_workflows: 20, max_failed_jobs_per_run: 5, max_report_artifacts_per_job: 2, max_report_bytes: 500_000 }
       }, null, 2), env);
-      return { content: [{ type: "text", text: limitText(payload, 120_000).text }] };
+      const diagnosticData = JSON.parse(safePayload) as Record<string, unknown>;
+      return { content: [{ type: "text", text: stringifyBoundedJson(diagnosticData, 120_000) }] };
     }
   );
 
