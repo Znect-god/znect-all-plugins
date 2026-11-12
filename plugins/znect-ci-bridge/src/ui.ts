@@ -68,7 +68,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   function setMessage(text,kind){message.textContent=text;message.className="status "+(kind||"");}
   function element(tag,className,text){var node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=String(text);return node;}
   function request(path){
-    return fetch(path,{method:"GET",headers:{Authorization:"Bearer "+token,Accept:"application/json"},cache:"no-store"}).then(function(response){
+    return fetch(path,{method:"GET",headers:{Authorization:"Bearer "+token,Accept:"application/json"},cache:"no-store",credentials:"omit",redirect:"error",referrerPolicy:"no-referrer"}).then(function(response){
       if(response.status===401)throw new Error("Access denied. Check the Bridge token.");
       return response.json().then(function(data){if(!response.ok)throw new Error(data.error||("Request failed: "+response.status));return data;});
     });
