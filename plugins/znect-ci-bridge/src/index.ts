@@ -549,6 +549,7 @@ export default {
     if (url.pathname === "/health" && request.method === "GET") {
       return json({ service: "znect-ci-bridge", status: "ok", project: "Znect-god/znect-forge", mode: "read-only" });
     }
+    if (url.pathname.startsWith("/api/")) return handleReadOnlyApi(request, env);
     if (url.pathname !== "/mcp") return json({ error: "Not found" }, 404);
     if (!env.CIRCLECI_TOKEN || !env.MCP_ACCESS_TOKEN) return json({ error: "Worker secrets are not configured." }, 503);
 
