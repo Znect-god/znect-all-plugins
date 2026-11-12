@@ -3,6 +3,7 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { circleGet } from "./circleci";
 import {
+  getCircleCiJob,
   getCircleCiJobStepOutput,
   getCircleCiRun,
   listCircleCiJobs,
@@ -219,6 +220,20 @@ function createServer(env: Env) {
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
       return { content: [{ type: "text", text: limitText(safe, 120_000).text }] };
+    }
+  );
+
+  server.registerTool(
+    "get_job_details",
+    {
+      description: "Read the CircleCI API v3 job resource by UUID, including all attributes exposed by CircleCI. Read-only.",
+      inputSchema: { job_id: z.string().uuid() }
+    },
+    async ({ job_id }) => {
+      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
+      const payload = JSON.stringify({ job }, null, 2);
+      const safe = redactKnownSecrets(payload, env);
+      return { content: [{ type: "text", text: limitText(safe, 40_000).text }] };
     }
   );
 
