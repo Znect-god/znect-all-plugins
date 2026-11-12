@@ -45,6 +45,40 @@ describe("Worker HTTP boundary", () => {
     expect(response.headers.get("www-authenticate")).toContain("Bearer");
   });
 
+  it("rate limits failed MCP and browser authentication attempts by hashed client IP", async () => {
+    const limiter = { limit: vi.fn(async () => ({ success: false })) };
+    const mcpResponse = await worker.fetch(
+      new Request("https://bridge.example/mcp", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer wrong-mcp-token",
+          "cf-connecting-ip": "203.0.113.10"
+        },
+        body: "{}"
+      }),
+      { ...env, MCP_RATE_LIMITER: limiter },
+      ctx
+    );
+    const webResponse = await worker.fetch(
+      new Request("https://bridge.example/api/v1/status", {
+        headers: {
+          authorization: "Bearer wrong-web-token",
+          "cf-connecting-ip": "203.0.113.10"
+        }
+      }),
+      { ...env, MCP_RATE_LIMITER: limiter },
+      ctx
+    );
+
+    expect(mcpResponse.status).toBe(429);
+    expect(webResponse.status).toBe(429);
+    expect(limiter.limit).toHaveBeenCalledTimes(2);
+    const keys = limiter.limit.mock.calls.map((call) => call[0].key);
+    expect(keys[0]).toMatch(/^[a-f0-9]{64}$/);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[0]).not.toContain("203.0.113.10");
+  });
+
   it("rejects MCP requests when the rate limiter is missing", async () => {
     const response = await worker.fetch(
       new Request("https://bridge.example/mcp", {
