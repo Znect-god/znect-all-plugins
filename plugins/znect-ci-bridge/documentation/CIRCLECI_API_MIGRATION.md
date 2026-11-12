@@ -1,6 +1,6 @@
 # CircleCI API migration plan
 
-**Status:** CircleCI Cloud target established; v3 read-only adapter and nine v3 MCP tools implemented with mocked tests. Live token access and project UUID resolution remain unverified.  
+**Status:** CircleCI Cloud target established; v3 read-only adapter and nine v3 MCP tools implemented with mocked tests, including cursor pagination for workflow and job collections. Live token access and project UUID resolution remain unverified.  
 **Current MCP tools:** legacy v1.1 tools remain for compatibility; nine separate v3 tools are now available.  
 **Target:** API v3 for the existing CircleCI Cloud project. No Forge hosting migration is needed.
 
@@ -38,7 +38,7 @@ Sources:
 - strict UUID validation for project, run, workflow and job identifiers;
 - exact project-slug resolution that requires exactly one result and validates the returned slug when present;
 - project-scoped run listing with a maximum of 30 items, using at most two v3 pages and treating cursors as opaque values;
-- run → workflow → job traversal;
+- run → workflow → job traversal; workflow and job collections follow opaque cursors with a 20-item page size and a 200-resource hard ceiling; repeated cursors and over-limit collections fail explicitly;
 - bounded stdout/stderr retrieval using the documented step and execution filters;
 - sanitized 401/403/404/429 and other upstream errors.
 
