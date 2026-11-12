@@ -70,6 +70,7 @@ Reference: https://developers.cloudflare.com/agents/model-context-protocol/proto
 - Consider an additional Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects.
 - Review MCP transport behavior and SDK security advisories before production use; Origin validation is covered by mocked Worker regression tests.
 - Complete token/project compatibility checks and API v3 parity tests.
+- The latest Cloudflare Preview deployment is commit `51ea707`; the current source head `0747d9a` has not yet been independently deployed to Preview. This must be resolved before any live Preview verification.
 - Confirm that the actual CircleCI account/token can resolve `gh/Znect-god/znect-forge` and read run, job, test, and artifact resources.
 - Verify actual production workload patterns against the bounded 40-job per-workflow and diagnostic inspection limits; large runs intentionally return bounded/incomplete diagnostics or a clear collection-limit error. Browser run details now report workflow truncation explicitly, while collections exceeding 40 resources per workflow fail with a clear collection-limit error.
 - Perform a separate independent security review before any production deployment.
