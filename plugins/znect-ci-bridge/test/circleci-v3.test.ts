@@ -243,6 +243,22 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("repeated a pagination cursor while listing workflows");
   });
 
+  it("enforces a caller-selected page ceiling for nested collections", async () => {
+    const nextJobId = "123e4567-e89b-42d3-a456-426614174006";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: JOB_ID }], page: { next: "cursor-1" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: nextJobId }], page: { next: "cursor-2" }
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listCircleCiJobs("token", WORKFLOW_ID, 2))
+      .rejects.toThrow("safety limit of 40 items");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("reads bounded stdout and uses the documented step/execution filters", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("line1\nline2\nline3", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
