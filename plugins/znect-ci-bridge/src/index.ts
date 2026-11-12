@@ -543,6 +543,68 @@ function createServer(env: Env) {
   return server;
 }
 
+async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> {
+  if (!env.CIRCLECI_TOKEN || !env.MCP_ACCESS_TOKEN) return json({ error: "Worker secrets are not configured." }, 503);
+  const authorization = request.headers.get("authorization") ?? "";
+  const match = /^Bearer\\s+(.+)$/i.exec(authorization);
+  if (!(await safeEqual(match?.[1] ?? "", env.MCP_ACCESS_TOKEN))) {
+    return new Response("Unauthorized", { status: 401, headers: { "www-authenticate": 'Bearer realm="Znect CI Bridge API"', "cache-control": "no-store" } });
+  }
+  if (!env.MCP_RATE_LIMITER) return json({ error: "Rate limiting is not configured." }, 503);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(env.MCP_ACCESS_TOKEN));
+  const key = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  let rateLimit: { success: boolean };
+  try { rateLimit = await env.MCP_RATE_LIMITER.limit({ key }); }
+  catch { return json({ error: "Rate limiting is temporarily unavailable." }, 503); }
+  if (!rateLimit.success) return json({ error: "Rate limit exceeded. Retry after the current window." }, 429);
+  if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers: { allow: "GET" } });
+
+  const url = new URL(request.url);
+  try {
+    if (url.pathname === "/api/v1/status") {
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, slug: project.attributes?.slug }, permissions: "read-only" });
+    }
+    if (url.pathname === "/api/v1/runs") {
+      const rawLimit = url.searchParams.get("limit");
+      const limit = rawLimit === null ? 10 : Number(rawLimit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 30) return json({ error: "limit must be an integer between 1 and 30." }, 400);
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
+      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, slug: project.attributes?.slug ?? "gh/Znect-god/znect-forge" }, runs }), env);
+      return json(JSON.parse(limitText(safe, 100_000).text));
+    }
+    const segments = url.pathname.split("/");
+    if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "runs") {
+      const parsed = z.string().uuid().safeParse(segments[4]);
+      if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
+      const runId = parsed.data;
+      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, runId);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId);
+      const inspected = workflows.slice(0, 20);
+      const workflowReports = await Promise.all(inspected.map(async (workflow) => {
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
+        return { workflow, jobs: jobs.slice(0, 50), jobs_truncated: jobs.length > 50 };
+      }));
+      const safe = redactKnownSecrets(JSON.stringify({
+        run,
+        workflows: workflowReports,
+        diagnostics_summary: {
+          workflows_total: workflows.length,
+          workflows_inspected: workflowReports.length,
+          workflows_truncated: workflows.length > inspected.length,
+          jobs_truncated: workflowReports.some((entry) => entry.jobs_truncated)
+        }
+      }), env);
+      return json(JSON.parse(limitText(safe, 120_000).text));
+    }
+    return json({ error: "API route not found." }, 404);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "CircleCI request failed.";
+    return json({ error: limitText(message, 500).text }, 502);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
