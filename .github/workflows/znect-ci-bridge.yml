@@ -41,7 +41,9 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Audit dependencies
         run: npm audit --audit-level=high
-      - name: Typecheck and unit tests
-        run: npm run check
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test
       - name: Validate Cloudflare Worker bundle without deploying
         run: npx wrangler deploy --dry-run
