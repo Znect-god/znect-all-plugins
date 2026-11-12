@@ -517,4 +517,52 @@ describe("Worker HTTP boundary", () => {
     expect(names).toContain("diagnose_run");
     expect(names.some((name: string) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(name))).toBe(false);
   });
+
+  it("executes stateless check_connection using only a CircleCI GET request", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174000";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request("https://bridge.example/mcp", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer bridge-test-token",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          "MCP-Protocol-Version": "2026-07-28",
+          "Mcp-Method": "tools/call"
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: {
+            name: "check_connection",
+            arguments: {},
+            _meta: {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        })
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(200);
+    const responseText = await response.text();
+    const dataLine = responseText.split("\n").find((line) => line.startsWith("data:"));
+    const payload = dataLine
+      ? JSON.parse(dataLine.slice("data:".length).trim())
+      : JSON.parse(responseText);
+    expect(payload.result?.content?.[0]?.text).toContain('"connected": true');
+    expect(payload.result?.content?.[0]?.text).toContain('"permissions": "read-only"');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "GET", redirect: "manual" });
+    expect(String(fetchMock.mock.calls[0][0])).toContain("https://circleci.com/api/v3/projects?");
+  });
 });
