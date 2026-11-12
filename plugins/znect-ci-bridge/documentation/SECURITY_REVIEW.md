@@ -55,7 +55,7 @@ Reference: https://developers.cloudflare.com/agents/model-context-protocol/proto
 ### Other controls reviewed
 
 - CircleCI API calls are GET-only, use a fixed project path, have a 15-second timeout, normalize network/TLS failures without reflecting runtime details, parse Retry-After hints, and have a streaming JSON body ceiling.
-- Nested run inspection uses explicit workflow/job/log/artifact budgets designed to remain below Cloudflare Workers Free's 50-subrequest invocation limit, including the maximum artifact redirect chain.
+- Nested MCP and browser run inspection use explicit workflow/job budgets designed to remain below Cloudflare Workers Free's 50-subrequest invocation limit. Legacy log retrieval is capped at 10 actions, accounting for up to three artifact redirects per action.
 - MCP and browser authentication are checked before dispatch; authenticated traffic uses per-token digest keys, while failed attempts use a separate per-client-IP digest key.
 - Artifact redirects are manual, revalidated at every hop, limited to three hops, and use HTTPS/default-port checks.
 - Log streams and final output have byte/character budgets.
@@ -71,7 +71,7 @@ Reference: https://developers.cloudflare.com/agents/model-context-protocol/proto
 - Review MCP transport behavior and SDK security advisories before production use; Origin validation is covered by mocked Worker regression tests.
 - Complete token/project compatibility checks and API v3 parity tests.
 - Confirm that the actual CircleCI account/token can resolve `gh/Znect-god/znect-forge` and read run, job, test, and artifact resources.
-- Verify actual production workload patterns against the bounded 40-job per-workflow and diagnostic inspection limits; large runs intentionally return bounded/incomplete diagnostics or a clear collection-limit error.
+- Verify actual production workload patterns against the bounded 40-job per-workflow and diagnostic inspection limits; large runs intentionally return bounded/incomplete diagnostics or a clear collection-limit error. Browser run details now report workflow truncation explicitly, while collections exceeding 40 resources per workflow fail with a clear collection-limit error.
 - Perform a separate independent security review before any production deployment.
 
 No deployment or real-secret test was performed during this review. The current source-level review does not establish live CircleCI connectivity.
