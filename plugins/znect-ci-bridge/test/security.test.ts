@@ -27,6 +27,16 @@ describe("redactKnownSecrets", () => {
     ).toBe("Circle [REDACTED]; MCP [REDACTED]");
   });
 
+
+  it("redacts the dedicated browser access token from returned output", () => {
+    const webToken = "web-secret-value";
+    const output = redactKnownSecrets("log line contains " + webToken, {
+      WEB_ACCESS_TOKEN: webToken
+    });
+    expect(output).not.toContain(webToken);
+    expect(output).toContain("[REDACTED]");
+  });
+
   it("redacts common credential patterns in JSON, headers, and environment output", () => {
     const gitlabToken = "glpat-" + "a".repeat(32);
     const stripeKey = "sk_" + "test_" + "a".repeat(24);
