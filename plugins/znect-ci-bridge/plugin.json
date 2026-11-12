@@ -26,7 +26,7 @@
     "MCP TypeScript server/client SDK 2.4.0",
     "Zod 4.6.7",
     "Wrangler 4.160.0",
-    "CircleCI API v1.1 (legacy/deprecated)"
+    "CircleCI API v3 (current), with legacy API v1.1 compatibility tools"
   ],
   "security_controls": [
     "Bearer authentication for /mcp with fixed-length digest comparison",
@@ -45,10 +45,10 @@
     "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats"
   ],
   "limitations": [
-    "Prototype only; not production-ready",
-    "Production Cloudflare deployment and end-to-end production MCP behavior not verified; current branch Preview deployment is verified",
+    "In development; not production-ready",
+    "Production Cloudflare deployment and end-to-end production MCP behavior not verified; current branch head Preview deployment is not independently confirmed",
     "Live CircleCI connectivity, token authentication, and log retrieval not verified",
-    "CircleCI API v1.1 is legacy; API v3 migration is researched but blocked on token type, project UUID, and response-mapping verification",
+    "CircleCI API v1.1 tools remain for legacy compatibility; API v3 adapter is implemented but live token authentication, project UUID resolution, and response mapping remain unverified",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
@@ -82,7 +82,7 @@
       "Live Cloudflare Worker deployment and endpoint checks",
       "Live CircleCI API integration and log retrieval",
       "Edge-level throttling for failed authentication attempts and broader log-secret exposure review",
-      "Implement and verify API v3 migration after token and project identity checks; mocked v1.1 adapter tests do not establish live compatibility"
+      "Verify live API v3 token authentication, project identity resolution, and end-to-end data retrieval; mock tests do not establish live compatibility"
     ]
   },
   "secrets": [
