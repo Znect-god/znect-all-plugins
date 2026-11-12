@@ -171,7 +171,46 @@ Wrangler запросит значения интерактивно. Не вст
 
 Для локальной работы с секретами соблюдайте отдельные правила Cloudflare и не помещайте рабочие значения в отслеживаемые Git файлы.
 
-### 5.3. Rate Limiting binding
+### 5.3. Отдельные секреты Cloudflare Worker Preview
+
+**Важно: Preview не наследует Production Secrets.** Для Preview необходимо отдельно настроить три значения: `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` и `WEB_ACCESS_TOKEN`. Наличие этих секретов у Production Worker не подтверждает их наличие у Preview.
+
+Cloudflare поддерживает два способа настройки:
+
+**Вариант A — Preview Base configuration для будущих Preview**
+
+Добавьте секреты в Previews Base configuration. Новые Preview будут получать их при создании:
+
+```bash
+npx wrangler preview base-config secret put CIRCLECI_TOKEN
+npx wrangler preview base-config secret put MCP_ACCESS_TOKEN
+npx wrangler preview base-config secret put WEB_ACCESS_TOKEN
+```
+
+Изменения Base configuration применяются к новым Preview, но не обновляют уже существующие Preview автоматически.
+
+**Вариант B — конкретный существующий Preview**
+
+Для уже созданного Preview задайте каждый секрет отдельно:
+
+```bash
+npx wrangler preview secret put CIRCLECI_TOKEN --name feature-ci-bridge-test-reports
+npx wrangler preview secret put MCP_ACCESS_TOKEN --name feature-ci-bridge-test-reports
+npx wrangler preview secret put WEB_ACCESS_TOKEN --name feature-ci-bridge-test-reports
+```
+
+Каждая команда `preview secret put` создаёт новое Preview deployment. Выполняйте их только после проверки правильности имени Preview и явного согласования Preview deployment. Значения вводятся в защищённом интерактивном приглашении Wrangler; не передавайте их в чат, shell arguments, Git, issue или workflow logs.
+
+Не используйте `wrangler secret put` для настройки Preview: эта команда предназначена для обычного Worker environment, а не для изолированного Preview.
+
+После настройки проверьте в Cloudflare Dashboard именно раздел **Previews** и убедитесь, что у нужного Preview присутствуют все три секрета. Не показывайте и не копируйте значения секретов в отчёты.
+
+Официальная документация:
+- https://developers.cloudflare.com/workers/previews/
+- https://developers.cloudflare.com/workers/previews/configuration/
+- https://developers.cloudflare.com/workers/wrangler/commands/workers/
+
+### 5.4. Rate Limiting binding
 
 В \`wrangler.toml\` определён binding \`MCP_RATE_LIMITER\`: ориентировочно 60 аутентифицированных MCP-запросов за 60 секунд на Cloudflare location. Для Preview указан отдельный namespace.
 
