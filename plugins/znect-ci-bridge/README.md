@@ -80,7 +80,7 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
-No live CircleCI token or API request has been used. Cloudflare Workers Builds reported a successful Preview build and deployment for the current PR head `7ac1cee954c4da1bbe3c298a33ad9730492b9d4d` on 2026-11-12. This confirms Preview deployment only; production deployment and live MCP/CircleCI authentication and API access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
+No live CircleCI token or API request has been used. Cloudflare Workers Builds reported a successful Preview build and deployment for source commit `7ac1cee954c4da1bbe3c298a33ad9730492b9d4d` on 2026-11-12. The later PR-head commit `bebf8cd44ca125fa2941924f02da4ce839037625` changed documentation only; it was validated by GitHub Actions, not redeployed to Preview. This confirms Preview deployment only; production deployment and live MCP/CircleCI authentication and API access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
 
 ## Known limitations
 
