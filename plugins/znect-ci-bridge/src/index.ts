@@ -188,9 +188,9 @@ function createServer(env: Env) {
     "check_connection",
     {
       description: "Verify MCP-to-CircleCI authentication and read access to the fixed Znect Forge project. Returns connection status and project identity only. Read-only.",
-      inputSchema: {}
+      inputSchema: z.object({})
     },
-    async () => {
+    async (_args) => {
       const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
       return { content: [{ type: "text", text: JSON.stringify({
         connected: true,
