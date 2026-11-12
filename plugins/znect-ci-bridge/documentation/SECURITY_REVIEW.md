@@ -26,6 +26,14 @@ Failed Bearer authentication on both MCP and browser API routes now consumes a s
 
 This mitigates repeated token guesses from one address, but Cloudflare's built-in limiter is approximate and location-local. Clients behind a shared NAT also share a bucket, and distributed attempts can use multiple locations or addresses. A dedicated Cloudflare WAF/rate-limiting rule with monitoring remains a useful additional edge control.
 
+### Browser API error responses redact configured credentials — addressed
+
+The browser JSON API now applies configured-secret redaction to upstream exception messages before returning an HTTP 502 response. A regression test injects all three configured credentials into a synthetic transport error and verifies that none is returned.
+
+### Automatic diagnostic output remains valid JSON when bounded — addressed
+
+The `diagnose_run` response now shortens the largest string fields when its 120,000-character response budget is exceeded, records `response_truncated: true`, and preserves valid JSON instead of cutting the serialized document mid-token. A regression test parses an oversized diagnostic response and checks the budget and truncation flag.
+
 ### Log redaction remains best-effort — open
 
 Configured Worker secrets and common credential patterns are redacted, but custom formats, encoded values, split secrets, binary content, and unknown upstream credentials may evade detection. Treat returned logs as sensitive. Never claim that redaction guarantees secrets cannot appear.
