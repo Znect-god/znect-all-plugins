@@ -426,4 +426,91 @@ describe("Worker HTTP boundary", () => {
     }
   });
 
+
+  it("supports stateless MCP server discovery for modern protocol clients", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/mcp", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer bridge-test-token",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          "MCP-Protocol-Version": "2026-07-28",
+          "Mcp-Method": "server/discover"
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "server/discover",
+          params: {
+            _meta: {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {},
+              "io.modelcontextprotocol/clientInfo": { name: "znect-ci-bridge-test", version: "1.0.0" }
+            }
+          }
+        })
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(200);
+    const responseText = await response.text();
+    const dataLine = responseText.split("\\n").find((line) => line.startsWith("data:"));
+    const payload = dataLine
+      ? JSON.parse(dataLine.slice("data:".length).trim())
+      : JSON.parse(responseText);
+    expect(payload).toMatchObject({
+      jsonrpc: "2.0",
+      id: 2,
+      result: {
+        supportedVersions: expect.arrayContaining(["2026-07-28"]),
+        capabilities: { tools: expect.any(Object) },
+        resultType: "complete"
+      }
+    });
+  });
+
+  it("lists only read-only tools through the stateless MCP protocol", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/mcp", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer bridge-test-token",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          "MCP-Protocol-Version": "2026-07-28",
+          "Mcp-Method": "tools/list"
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/list",
+          params: {
+            _meta: {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        })
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(200);
+    const responseText = await response.text();
+    const dataLine = responseText.split("\\n").find((line) => line.startsWith("data:"));
+    const payload = dataLine
+      ? JSON.parse(dataLine.slice("data:".length).trim())
+      : JSON.parse(responseText);
+    const tools = payload.result?.tools;
+    expect(Array.isArray(tools)).toBe(true);
+    const names = tools.map((tool: { name: string }) => tool.name);
+    expect(names).toContain("check_connection");
+    expect(names).toContain("list_recent_runs");
+    expect(names).toContain("diagnose_run");
+    expect(names.some((name: string) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(name))).toBe(false);
+  });
 });
