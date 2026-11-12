@@ -393,6 +393,7 @@ function createServer(env: Env) {
               return actions.some((action) => action.status === "failed" || action.outcome === "failed");
             }).map((step) => ({
               name: step.name,
+              execution_index: execution.execution ?? 0,
               actions: (Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [])
                 .filter((action) => action.status === "failed" || action.outcome === "failed")
                 .map((action) => ({
@@ -403,6 +404,46 @@ function createServer(env: Env) {
                 }))
             }));
           });
+
+          // Include the actual stdout/stderr from failed actions so a single
+          // diagnose_run call contains evidence, not only failure metadata.
+          const failedStepLogs: Array<Record<string, unknown>> = [];
+          for (const step of failedSteps) {
+            const actions = Array.isArray(step.actions)
+              ? step.actions as Array<Record<string, unknown>>
+              : [];
+            for (const action of actions.slice(0, 5)) {
+              const stepNum = action.step_num;
+              if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) continue;
+              const execution = typeof step.execution_index === "number" && Number.isInteger(step.execution_index)
+                ? step.execution_index
+                : 0;
+              const output: Record<string, unknown> = {};
+              for (const stream of ["stdout", "stderr"] as const) {
+                try {
+                  const result = await getCircleCiJobStepOutput(
+                    env.CIRCLECI_TOKEN,
+                    job.id,
+                    stepNum,
+                    stream,
+                    execution,
+                    12_000 * 4
+                  );
+                  const redacted = redactKnownSecrets(result.text, env);
+                  output[stream] = limitText(redacted, 12_000, result.truncated).text;
+                } catch {
+                  output[stream] = "Unable to retrieve this output stream.";
+                }
+              }
+              failedStepLogs.push({
+                step_num: stepNum,
+                execution,
+                action_name: action.name,
+                stdout: output.stdout,
+                stderr: output.stderr
+              });
+            }
+          }
 
           let testResults = "";
           let testResultsError: string | undefined;
@@ -440,6 +481,7 @@ function createServer(env: Env) {
             name: attributes?.name ?? detailAttributes?.name,
             outcome: attributes?.outcome ?? attributes?.status,
             failed_steps: failedSteps,
+            failed_step_logs: failedStepLogs,
             test_results: testResults,
             test_results_error: testResultsError,
             report_artifacts: artifacts
