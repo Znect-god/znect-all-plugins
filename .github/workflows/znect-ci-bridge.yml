@@ -45,5 +45,7 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test
+      - name: Validate Preview smoke-test script syntax
+        run: node --check scripts/preview-smoke-test.mjs
       - name: Validate Cloudflare Worker bundle without deploying
         run: npx wrangler deploy --dry-run
