@@ -35,7 +35,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 <section class="panel" aria-labelledby="access-title">
 <h2 id="access-title" style="font-size:1.05rem;margin:0 0 12px">Secure access</h2>
 <label for="token">Web access token</label>
-<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Enter your Bridge token">
+<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Enter your Web access token">
 <div class="actions"><button id="connect">Connect</button><button id="disconnect" type="button">Clear token</button></div>
 <p id="message" class="status" role="status" aria-live="polite">Your web token stays in this tab's memory and is not saved to browser storage.</p>
 </section>
