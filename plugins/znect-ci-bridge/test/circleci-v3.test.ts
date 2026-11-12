@@ -6,6 +6,7 @@ import {
   getCircleCiRun,
   getCircleCiJobStepOutput,
   getCircleCiJobTests,
+  getCircleCiJobArtifact,
   listCircleCiJobArtifacts,
   isCircleCiUuid,
   listCircleCiJobs,
@@ -242,6 +243,32 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("invalid artifacts collection");
     await expect(listCircleCiJobArtifacts("token", JOB_ID))
       .rejects.toThrow("more than 100 artifacts");
+  });
+
+
+  it("downloads a listed artifact by exact path through an allowlisted URL", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: "artifact-1", attributes: { path: "test-results/junit.xml", url: "https://s3.amazonaws.com/bucket/report.xml" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("<testsuite failures=\"1\"/>", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "test-results/junit.xml", 256))
+      .resolves.toEqual({ path: "test-results/junit.xml", text: "<testsuite failures=\"1\"/>", truncated: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "GET", redirect: "manual" });
+  });
+
+  it("rejects path traversal and artifact URLs outside the allowlist", async () => {
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "../secrets.txt"))
+      .rejects.toThrow("Invalid CircleCI artifact path.");
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: "artifact-1", attributes: { path: "report.xml", url: "https://attacker.example/report.xml" } }]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "report.xml"))
+      .rejects.toThrow("not on an allowed HTTPS host");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
 });
