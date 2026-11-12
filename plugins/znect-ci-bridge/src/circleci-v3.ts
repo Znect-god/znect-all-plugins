@@ -67,9 +67,11 @@ export async function circleV3Get<T>(token: string, path: string): Promise<T> {
   });
 
   if (!response.ok) {
-    const safeMessage = response.status === 401 || response.status === 403
-      ? "CircleCI API v3 rejected the configured read-only token. Check its type and project access."
-      : response.status === 404
+    const safeMessage = response.status === 401
+      ? "CircleCI API v3 authentication failed (HTTP 401). Check whether CIRCLECI_TOKEN is a valid, unexpired Personal API Token."
+      : response.status === 403
+        ? "CircleCI API v3 authorization failed (HTTP 403). The authenticated account or token does not have access to this project."
+        : response.status === 404
         ? "The requested CircleCI API v3 resource was not found or is not accessible."
         : response.status === 429
           ? "CircleCI API v3 rate limit exceeded. Retry after the indicated interval."
@@ -99,9 +101,11 @@ export async function circleV3GetText(
 
   if (response.status === 204) return { text: "", truncated: false };
   if (!response.ok) {
-    const safeMessage = response.status === 401 || response.status === 403
-      ? "CircleCI API v3 rejected the configured read-only token. Check its type and project access."
-      : response.status === 404
+    const safeMessage = response.status === 401
+      ? "CircleCI API v3 authentication failed (HTTP 401). Check whether CIRCLECI_TOKEN is a valid, unexpired Personal API Token."
+      : response.status === 403
+        ? "CircleCI API v3 authorization failed (HTTP 403). The authenticated account or token does not have access to this project."
+        : response.status === 404
         ? "The requested CircleCI job output was not found or is not accessible."
         : response.status === 429
           ? "CircleCI API v3 rate limit exceeded. Retry after the indicated interval."
