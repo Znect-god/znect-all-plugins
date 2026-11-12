@@ -18,6 +18,9 @@ New API v3 tools are also exposed:
 - `list_recent_runs(limit)` — latest project runs with UUIDs and current outcomes; limit 1–30.
 - `get_run_details(run_id)` — one run plus its workflows and jobs, addressed by UUID.
 - `get_job_logs(job_id, step_num, execution?, stream?, max_chars?)` — bounded stdout/stderr for a job step.
+- `get_job_test_results(job_id, max_chars?)` — structured test results as bounded JSON Lines.
+- `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
+- `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.
 
 The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. All tools are read-only; no build mutation tools exist.
 
@@ -25,7 +28,7 @@ The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its 
 
 - `src/index.ts` — Worker entry point, authentication, and MCP tools.
 - `src/circleci.ts` — legacy v1.1 fixed-origin, read-only HTTP adapter.
-- `src/circleci-v3.ts` — CircleCI Cloud API v3 read-only adapter used by the three v3 MCP tools.
+- `src/circleci-v3.ts` — CircleCI Cloud API v3 read-only adapter used by the v3 MCP tools, including structured test results and safe artifact retrieval.
 - `src/security.ts` — authentication comparison, artifact URL validation, bounded streams, redaction, output limits, and safe redirect handling.
 - `test/security.test.ts` — security helper and artifact-host/redirect tests.
 - `test/circleci.test.ts` — mocked v1.1 adapter tests.
@@ -83,7 +86,8 @@ No live CircleCI token or endpoint has been used, and no Cloudflare deployment h
 
 - Prototype only; not production-ready.
 - CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
-- The v3 adapter and MCP tools are tested with mocked HTTP responses only; no live CircleCI API request has been made.
+- The v3 adapter and MCP tools are tested with mocked HTTP responses only; live test-result and artifact access still require verification against CircleCI using the configured token.
+- CircleCI API v3 test-result and artifact endpoints may return no data when test metadata or artifacts were not uploaded by the job. Artifact retrieval is restricted to exact paths returned by CircleCI and allowlisted HTTPS hosts.
 - Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
 - Failed Bearer-token attempts are not covered by the per-token rate limiter.
