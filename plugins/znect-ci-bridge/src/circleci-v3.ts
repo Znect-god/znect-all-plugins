@@ -62,7 +62,7 @@ export async function circleV3Get<T>(token: string, path: string): Promise<T> {
       Authorization: `Bearer ${token}`,
       Accept: "application/json"
     },
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   });
 
@@ -93,7 +93,7 @@ export async function circleV3GetText(
       Authorization: `Bearer ${token}`,
       Accept: "text/plain"
     },
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   });
 
