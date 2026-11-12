@@ -565,8 +565,8 @@ function createServer(env: Env) {
           failed_jobs_total: failedJobs.length,
           failed_jobs: diagnostics
         });
-        // Keep scanning later workflow job metadata after the fifth failure.
-        // Only mark the report incomplete when a sixth failed job is actually found.
+        // Continue scanning the remaining inspected workflows after the third failure.
+        // Only mark the report incomplete when another failed job is actually found.
       }
 
       const workflowLimitReached = workflows.length > workflowsInspected.length;
