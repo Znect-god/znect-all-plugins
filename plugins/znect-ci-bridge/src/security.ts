@@ -19,7 +19,7 @@ export async function fetchWithSafeErrors(
 export function retryAfterSeconds(value: string | null, now = Date.now()): number | null {
   if (!value) return null;
   const trimmed = value.trim();
-  if (/^\\d+(?:\\.\\d+)?$/.test(trimmed)) {
+  if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
     const seconds = Number(trimmed);
     return Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds) : null;
   }
