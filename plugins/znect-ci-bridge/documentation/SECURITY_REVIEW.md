@@ -42,6 +42,12 @@ Configured Worker secrets and common credential patterns are redacted, but custo
 
 The read-only v3 adapter is now wired to MCP tools for project resolution, recent runs, run/workflow/job details, step stdout/stderr, structured test results, artifact metadata/downloads, and one-call failed-run diagnosis. The legacy v1.1 tools remain available for build-number-based access. Both paths are GET-only. The configured CircleCI token has not yet been verified against the live v3 project endpoint, and the documented Forge failure has not yet been re-diagnosed through the Bridge.
 
+### MCP Origin validation — addressed by the transport wrapper
+
+The Worker delegates Streamable HTTP handling to Cloudflare Agents SDK v2 `createMcpHandler`. The SDK validates every present `Origin` header, rejects malformed and opaque origins, and applies its default hostname allowlist. Regression tests verify rejection of an untrusted web origin, `null`, and a `file:` origin with HTTP 403. Requests from non-browser MCP clients without an Origin header remain supported. This control is distinct from CORS; `corsOptions: false` disables CORS handling but does not opt out of the SDK's Origin validation.
+
+Reference: https://developers.cloudflare.com/agents/model-context-protocol/protocol/transport/
+
 ### Other controls reviewed
 
 - CircleCI API calls are GET-only, use a fixed project path, have a timeout, and have a streaming JSON body ceiling.
@@ -56,7 +62,7 @@ The read-only v3 adapter is now wired to MCP tools for project resolution, recen
 - Expand mocked CircleCI adapter tests to cover timeout/abort behavior and additional response edge cases; current tests cover 401/403/429, malformed/oversized responses, and fixed-origin path validation.
 - Verify the artifact URL patterns against actual CircleCI responses without exposing presigned URLs.
 - Consider an additional Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects.
-- Review MCP transport behavior and SDK security advisories before production use.
+- Review MCP transport behavior and SDK security advisories before production use; Origin validation is covered by mocked Worker regression tests.
 - Complete token/project compatibility checks and API v3 parity tests.
 - Confirm that the actual CircleCI account/token can resolve `gh/Znect-god/znect-forge` and read run, job, test, and artifact resources.
 - Perform a separate independent security review before any production deployment.
