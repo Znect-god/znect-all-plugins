@@ -114,7 +114,7 @@ function createServer(env: Env) {
         build_url: item.build_url,
         failed: item.failed
       }));
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson(result, 100_000) }] };
     }
   );
 
@@ -151,7 +151,7 @@ function createServer(env: Env) {
         failed: build.failed,
         steps
       };
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson(result, 100_000) }] };
     }
   );
 
@@ -215,7 +215,7 @@ function createServer(env: Env) {
         }
         if (actions.length >= max_actions || totalOutputChars >= MAX_TOTAL_LOG_CHARS) break;
       }
-      return { content: [{ type: "text", text: JSON.stringify({ build_num, actions }, null, 2) }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson({ build_num, actions }, 180_000) }] };
     }
   );
 
@@ -253,7 +253,7 @@ function createServer(env: Env) {
         runs
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
-      return { content: [{ type: "text", text: limitText(safe, 100_000).text }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(safe), 100_000) }] };
     }
   );
 
@@ -279,7 +279,7 @@ function createServer(env: Env) {
         truncated: workflows.length > 20 || workflowResults.some((entry) => entry.jobs.length > 50)
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
-      return { content: [{ type: "text", text: limitText(safe, 120_000).text }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(safe), 120_000) }] };
     }
   );
 
@@ -293,7 +293,7 @@ function createServer(env: Env) {
       const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
       const payload = JSON.stringify({ job }, null, 2);
       const safe = redactKnownSecrets(payload, env);
-      return { content: [{ type: "text", text: limitText(safe, 40_000).text }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(safe), 40_000) }] };
     }
   );
 
@@ -323,14 +323,14 @@ function createServer(env: Env) {
       return {
         content: [{
           type: "text",
-          text: JSON.stringify({
+          text: stringifyBoundedJson({
             job_id,
             step_num,
             execution,
             stream,
             output: limited.text,
             truncated: limited.truncated
-          }, null, 2)
+          }, 85_000)
         }]
       };
     }
@@ -353,12 +353,12 @@ function createServer(env: Env) {
       return {
         content: [{
           type: "text",
-          text: JSON.stringify({
+          text: stringifyBoundedJson({
             job_id,
             format: "jsonl",
             results: limited.text,
             truncated: limited.truncated
-          }, null, 2)
+          }, 85_000)
         }]
       };
     }
@@ -379,7 +379,7 @@ function createServer(env: Env) {
         node_index: artifact.attributes?.node_index
       }));
       const payload = redactKnownSecrets(JSON.stringify({ job_id, artifacts: safe }, null, 2), env);
-      return { content: [{ type: "text", text: limitText(payload, 30_000).text }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(payload), 30_000) }] };
     }
   );
 
@@ -401,12 +401,12 @@ function createServer(env: Env) {
       return {
         content: [{
           type: "text",
-          text: JSON.stringify({
+          text: stringifyBoundedJson({
             job_id,
             artifact_path: result.path,
             content: limited.text,
             truncated: limited.truncated
-          }, null, 2)
+          }, 85_000)
         }]
       };
     }
