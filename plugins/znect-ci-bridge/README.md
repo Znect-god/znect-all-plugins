@@ -27,6 +27,8 @@ New API v3 tools are also exposed:
 
 The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. Workflow and job collection endpoints follow opaque pagination cursors with a hard ceiling of 200 resources per collection; repeated cursors and collections exceeding that ceiling fail explicitly rather than silently returning partial data. `diagnose_run` examines at most 20 workflows and five failed jobs per run, collecting failed-step metadata, bounded stdout/stderr, structured test results, and up to two small JUnit/test-report artifacts per failed job. Its `diagnostics_summary` reports total versus inspected workflows, whether either inspection limit was reached, and an `incomplete` flag so a bounded report cannot be mistaken for exhaustive diagnostics. All tools are read-only; no build mutation tools exist.
 
+CircleCI transport failures are normalized into safe timeout/network messages. HTTP 429 responses include a parsed `Retry-After` interval when CircleCI supplies a valid numeric or HTTP-date header; the Bridge does not retry automatically or increase upstream load.
+
 ## User guide
 
 See [USAGE_GUIDE.md](documentation/USAGE_GUIDE.md) for step-by-step setup, ChatGPT connection requirements, Cloudflare secrets, MCP tool usage, diagnostics, troubleshooting, and safety rules.
