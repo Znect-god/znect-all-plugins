@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
+import { DASHBOARD_HTML } from "./ui";
 import { circleGet } from "./circleci";
 import {
   getCircleCiJob,
@@ -610,6 +611,18 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/health" && request.method === "GET") {
       return json({ service: "znect-ci-bridge", status: "ok", project: "Znect-god/znect-forge", mode: "read-only" });
+    }
+    if (url.pathname === "/" && request.method === "GET") {
+      return new Response(DASHBOARD_HTML, {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+          "referrer-policy": "no-referrer",
+          "content-security-policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        }
+      });
     }
     if (url.pathname.startsWith("/api/")) return handleReadOnlyApi(request, env);
     if (url.pathname !== "/mcp") return json({ error: "Not found" }, 404);
