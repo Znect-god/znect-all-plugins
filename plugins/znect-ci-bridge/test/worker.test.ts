@@ -118,7 +118,7 @@ describe("Worker HTTP boundary", () => {
     );
     expect(response.status).toBe(503);
   });
-  it("protects the JSON API with the same Bearer authentication as MCP", async () => {
+  it("rejects requests without the dedicated web Bearer token", async () => {
     const response = await worker.fetch(
       new Request("https://bridge.example/api/v1/runs", {
         headers: { authorization: "Bearer incorrect-token" }
@@ -128,6 +128,17 @@ describe("Worker HTTP boundary", () => {
     );
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toContain("Bearer");
+  });
+
+  it("does not accept the MCP token as a browser API credential", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/status", {
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(401);
   });
 
   it("rejects unsupported methods on the read-only JSON API", async () => {
