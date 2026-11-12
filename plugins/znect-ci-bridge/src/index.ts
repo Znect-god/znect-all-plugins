@@ -6,6 +6,7 @@ import {
   getCircleCiJob,
   getCircleCiJobStepOutput,
   getCircleCiJobTests,
+  getCircleCiJobArtifact,
   listCircleCiJobArtifacts,
   getCircleCiRun,
   listCircleCiJobs,
@@ -322,6 +323,35 @@ function createServer(env: Env) {
       }));
       const payload = redactKnownSecrets(JSON.stringify({ job_id, artifacts: safe }, null, 2), env);
       return { content: [{ type: "text", text: limitText(payload, 30_000).text }] };
+    }
+  );
+
+
+  server.registerTool(
+    "get_job_artifact",
+    {
+      description: "Download one CircleCI job artifact by its exact path from list_job_artifacts. The URL is resolved internally, host-validated, and the text response is bounded. Read-only.",
+      inputSchema: {
+        job_id: z.string().uuid(),
+        artifact_path: z.string().min(1).max(512),
+        max_chars: z.number().int().min(1).max(80_000).default(40_000)
+      }
+    },
+    async ({ job_id, artifact_path, max_chars }) => {
+      const result = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job_id, artifact_path, max_chars * 4);
+      const redacted = redactKnownSecrets(result.text, env);
+      const limited = limitText(redacted, max_chars, result.truncated);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            job_id,
+            artifact_path: result.path,
+            content: limited.text,
+            truncated: limited.truncated
+          }, null, 2)
+        }]
+      };
     }
   );
 
