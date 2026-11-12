@@ -50,7 +50,7 @@ Reference: https://developers.cloudflare.com/agents/model-context-protocol/proto
 
 ### Other controls reviewed
 
-- CircleCI API calls are GET-only, use a fixed project path, have a timeout, and have a streaming JSON body ceiling.
+- CircleCI API calls are GET-only, use a fixed project path, have a 15-second timeout, normalize network/TLS failures without reflecting runtime details, parse Retry-After hints, and have a streaming JSON body ceiling.
 - MCP and browser authentication are checked before dispatch; authenticated traffic uses per-token digest keys, while failed attempts use a separate per-client-IP digest key.
 - Artifact redirects are manual, revalidated at every hop, limited to three hops, and use HTTPS/default-port checks.
 - Log streams and final output have byte/character budgets.
@@ -59,7 +59,7 @@ Reference: https://developers.cloudflare.com/agents/model-context-protocol/proto
 
 ## Remaining verification
 
-- Expand mocked CircleCI adapter tests to cover timeout/abort behavior and additional response edge cases; current tests cover 401/403/429, malformed/oversized responses, and fixed-origin path validation.
+- Mocked CircleCI adapter tests now cover normalized timeout/network failures, numeric and HTTP-date Retry-After values, 401/403/429, malformed/oversized responses, and fixed-origin path validation.
 - Verify the artifact URL patterns against actual CircleCI responses without exposing presigned URLs.
 - Consider an additional Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects.
 - Review MCP transport behavior and SDK security advisories before production use; Origin validation is covered by mocked Worker regression tests.
