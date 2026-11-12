@@ -1,6 +1,7 @@
 export interface SecretEnv {
   CIRCLECI_TOKEN?: string;
   MCP_ACCESS_TOKEN?: string;
+  WEB_ACCESS_TOKEN?: string;
 }
 
 export async function safeEqual(a: string, b: string): Promise<boolean> {
@@ -18,7 +19,7 @@ export async function safeEqual(a: string, b: string): Promise<boolean> {
 
 export function redactKnownSecrets(value: string, env: SecretEnv): string {
   let redacted = value;
-  for (const secret of [env.CIRCLECI_TOKEN, env.MCP_ACCESS_TOKEN]) {
+  for (const secret of [env.CIRCLECI_TOKEN, env.MCP_ACCESS_TOKEN, env.WEB_ACCESS_TOKEN]) {
     if (secret) redacted = redacted.split(secret).join("[REDACTED]");
   }
 
