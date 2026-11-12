@@ -305,4 +305,45 @@ describe("Worker HTTP boundary", () => {
     expect(body).toContain("[REDACTED]");
   });
 
+  it("completes an authenticated MCP initialize handshake over Streamable HTTP", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/mcp", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer bridge-test-token",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream"
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-03-26",
+            capabilities: {},
+            clientInfo: { name: "znect-ci-bridge-test", version: "1.0.0" }
+          }
+        })
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(200);
+    const responseText = await response.text();
+    const dataLine = responseText.split("\\n").find((line) => line.startsWith("data:"));
+    const payload = dataLine
+      ? JSON.parse(dataLine.slice("data:".length).trim())
+      : JSON.parse(responseText);
+    expect(payload).toMatchObject({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        serverInfo: { name: "znect-ci-bridge" },
+        capabilities: { tools: expect.any(Object) }
+      }
+    });
+    expect(response.headers.get("content-type")).toMatch(/application\\/json|text\\/event-stream/);
+  });
+
 });
