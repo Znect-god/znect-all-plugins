@@ -250,6 +250,33 @@ Production deployment должен выполняться отдельно и т
 
 После подключения клиент должен выполнить MCP initialization и обнаружить инструменты. При вызове \`check_connection()\` Bridge должен попытаться выполнить живую read-only проверку CircleCI API v3 и разрешить фиксированный project slug в UUID.
 
+#### Автоматическая Preview smoke-проверка
+
+В репозитории есть opt-in сценарий \`scripts/preview-smoke-test.mjs\`. Он жёстко привязан к Preview alias \`feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev\` и отказывается обращаться к Production или произвольному адресу.
+
+Сценарий последовательно проверяет:
+
+1. \`GET /health\`;
+2. \`GET /api/v1/status\` с отдельным \`WEB_ACCESS_TOKEN\`;
+3. MCP stateless discovery и \`tools/list\` с \`MCP_ACCESS_TOKEN\`;
+4. наличие \`readOnlyHint: true\` у всех 12 инструментов;
+5. read-only вызов \`check_connection\`, который проверяет доступ к фиксированному CircleCI project.
+
+Никакие pipeline actions не вызываются. MCP POST-запросы здесь являются только JSON-RPC транспортом; единственный вызов инструмента — \`check_connection\`.
+
+Требуется Node.js 20+ и два токена, введённые локально в скрытом приглашении терминала. Из каталога \`plugins/znect-ci-bridge\` в Bash:
+
+\`\`\`bash
+read -rsp "MCP_ACCESS_TOKEN: " MCP_ACCESS_TOKEN; echo
+export MCP_ACCESS_TOKEN
+read -rsp "WEB_ACCESS_TOKEN: " WEB_ACCESS_TOKEN; echo
+export WEB_ACCESS_TOKEN
+node scripts/preview-smoke-test.mjs
+unset MCP_ACCESS_TOKEN WEB_ACCESS_TOKEN
+\`\`\`
+
+Скрипт не выводит значения токенов. Не вставляйте их в чат, Git, shell-командную строку или журналы CI. Не запускайте проверку, пока нужный Preview deployment и его три секрета не настроены.
+
 ### Уровень D — живая проверка CircleCI
 
 После успешной авторизации и обнаружения инструментов выполните:
