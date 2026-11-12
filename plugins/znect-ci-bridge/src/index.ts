@@ -546,7 +546,7 @@ function createServer(env: Env) {
 async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> {
   if (!env.CIRCLECI_TOKEN || !env.MCP_ACCESS_TOKEN) return json({ error: "Worker secrets are not configured." }, 503);
   const authorization = request.headers.get("authorization") ?? "";
-  const match = /^Bearer\\s+(.+)$/i.exec(authorization);
+  const match = /^Bearer\s+(.+)$/i.exec(authorization);
   if (!(await safeEqual(match?.[1] ?? "", env.MCP_ACCESS_TOKEN))) {
     return new Response("Unauthorized", { status: 401, headers: { "www-authenticate": 'Bearer realm="Znect CI Bridge API"', "cache-control": "no-store" } });
   }
