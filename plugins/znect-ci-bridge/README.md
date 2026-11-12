@@ -95,3 +95,4 @@ No live CircleCI token or endpoint has been used, and no Cloudflare deployment h
 ## Relationship to Znect Forge
 
 This plugin only reads CircleCI build information. It does not change Forge source code or CircleCI configuration and does not start or alter Forge builds. The Forge 0.8.0 freeze remains in force unless explicitly changed by the user.
+
