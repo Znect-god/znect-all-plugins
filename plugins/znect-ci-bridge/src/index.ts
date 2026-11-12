@@ -386,8 +386,10 @@ function createServer(env: Env) {
       const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
+      let failedJobLimitReached = false;
+      const workflowsInspected = workflows.slice(0, 20);
 
-      for (const workflow of workflows.slice(0, 20)) {
+      for (const workflow of workflowsInspected) {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
         const failedJobs = jobs.filter((job) => {
           const attributes = job.attributes as Record<string, unknown> | undefined;
@@ -396,7 +398,10 @@ function createServer(env: Env) {
         const diagnostics: Array<Record<string, unknown>> = [];
 
         for (const job of failedJobs) {
-          if (failedJobsInspected >= 5) break;
+          if (failedJobsInspected >= 5) {
+            failedJobLimitReached = true;
+            break;
+          }
           failedJobsInspected++;
           const attributes = job.attributes as Record<string, unknown> | undefined;
           const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
@@ -513,12 +518,24 @@ function createServer(env: Env) {
           failed_jobs_total: failedJobs.length,
           failed_jobs: diagnostics
         });
-        if (failedJobsInspected >= 5) break;
+        if (failedJobsInspected >= 5) {
+          if (workflowReports.length < workflowsInspected.length) failedJobLimitReached = true;
+          break;
+        }
       }
 
+      const workflowLimitReached = workflows.length > workflowsInspected.length;
       const payload = redactKnownSecrets(JSON.stringify({
         run,
         workflows: workflowReports,
+        diagnostics_summary: {
+          workflows_total: workflows.length,
+          workflows_inspected: workflowReports.length,
+          workflows_truncated: workflowLimitReached,
+          failed_jobs_inspected: failedJobsInspected,
+          failed_job_limit_reached: failedJobLimitReached,
+          incomplete: workflowLimitReached || failedJobLimitReached
+        },
         limits: { max_workflows: 20, max_failed_jobs_per_run: 5, max_report_artifacts_per_job: 2, max_report_bytes: 500_000 }
       }, null, 2), env);
       return { content: [{ type: "text", text: limitText(payload, 120_000).text }] };
