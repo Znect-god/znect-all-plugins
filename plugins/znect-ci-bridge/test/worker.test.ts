@@ -115,4 +115,63 @@ describe("Worker HTTP boundary", () => {
     );
     expect(response.status).toBe(503);
   });
+  it("protects the JSON API with the same Bearer authentication as MCP", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs", {
+        headers: { authorization: "Bearer incorrect-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain("Bearer");
+  });
+
+  it("rejects unsupported methods on the read-only JSON API", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs", {
+        method: "POST",
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET");
+  });
+
+  it("validates API run limits and UUIDs before contacting CircleCI", async () => {
+    const invalidLimit = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs?limit=31", {
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(invalidLimit.status).toBe(400);
+
+    const invalidUuid = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs/not-a-uuid", {
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(invalidUuid.status).toBe(400);
+  });
+
+  it("fails closed for JSON API requests when rate limiting is unavailable", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs", {
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      { CIRCLECI_TOKEN: "circle-test-token", MCP_ACCESS_TOKEN: "bridge-test-token" } as typeof env,
+      ctx
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Rate limiting is not configured."
+    });
+  });
+
 });
