@@ -150,7 +150,8 @@ https://chatgpt.com/plugins/plugins_6af57327949081918faf5b31a8d4d7a0
 | Имя | Для чего нужен |
 |---|---|
 | \`CIRCLECI_TOKEN\` | Авторизация запросов Worker к CircleCI API |
-| \`MCP_ACCESS_TOKEN\` | Bearer-аутентификация MCP-клиента к Worker |\n| \`WEB_ACCESS_TOKEN\` | Отдельная Bearer-аутентификация браузерного JSON API |
+| \`MCP_ACCESS_TOKEN\` | Bearer-аутентификация MCP-клиента к Worker |
+| \`WEB_ACCESS_TOKEN\` | Отдельная Bearer-аутентификация браузерного JSON API |
 
 В Cloudflare Dashboard откройте нужный аккаунт и Worker \`znect-ci-bridge\`, затем раздел настроек Variables/Secrets. Добавьте все три значения именно как **Secrets**, а не как обычные открытые Variables. Для бесплатного браузерного сценария особенно важно задать отдельный \`WEB_ACCESS_TOKEN\`; не используйте для этого CircleCI token.
 
@@ -159,7 +160,8 @@ https://chatgpt.com/plugins/plugins_6af57327949081918faf5b31a8d4d7a0
 \`\`\`bash
 npx wrangler login
 npx wrangler secret put CIRCLECI_TOKEN
-npx wrangler secret put MCP_ACCESS_TOKEN\nnpx wrangler secret put WEB_ACCESS_TOKEN\nnpx wrangler secret put WEB_ACCESS_TOKEN
+npx wrangler secret put MCP_ACCESS_TOKEN
+npx wrangler secret put WEB_ACCESS_TOKEN
 \`\`\`
 
 Wrangler запросит значения интерактивно. Не вставляйте реальные токены в командную строку как аргументы, не коммитьте их и не отправляйте в чат.
