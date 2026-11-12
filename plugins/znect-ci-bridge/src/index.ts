@@ -92,6 +92,12 @@ function buildNumber(value: number): number {
   return value;
 }
 
+function redactedBoundedJson(value: unknown, env: Env, maxChars: number): string {
+  const redacted = redactKnownSecrets(JSON.stringify(value), env);
+  return stringifyBoundedJson(JSON.parse(redacted), maxChars);
+}
+
+
 function createServer(env: Env) {
   const server = new McpServer({ name: "znect-ci-bridge", version: "0.1.0" });
 
@@ -114,7 +120,7 @@ function createServer(env: Env) {
         build_url: item.build_url,
         failed: item.failed
       }));
-      return { content: [{ type: "text", text: stringifyBoundedJson({ builds: result }, 100_000) }] };
+      return { content: [{ type: "text", text: redactedBoundedJson({ builds: result }, env, 100_000) }] };
     }
   );
 
@@ -151,18 +157,18 @@ function createServer(env: Env) {
         failed: build.failed,
         steps
       };
-      return { content: [{ type: "text", text: stringifyBoundedJson(result, 100_000) }] };
+      return { content: [{ type: "text", text: redactedBoundedJson(result, env, 100_000) }] };
     }
   );
 
   server.registerTool(
     "get_build_logs",
     {
-      description: "Read console output for a CircleCI build step/action. Fetches the presigned output URL returned by CircleCI; never accepts arbitrary URLs. Output is bounded to 80,000 characters per action and 160,000 characters total per response.",
+      description: "Read console output for a CircleCI build step/action. Fetches the presigned output URL returned by CircleCI; never accepts arbitrary URLs. Output is bounded to 80,000 characters per action and 160,000 characters total per response; at most 10 actions are fetched to remain within Worker subrequest limits.",
       inputSchema: {
         build_num: z.number().int().min(1),
         step_index: z.number().int().min(0).optional(),
-        max_actions: z.number().int().min(1).max(20).default(10)
+        max_actions: z.number().int().min(1).max(10).default(10)
       }
     },
     async ({ build_num, step_index, max_actions }) => {
@@ -215,7 +221,7 @@ function createServer(env: Env) {
         }
         if (actions.length >= max_actions || totalOutputChars >= MAX_TOTAL_LOG_CHARS) break;
       }
-      return { content: [{ type: "text", text: stringifyBoundedJson({ build_num, actions }, 180_000) }] };
+      return { content: [{ type: "text", text: redactedBoundedJson({ build_num, actions }, env, 180_000) }] };
     }
   );
 
@@ -632,11 +638,11 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
       const runId = parsed.data;
       const run = await getCircleCiRun(env.CIRCLECI_TOKEN, runId);
-      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId);
-      const inspected = workflows.slice(0, 20);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId, 2);
+      const inspected = workflows.slice(0, 10);
       const workflowReports = await Promise.all(inspected.map(async (workflow) => {
-        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
-        return { workflow, jobs: jobs.slice(0, 50), jobs_truncated: jobs.length > 50 };
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        return { workflow, jobs: jobs.slice(0, 40), jobs_total: jobs.length };
       }));
       const safe = redactKnownSecrets(JSON.stringify({
         run,
@@ -645,8 +651,9 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           workflows_total: workflows.length,
           workflows_inspected: workflowReports.length,
           workflows_truncated: workflows.length > inspected.length,
-          jobs_truncated: workflowReports.some((entry) => entry.jobs_truncated)
-        }
+          incomplete: workflows.length > inspected.length
+        },
+        limits: { max_workflows: 10, max_jobs_per_workflow: 40 }
       }), env);
       return boundedJson(safe, 120_000);
     }
