@@ -30,9 +30,9 @@ Do not add a low per-IP application limit without considering shared NATs and le
 
 Configured Worker secrets and common credential patterns are redacted, but custom formats, encoded values, split secrets, binary content, and unknown upstream credentials may evade detection. Treat returned logs as sensitive. Never claim that redaction guarantees secrets cannot appear.
 
-### CircleCI API migration is not implemented — open
+### CircleCI API v3 integration — implemented, live verification open
 
-The current v1.1 adapter remains read-only. The v3 migration research and compatibility blockers are documented in `documentation/CIRCLECI_API_MIGRATION.md`. No token was tested and no API switch was made.
+The read-only v3 adapter is now wired to MCP tools for project resolution, recent runs, run/workflow/job details, step stdout/stderr, structured test results, artifact metadata/downloads, and one-call failed-run diagnosis. The legacy v1.1 tools remain available for build-number-based access. Both paths are GET-only. The configured CircleCI token has not yet been verified against the live v3 project endpoint, and the documented Forge failure has not yet been re-diagnosed through the Bridge.
 
 ### Other controls reviewed
 
@@ -49,7 +49,8 @@ The current v1.1 adapter remains read-only. The v3 migration research and compat
 - Verify the artifact URL patterns against actual CircleCI responses without exposing presigned URLs.
 - Configure edge-level throttling for failed authentication attempts.
 - Review MCP transport behavior and SDK security advisories before production use.
-- Complete token/project compatibility checks and API v3 parity tests.\n- The new v3 client is not yet wired to the MCP tools; do not treat the presence of the adapter as proof of live integration.
+- Complete token/project compatibility checks and API v3 parity tests.
+- Confirm that the actual CircleCI account/token can resolve `gh/Znect-god/znect-forge` and read run, job, test, and artifact resources.
 - Perform a separate independent security review before any production deployment.
 
-No deployment, live API call, or real-secret test was performed during this review.
+No deployment or real-secret test was performed during this review. The current source-level review does not establish live CircleCI connectivity.
