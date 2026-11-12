@@ -4,6 +4,7 @@ import worker from "../src/index";
 const env = {
   CIRCLECI_TOKEN: "circle-test-token",
   MCP_ACCESS_TOKEN: "bridge-test-token",
+  WEB_ACCESS_TOKEN: "web-test-token",
   MCP_RATE_LIMITER: {
     limit: async () => ({ success: true })
   }
