@@ -66,7 +66,10 @@ async function rpc(mcpToken, id, method, params = {}) {
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
       "MCP-Protocol-Version": PROTOCOL_VERSION,
-      "Mcp-Method": method
+      "Mcp-Method": method,
+      ...(method === "tools/call" && typeof params.name === "string"
+        ? { "Mcp-Name": params.name }
+        : {})
     },
     body: JSON.stringify({ jsonrpc: "2.0", id, method, params })
   });
