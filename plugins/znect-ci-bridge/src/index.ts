@@ -356,6 +356,7 @@ function createServer(env: Env) {
   );
 
 
+
   server.registerTool(
     "diagnose_run",
     {
@@ -365,13 +366,20 @@ function createServer(env: Env) {
     async ({ run_id }) => {
       const run = await getCircleCiRun(env.CIRCLECI_TOKEN, run_id);
       const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id);
-      const workflowReports = await Promise.all(workflows.slice(0, 20).map(async (workflow) => {
+      const workflowReports: Array<Record<string, unknown>> = [];
+      let failedJobsInspected = 0;
+
+      for (const workflow of workflows.slice(0, 20)) {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
         const failedJobs = jobs.filter((job) => {
           const attributes = job.attributes as Record<string, unknown> | undefined;
           return attributes?.outcome === "failed" || attributes?.status === "failed";
-        }).slice(0, 10);
-        const diagnostics = await Promise.all(failedJobs.map(async (job) => {
+        });
+        const diagnostics: Array<Record<string, unknown>> = [];
+
+        for (const job of failedJobs) {
+          if (failedJobsInspected >= 5) break;
+          failedJobsInspected++;
           const attributes = job.attributes as Record<string, unknown> | undefined;
           const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
           const detailAttributes = details.attributes as Record<string, unknown> | undefined;
@@ -395,36 +403,39 @@ function createServer(env: Env) {
                 }))
             }));
           });
+
           let testResults = "";
           let testResultsError: string | undefined;
           try {
-            const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 300_000);
+            const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 200_000);
             testResults = result.text;
             if (result.truncated) testResults += "\\n[TRUNCATED]";
           } catch {
             testResultsError = "Unable to retrieve structured test results.";
           }
+
           let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
           try {
             const listed = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job.id);
             const reports = listed.filter((artifact) => {
               const path = artifact.attributes?.path ?? "";
               const size = artifact.attributes?.size ?? 0;
-              return /(?:junit|test-results).*\\.xml$/i.test(path) && size <= 1_000_000;
-            }).slice(0, 3);
-            artifacts = await Promise.all(reports.map(async (artifact) => {
+              return /(?:junit|test-results).*\\.xml$/i.test(path) && size <= 500_000;
+            }).slice(0, 2);
+            for (const artifact of reports) {
               const path = artifact.attributes?.path ?? "";
               try {
-                const report = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job.id, path, 1_000_000);
-                return { path, size: artifact.attributes?.size, content: report.text };
+                const report = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job.id, path, 500_000);
+                artifacts.push({ path, size: artifact.attributes?.size, content: report.text });
               } catch {
-                return { path, size: artifact.attributes?.size, error: "Unable to retrieve this report artifact." };
+                artifacts.push({ path, size: artifact.attributes?.size, error: "Unable to retrieve this report artifact." });
               }
-            }));
+            }
           } catch {
             artifacts = [{ error: "Unable to list job artifacts." }];
           }
-          return {
+
+          diagnostics.push({
             job_id: job.id,
             name: attributes?.name ?? detailAttributes?.name,
             outcome: attributes?.outcome ?? attributes?.status,
@@ -432,19 +443,23 @@ function createServer(env: Env) {
             test_results: testResults,
             test_results_error: testResultsError,
             report_artifacts: artifacts
-          };
-        }));
-        return {
+          });
+        }
+
+        workflowReports.push({
           workflow_id: workflow.id,
           workflow_name: (workflow.attributes as Record<string, unknown> | undefined)?.name,
           jobs_total: jobs.length,
+          failed_jobs_total: failedJobs.length,
           failed_jobs: diagnostics
-        };
-      }));
+        });
+        if (failedJobsInspected >= 5) break;
+      }
+
       const payload = redactKnownSecrets(JSON.stringify({
         run,
         workflows: workflowReports,
-        limits: { max_workflows: 20, max_failed_jobs_per_workflow: 10, max_report_artifacts_per_job: 3, max_report_bytes: 1_000_000 }
+        limits: { max_workflows: 20, max_failed_jobs_per_run: 5, max_report_artifacts_per_job: 2, max_report_bytes: 500_000 }
       }, null, 2), env);
       return { content: [{ type: "text", text: limitText(payload, 120_000).text }] };
     }
