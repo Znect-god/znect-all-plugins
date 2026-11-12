@@ -27,6 +27,7 @@ import {
 interface Env {
   CIRCLECI_TOKEN: string;
   MCP_ACCESS_TOKEN: string;
+  WEB_ACCESS_TOKEN: string;
   MCP_RATE_LIMITER: {
     limit(options: { key: string }): Promise<{ success: boolean }>;
   };
@@ -560,14 +561,14 @@ function createServer(env: Env) {
 }
 
 async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> {
-  if (!env.CIRCLECI_TOKEN || !env.MCP_ACCESS_TOKEN) return json({ error: "Worker secrets are not configured." }, 503);
+  if (!env.CIRCLECI_TOKEN || !env.WEB_ACCESS_TOKEN) return json({ error: "Web access secrets are not configured." }, 503);
   const authorization = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(.+)$/i.exec(authorization);
-  if (!(await safeEqual(match?.[1] ?? "", env.MCP_ACCESS_TOKEN))) {
+  if (!(await safeEqual(match?.[1] ?? "", env.WEB_ACCESS_TOKEN))) {
     return new Response("Unauthorized", { status: 401, headers: { "www-authenticate": 'Bearer realm="Znect CI Bridge API"', "cache-control": "no-store" } });
   }
   if (!env.MCP_RATE_LIMITER) return json({ error: "Rate limiting is not configured." }, 503);
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(env.MCP_ACCESS_TOKEN));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(env.WEB_ACCESS_TOKEN));
   const key = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
   let rateLimit: { success: boolean };
   try { rateLimit = await env.MCP_RATE_LIMITER.limit({ key }); }
