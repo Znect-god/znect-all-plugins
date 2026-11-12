@@ -111,7 +111,7 @@ Cloudflare Workers Builds succeeded for branch commit `3e3262c7b7664f19b436d6753
 - CircleCI API v3 test-result and artifact endpoints may return no data when test metadata or artifacts were not uploaded by the job. Artifact retrieval is restricted to exact paths returned by CircleCI and allowlisted HTTPS hosts.
 - Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
-- Failed Bearer-token attempts are not covered by the per-token rate limiter.
+- Failed Bearer-token attempts use a separate per-client-IP digest bucket; this is approximate and location-local, and does not replace a dedicated edge WAF rule.
 - Log redaction is best-effort.
 - No persistent storage, scheduled polling, alerts, or push notifications yet.
 - Wrangler/workerd is unsupported in the current Android ARM64 Termux environment.
