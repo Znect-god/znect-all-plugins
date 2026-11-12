@@ -105,6 +105,7 @@ function createServer(env: Env) {
     "list_recent_builds",
     {
       description: "Read the latest CircleCI job runs for the fixed GitHub project Znect-god/znect-forge. Read-only; returns branch, status, build number, commit and build URL. Limit 1–30.",
+      annotations: { readOnlyHint: true },
       inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ limit }) => {
@@ -128,6 +129,7 @@ function createServer(env: Env) {
     "get_build_details",
     {
       description: "Read detailed metadata and step/action statuses for one CircleCI build of Znect-god/Znect-forge. Does not retrieve console output.",
+      annotations: { readOnlyHint: true },
       inputSchema: { build_num: z.number().int().min(1) }
     },
     async ({ build_num }) => {
@@ -165,6 +167,7 @@ function createServer(env: Env) {
     "get_build_logs",
     {
       description: "Read console output for a CircleCI build step/action. Fetches the presigned output URL returned by CircleCI; never accepts arbitrary URLs. Output is bounded to 80,000 characters per action and 160,000 characters total per response; at most 10 actions are fetched to remain within Worker subrequest limits.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         build_num: z.number().int().min(1),
         step_index: z.number().int().min(0).optional(),
@@ -233,6 +236,7 @@ function createServer(env: Env) {
     "check_connection",
     {
       description: "Verify MCP-to-CircleCI authentication and read access to the fixed Znect Forge project. Returns connection status and project identity only. Read-only.",
+      annotations: { readOnlyHint: true },
       inputSchema: z.object({})
     },
     async (_args) => {
@@ -249,6 +253,7 @@ function createServer(env: Env) {
     "list_recent_runs",
     {
       description: "Read the latest CircleCI API v3 runs for the fixed Znect Forge project. Returns UUID run IDs and current outcomes. Read-only; limit 1–30.",
+      annotations: { readOnlyHint: true },
       inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ limit }) => {
@@ -267,6 +272,7 @@ function createServer(env: Env) {
     "get_run_details",
     {
       description: "Read one CircleCI API v3 run by UUID, including its workflows and jobs. Read-only; use a run UUID returned by list_recent_runs.",
+      annotations: { readOnlyHint: true },
       inputSchema: { run_id: z.string().uuid() }
     },
     async ({ run_id }) => {
@@ -293,6 +299,7 @@ function createServer(env: Env) {
     "get_job_details",
     {
       description: "Read the CircleCI API v3 job resource by UUID, including all attributes exposed by CircleCI. Read-only.",
+      annotations: { readOnlyHint: true },
       inputSchema: { job_id: z.string().uuid() }
     },
     async ({ job_id }) => {
@@ -307,6 +314,7 @@ function createServer(env: Env) {
     "get_job_logs",
     {
       description: "Read bounded stdout or stderr for a CircleCI API v3 job step. Requires a job UUID and step number. Read-only.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         job_id: z.string().uuid(),
         step_num: z.number().int().min(0),
@@ -347,6 +355,7 @@ function createServer(env: Env) {
     "get_job_test_results",
     {
       description: "Read structured CircleCI test results for a job as bounded JSON Lines. Read-only; requires a job UUID from get_run_details.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         job_id: z.string().uuid(),
         max_chars: z.number().int().min(1).max(80_000).default(40_000)
@@ -374,6 +383,7 @@ function createServer(env: Env) {
     "list_job_artifacts",
     {
       description: "List metadata for artifacts uploaded by a CircleCI job. Presigned download URLs are deliberately not exposed. Read-only.",
+      annotations: { readOnlyHint: true },
       inputSchema: { job_id: z.string().uuid() }
     },
     async ({ job_id }) => {
@@ -394,6 +404,7 @@ function createServer(env: Env) {
     "get_job_artifact",
     {
       description: "Download one CircleCI job artifact by its exact path from list_job_artifacts. The URL is resolved internally, host-validated, and the text response is bounded. Read-only.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         job_id: z.string().uuid(),
         artifact_path: z.string().min(1).max(512),
@@ -424,6 +435,7 @@ function createServer(env: Env) {
     "diagnose_run",
     {
       description: "Automatically inspect one CircleCI run: traverse workflows and jobs, collect failed job steps, structured test results, and small JUnit/test-report artifacts. Read-only; does not rerun or modify pipelines.",
+      annotations: { readOnlyHint: true },
       inputSchema: { run_id: z.string().uuid() }
     },
     async ({ run_id }) => {
