@@ -109,7 +109,7 @@ Cloudflare Workers Builds succeeded for branch commit `3e3262c7b7664f19b436d6753
 
 - In development; not production-ready.
 - CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
-- The v3 adapter and MCP tools are tested with mocked HTTP responses. Live project resolution, run retrieval, failed-step log retrieval, test-result access, and artifact access still require verification against CircleCI using the configured token. The `diagnose_run` aggregator limits itself to five failed jobs per run and two report artifacts per job to control API usage and response size.
+- The v3 adapter and MCP tools are tested with mocked HTTP responses. Live project resolution, run retrieval, failed-step log retrieval, test-result access, and artifact access still require verification against CircleCI using the configured token. `get_run_details` inspects at most 10 workflows and 40 jobs per workflow; `diagnose_run` inspects at most five workflows, three failed jobs, three failed-action log bundles, and one report artifact per failed job to control Worker subrequests and response size.
 - CircleCI API v3 test-result and artifact endpoints may return no data when test metadata or artifacts were not uploaded by the job. Artifact retrieval is restricted to exact paths returned by CircleCI and allowlisted HTTPS hosts.
 - Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
