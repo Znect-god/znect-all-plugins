@@ -17,7 +17,7 @@
   "permissions": [
     "Network access to the configured Cloudflare Worker and approved CircleCI API endpoints",
     "Read-only CircleCI project/build data using a secret token",
-    "Bearer authentication for the MCP endpoint"
+    "Separate Bearer authentication tokens for MCP and browser JSON API access"
   ],
   "dependencies": [
     "Node.js 24 toolchain for development",
@@ -39,8 +39,13 @@
     "Secrets supplied through Cloudflare Worker Secrets",
     "CircleCI API JSON response body size ceiling",
     "Maximum three allowlisted artifact redirects",
-    "Cloudflare Rate Limiting binding: 60 authenticated MCP requests per 60 seconds per Cloudflare location",
     "Rate-limit key is a SHA-256 digest of the configured MCP token; raw token is not used as the key",
+    "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
+    "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats",
+    "Separate Bearer authentication for /mcp (MCP_ACCESS_TOKEN) and /api/v1/* (WEB_ACCESS_TOKEN)",
+    "Cloudflare Rate Limiting binding: 60 authenticated MCP and browser API requests per 60 seconds per Cloudflare location",
+    "Authenticated rate-limit keys are SHA-256 digests of their respective access tokens; raw tokens are not used as keys",
+    "Failed MCP and browser API authentication attempts use a separate SHA-256 client-IP digest bucket",
     "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
     "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats"
   ],
@@ -51,8 +56,7 @@
     "CircleCI API v1.1 tools remain for legacy compatibility; API v3 adapter is implemented but live token authentication, project UUID resolution, and response mapping remain unverified",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
-    "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
-    "Failed authentication attempts are not covered by the authenticated per-token rate limit",
+    "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit; dedicated edge WAF hardening remains advisable.",
     "Rate-limit namespace ID must be unique within the user's Cloudflare account",
     "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials"
   ],
@@ -76,18 +80,22 @@
       "Mocked CircleCI HTTP adapter tests cover fixed-origin GET requests, path confinement, 401/403/429 errors, sanitized failures, malformed JSON, and oversized responses",
       "Artifact allowlist regression tests cover regional S3 endpoints and reject unrelated AWS service hosts",
       "Artifact redirect regression tests cover the configured redirect-hop limit",
-      "GitHub Actions run 43088128444 passed npm ci, npm audit with zero vulnerabilities, TypeScript typecheck, 29 tests across three files, and Wrangler dry-run with MCP_RATE_LIMITER"
+      "GitHub Actions run 43088128444 passed npm ci, npm audit with zero vulnerabilities, TypeScript typecheck, 29 tests across three files, and Wrangler dry-run with MCP_RATE_LIMITER",
+      "Worker API regression test verifies configured CircleCI, MCP, and browser credentials are redacted from upstream error responses",
+      "Security helper regression tests verify oversized diagnostic JSON remains parseable and is marked as truncated",
+      "Current CI validates the latest read-only MCP Worker bundle with dependency audit, TypeScript, Vitest, and Wrangler dry-run"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
       "Live CircleCI API integration and log retrieval",
-      "Edge-level throttling for failed authentication attempts and broader log-secret exposure review",
+      "Dedicated Cloudflare WAF rule for failed-authentication traffic and broader log-secret exposure review",
       "Verify live API v3 token authentication, project identity resolution, and end-to-end data retrieval; mock tests do not establish live compatibility"
     ]
   },
   "secrets": [
     "CIRCLECI_TOKEN",
-    "MCP_ACCESS_TOKEN"
+    "MCP_ACCESS_TOKEN",
+    "WEB_ACCESS_TOKEN"
   ],
   "license": "undecided"
 }
