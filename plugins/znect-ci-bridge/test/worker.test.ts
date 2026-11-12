@@ -302,7 +302,7 @@ describe("Worker HTTP boundary", () => {
     expect(body).not.toContain(env.CIRCLECI_TOKEN);
     expect(body).not.toContain(env.WEB_ACCESS_TOKEN);
     expect(body).not.toContain(env.MCP_ACCESS_TOKEN);
-    expect(body).toContain("[REDACTED]");
+    expect(body).toContain("CircleCI API request failed due to a network or TLS error.");
   });
 
   it("completes an authenticated MCP initialize handshake over Streamable HTTP", async () => {
