@@ -67,11 +67,13 @@ describe("CircleCI API v3 client", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response("sensitive upstream details", { status })
     ));
-    const expected = status === 401 || status === 403
+    const expected = status === 401
       ? "CircleCI API v3 authentication failed (HTTP 401). Check whether CIRCLECI_TOKEN is a valid, unexpired Personal API Token."
-      : status === 404
-        ? "The requested CircleCI API v3 resource was not found or is not accessible."
-        : "CircleCI API v3 rate limit exceeded. Retry after the indicated interval.";
+      : status === 403
+        ? "CircleCI API v3 authorization failed (HTTP 403). The authenticated account or token does not have access to this project."
+        : status === 404
+          ? "The requested CircleCI API v3 resource was not found or is not accessible."
+          : "CircleCI API v3 rate limit exceeded. Retry after the indicated interval.";
     await expect(circleV3Get("token", "/api/v3/runs")).rejects.toThrow(expected);
   });
 
