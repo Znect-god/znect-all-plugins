@@ -22,7 +22,7 @@ New API v3 tools are also exposed:
 - `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
 - `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.\n- `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
 
-The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. All tools are read-only; no build mutation tools exist.
+The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. `diagnose_run` collects failed-step metadata, bounded stdout/stderr, structured test results, and up to two small JUnit/test-report artifacts per failed job. All tools are read-only; no build mutation tools exist.
 
 ## Source layout
 
@@ -63,7 +63,7 @@ The legacy v1.1 tools remain temporarily for compatibility. They use build numbe
 
 ## Development
 
-Use Node.js 22 on Linux, macOS, or Windows:
+Use Node.js 24 on Linux, macOS, or Windows:
 
 ```bash
 npm ci
@@ -74,7 +74,7 @@ npx wrangler deploy --dry-run
 
 Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub Actions Linux workflow for Worker validation instead.
 
-## Cloudflare setup — not yet performed
+## Deployment and live verification
 
 1. Check that the rate-limit namespace ID in `wrangler.toml` is unique in your Cloudflare account.
 2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
@@ -86,13 +86,13 @@ No live CircleCI token or endpoint has been used, and no Cloudflare deployment h
 
 - Prototype only; not production-ready.
 - CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
-- The v3 adapter and MCP tools are tested with mocked HTTP responses only; live test-result and artifact access still require verification against CircleCI using the configured token. The `diagnose_run` aggregator limits itself to five failed jobs per run and two report artifacts per job to control API usage and response size.
+- The v3 adapter and MCP tools are tested with mocked HTTP responses. Live project resolution, run retrieval, failed-step log retrieval, test-result access, and artifact access still require verification against CircleCI using the configured token. The `diagnose_run` aggregator limits itself to five failed jobs per run and two report artifacts per job to control API usage and response size.
 - CircleCI API v3 test-result and artifact endpoints may return no data when test metadata or artifacts were not uploaded by the job. Artifact retrieval is restricted to exact paths returned by CircleCI and allowlisted HTTPS hosts.
 - Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
 - Failed Bearer-token attempts are not covered by the per-token rate limiter.
 - Log redaction is best-effort.
-- No persistent storage, scheduled polling, alerts, or push notifications.
+- No persistent storage, scheduled polling, alerts, or push notifications yet.
 - Wrangler/workerd is unsupported in the current Android ARM64 Termux environment.
 - License remains undecided; public visibility does not grant reuse or redistribution rights.
 
