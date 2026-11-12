@@ -134,7 +134,7 @@ describe("Worker HTTP boundary", () => {
     const response = await worker.fetch(
       new Request("https://bridge.example/api/v1/runs", {
         method: "POST",
-        headers: { authorization: "Bearer bridge-test-token" }
+        headers: { authorization: "Bearer web-test-token" }
       }),
       env,
       ctx
@@ -146,7 +146,7 @@ describe("Worker HTTP boundary", () => {
   it("validates API run limits and UUIDs before contacting CircleCI", async () => {
     const invalidLimit = await worker.fetch(
       new Request("https://bridge.example/api/v1/runs?limit=31", {
-        headers: { authorization: "Bearer bridge-test-token" }
+        headers: { authorization: "Bearer web-test-token" }
       }),
       env,
       ctx
@@ -155,7 +155,7 @@ describe("Worker HTTP boundary", () => {
 
     const invalidUuid = await worker.fetch(
       new Request("https://bridge.example/api/v1/runs/not-a-uuid", {
-        headers: { authorization: "Bearer bridge-test-token" }
+        headers: { authorization: "Bearer web-test-token" }
       }),
       env,
       ctx
@@ -166,9 +166,9 @@ describe("Worker HTTP boundary", () => {
   it("fails closed for JSON API requests when rate limiting is unavailable", async () => {
     const response = await worker.fetch(
       new Request("https://bridge.example/api/v1/runs", {
-        headers: { authorization: "Bearer bridge-test-token" }
+        headers: { authorization: "Bearer web-test-token" }
       }),
-      { CIRCLECI_TOKEN: "circle-test-token", MCP_ACCESS_TOKEN: "bridge-test-token" } as typeof env,
+      { CIRCLECI_TOKEN: "circle-test-token", MCP_ACCESS_TOKEN: "bridge-test-token", WEB_ACCESS_TOKEN: "web-test-token" } as typeof env,
       ctx
     );
     expect(response.status).toBe(503);
@@ -200,7 +200,7 @@ describe("Worker HTTP boundary", () => {
     vi.stubGlobal("fetch", fetchMock);
     const response = await worker.fetch(
       new Request("https://bridge.example/api/v1/status", {
-        headers: { authorization: "Bearer bridge-test-token" }
+        headers: { authorization: "Bearer web-test-token" }
       }),
       env,
       ctx
@@ -228,7 +228,7 @@ describe("Worker HTTP boundary", () => {
     vi.stubGlobal("fetch", fetchMock);
     const response = await worker.fetch(
       new Request("https://bridge.example/api/v1/runs?limit=5", {
-        headers: { authorization: "Bearer bridge-test-token" }
+        headers: { authorization: "Bearer web-test-token" }
       }),
       env,
       ctx
