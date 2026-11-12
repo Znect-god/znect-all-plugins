@@ -56,6 +56,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   var token="";
   var lastDetails=null;
   var sessionVersion=0;
+  var runsRequestId=0;
   var detailsRequestId=0;
   var tokenInput=document.getElementById("token");
   var message=document.getElementById("message");
@@ -74,7 +75,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   }
   function connect(){
     var version=++sessionVersion;
-    detailsRequestId++;
+    runsRequestId++;detailsRequestId++;
     token=tokenInput.value.trim();
     runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
     runsBox.replaceChildren();detailsBox.replaceChildren();rawBox.textContent="";
@@ -93,9 +94,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   function loadRuns(){
     if(!token)return;
     var version=sessionVersion;
+    var requestId=++runsRequestId;
     runsBox.replaceChildren(element("p","status","Loading runs…"));
     request("/api/v1/runs?limit=20").then(function(data){
-      if(version!==sessionVersion)return;
+      if(version!==sessionVersion||requestId!==runsRequestId)return;
       runsBox.replaceChildren();
       var items=Array.isArray(data.runs)?data.runs:[];
       if(!items.length){runsBox.appendChild(element("p","status","No recent runs were returned."));return;}
@@ -113,7 +115,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         runsBox.appendChild(row);
       });
     }).catch(function(error){
-      if(version!==sessionVersion)return;
+      if(version!==sessionVersion||requestId!==runsRequestId)return;
       runsBox.replaceChildren(element("p","status error",error.message));
     });
   }
@@ -150,14 +152,22 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   document.getElementById("connect").addEventListener("click",connect);
   document.getElementById("refresh").addEventListener("click",loadRuns);
   document.getElementById("disconnect").addEventListener("click",function(){
-    sessionVersion++;detailsRequestId++;
+    sessionVersion++;runsRequestId++;detailsRequestId++;
     token="";tokenInput.value="";runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
     runsBox.replaceChildren();detailsBox.replaceChildren();rawBox.textContent="";
     setMessage("Token cleared from this tab.","");
   });
   document.getElementById("copy").addEventListener("click",function(){
     if(!lastDetails)return;
-    navigator.clipboard.writeText(JSON.stringify(lastDetails,null,2)).then(function(){setMessage("Run JSON copied.","good");}).catch(function(){setMessage("Clipboard access is unavailable in this browser.","error");});
+    var copiedDetails=lastDetails;
+    var version=sessionVersion;
+    navigator.clipboard.writeText(JSON.stringify(copiedDetails,null,2)).then(function(){
+      if(version!==sessionVersion||lastDetails!==copiedDetails)return;
+      setMessage("Run JSON copied.","good");
+    }).catch(function(){
+      if(version!==sessionVersion||lastDetails!==copiedDetails)return;
+      setMessage("Clipboard access is unavailable in this browser.","error");
+    });
   });
 })();
 </script>
