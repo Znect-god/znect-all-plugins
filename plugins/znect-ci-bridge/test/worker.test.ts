@@ -174,4 +174,19 @@ describe("Worker HTTP boundary", () => {
     });
   });
 
+  it("serves the standalone dashboard with restrictive browser security headers", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/"),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(response.headers.get("content-security-policy")).toContain("connect-src 'self'");
+    const html = await response.text();
+    expect(html).toContain("Znect CI Bridge");
+    expect(html).toContain("/api/v1/status");
+    expect(html).toContain("not saved to browser storage");
+  });
+
 });
