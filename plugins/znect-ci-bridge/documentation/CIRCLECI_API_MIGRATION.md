@@ -1,7 +1,7 @@
 # CircleCI API migration plan
 
-**Status:** CircleCI Cloud target established; v3 read-only adapter and ten v3 MCP tools implemented with mocked tests. Live token access and project UUID resolution remain unverified.  
-**Current MCP tools:** legacy v1.1 tools remain for compatibility; ten separate v3 tools are now available.  
+**Status:** CircleCI Cloud target established; v3 read-only adapter and nine v3 MCP tools implemented with mocked tests. Live token access and project UUID resolution remain unverified.  
+**Current MCP tools:** legacy v1.1 tools remain for compatibility; nine separate v3 tools are now available.  
 **Target:** API v3 for the existing CircleCI Cloud project. No Forge hosting migration is needed.
 
 ## Current documentation findings
@@ -42,7 +42,7 @@ Sources:
 - bounded stdout/stderr retrieval using the documented step and execution filters;
 - sanitized 401/403/404/429 and other upstream errors.
 
-The v3 adapter is now wired to ten new MCP tools, kept separate from the legacy tools:
+The v3 adapter is now wired to nine new MCP tools, kept separate from the legacy tools:
 - `check_connection()` verifies read access to the fixed project and returns its UUID and slug.
 - `list_recent_runs(limit)` resolves the fixed project slug and lists v3 runs.
 - `get_run_details(run_id)` reads a run, its workflows and their jobs.
