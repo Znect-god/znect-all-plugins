@@ -188,6 +188,44 @@ describe("CircleCI API v3 client", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  it("paginates workflows and jobs with opaque cursors", async () => {
+    const workflow2 = "123e4567-e89b-42d3-a456-426614174004";
+    const job2 = "123e4567-e89b-42d3-a456-426614174005";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: "workflow-cursor" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: workflow2 }], page: { next: null }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: JOB_ID }], page: { next: "job-cursor" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: job2 }], page: { next: null }
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listCircleCiWorkflows("token", RUN_ID)).resolves.toHaveLength(2);
+    await expect(listCircleCiJobs("token", WORKFLOW_ID)).resolves.toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[1][0]).toContain("page%5Bcursor%5D=workflow-cursor");
+    expect(fetchMock.mock.calls[3][0]).toContain("page%5Bcursor%5D=job-cursor");
+    expect(fetchMock.mock.calls[0][0]).toContain("page%5Blimit%5D=20");
+  });
+
+  it("rejects repeated cursors while traversing workflows and jobs", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: "repeat" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: "repeat" }
+      }), { status: 200 })));
+    await expect(listCircleCiWorkflows("token", RUN_ID))
+      .rejects.toThrow("repeated a pagination cursor while listing workflows");
+  });
+
   it("reads bounded stdout and uses the documented step/execution filters", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("line1\nline2\nline3", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
