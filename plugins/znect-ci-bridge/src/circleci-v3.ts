@@ -198,13 +198,17 @@ const MAX_COLLECTION_PAGES = 10;
 async function listCircleCiCollection(
   pathForCursor: (cursor: string | null) => string,
   resourceLabel: "workflow" | "job",
-  token: string
+  token: string,
+  maxPages = MAX_COLLECTION_PAGES
 ): Promise<V3Resource[]> {
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > MAX_COLLECTION_PAGES) {
+    throw new Error(`Collection page limit must be between 1 and ${MAX_COLLECTION_PAGES}.`);
+  }
   const resources: V3Resource[] = [];
   const seenCursors = new Set<string>();
   let cursor: string | null = null;
 
-  for (let pageIndex = 0; pageIndex < MAX_COLLECTION_PAGES; pageIndex++) {
+  for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
     const page: V3Collection = await circleV3Get<V3Collection>(
       token,
       pathForCursor(cursor)
@@ -224,12 +228,13 @@ async function listCircleCiCollection(
     cursor = next;
   }
 
-  throw new Error(`CircleCI API v3 ${resourceLabel}s collection exceeded the safety limit of ${MAX_COLLECTION_PAGES * COLLECTION_PAGE_SIZE} items.`);
+  throw new Error(`CircleCI API v3 ${resourceLabel}s collection exceeded the safety limit of ${maxPages * COLLECTION_PAGE_SIZE} items.`);
 }
 
 export async function listCircleCiWorkflows(
   token: string,
-  runId: string
+  runId: string,
+  maxPages = MAX_COLLECTION_PAGES
 ): Promise<V3Resource[]> {
   assertUuid(runId, "run ID");
   return listCircleCiCollection((cursor) => {
@@ -239,12 +244,13 @@ export async function listCircleCiWorkflows(
     });
     if (cursor) query.set("page[cursor]", cursor);
     return `/api/v3/workflows?${query.toString()}`;
-  }, "workflow", token);
+  }, "workflow", token, maxPages);
 }
 
 export async function listCircleCiJobs(
   token: string,
-  workflowId: string
+  workflowId: string,
+  maxPages = MAX_COLLECTION_PAGES
 ): Promise<V3Resource[]> {
   assertUuid(workflowId, "workflow ID");
   return listCircleCiCollection((cursor) => {
@@ -254,7 +260,7 @@ export async function listCircleCiJobs(
     });
     if (cursor) query.set("page[cursor]", cursor);
     return `/api/v3/jobs?${query.toString()}`;
-  }, "job", token);
+  }, "job", token, maxPages);
 }
 
 export async function getCircleCiJob(
