@@ -26,6 +26,10 @@ Failed Bearer authentication on both MCP and browser API routes now consumes a s
 
 This mitigates repeated token guesses from one address, but Cloudflare's built-in limiter is approximate and location-local. Clients behind a shared NAT also share a bucket, and distributed attempts can use multiple locations or addresses. A dedicated Cloudflare WAF/rate-limiting rule with monitoring remains a useful additional edge control.
 
+### Browser dashboard DOM and credential handling — addressed
+
+The dashboard renders CircleCI-controlled values through `textContent` and DOM node creation; no HTML injection sinks are used. The Web token remains in tab memory only, is cleared on disconnect or failed authentication, and is never placed in browser storage or the URL. Dashboard API requests now omit ambient cookies, reject redirects, suppress referrers, and use `cache: no-store`. Static regression tests cover these properties.
+
 ### Browser API error responses redact configured credentials — addressed
 
 The browser JSON API now applies configured-secret redaction to upstream exception messages before returning an HTTP 502 response. A regression test injects all three configured credentials into a synthetic transport error and verifies that none is returned.
@@ -57,6 +61,7 @@ Reference: https://developers.cloudflare.com/agents/model-context-protocol/proto
 - Log streams and final output have byte/character budgets.
 - CORS is disabled and caller-supplied artifact URLs are not accepted.
 - CI workflow uses read-only repository permissions and performs dry-run validation only.
+- Dashboard requests use an explicit Bearer header with `credentials: omit`, `redirect: error`, `referrerPolicy: no-referrer`, and `cache: no-store`; user-controlled and CircleCI-controlled strings are rendered as text nodes.
 
 ## Remaining verification
 
