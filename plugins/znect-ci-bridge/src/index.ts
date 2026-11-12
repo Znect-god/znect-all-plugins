@@ -182,6 +182,24 @@ function createServer(env: Env) {
 
   // CircleCI API v3 tools are exposed alongside the legacy v1.1 tools.
   // They use UUIDs and never infer a v3 run ID from a legacy build number.
+  // Minimal live connectivity check for the fixed Forge project.
+  // Read-only: this tool never starts or changes a pipeline.
+  server.registerTool(
+    "check_connection",
+    {
+      description: "Verify MCP-to-CircleCI authentication and read access to the fixed Znect Forge project. Returns connection status and project identity only. Read-only.",
+      inputSchema: {}
+    },
+    async () => {
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      return { content: [{ type: "text", text: JSON.stringify({
+        connected: true,
+        provider: "CircleCI Cloud API v3",
+        project: { id: project.id, slug: project.attributes?.slug },
+        permissions: "read-only"
+      }, null, 2) }] };
+    }
+  );
   server.registerTool(
     "list_recent_runs",
     {
