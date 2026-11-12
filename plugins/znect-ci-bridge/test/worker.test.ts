@@ -331,7 +331,7 @@ describe("Worker HTTP boundary", () => {
 
     expect(response.status).toBe(200);
     const responseText = await response.text();
-    const dataLine = responseText.split("\\n").find((line) => line.startsWith("data:"));
+    const dataLine = responseText.split("\n").find((line) => line.startsWith("data:"));
     const payload = dataLine
       ? JSON.parse(dataLine.slice("data:".length).trim())
       : JSON.parse(responseText);
@@ -343,7 +343,7 @@ describe("Worker HTTP boundary", () => {
         capabilities: { tools: expect.any(Object) }
       }
     });
-    expect(response.headers.get("content-type")).toMatch(/application\\/json|text\\/event-stream/);
+    expect(response.headers.get("content-type")).toMatch(/application\/json|text\/event-stream/);
   });
 
 });
