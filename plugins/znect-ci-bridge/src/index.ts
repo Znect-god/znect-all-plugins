@@ -114,7 +114,7 @@ function createServer(env: Env) {
         build_url: item.build_url,
         failed: item.failed
       }));
-      return { content: [{ type: "text", text: stringifyBoundedJson(result, 100_000) }] };
+      return { content: [{ type: "text", text: stringifyBoundedJson({ builds: result }, 100_000) }] };
     }
   );
 
