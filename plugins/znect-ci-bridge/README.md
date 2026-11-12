@@ -1,6 +1,6 @@
 # Znect CI Bridge
 
-**Status:** `prototype`  
+**Status:** `in-development`  
 **Version:** `0.1.0`
 
 Znect CI Bridge is an experimental, read-only MCP server for CircleCI build information. It runs as a Cloudflare Worker and is intended for an MCP-compatible client.
@@ -83,11 +83,11 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
-No live CircleCI token or API request has been used. Cloudflare Workers Builds completed successfully for PR head commit `dbac3c87525a1c52d63b1cfb91a6e579b66db122` on 2026-11-12. This confirms that the current source builds in Cloudflare, but a Preview deployment for this exact commit has not been independently confirmed. The last explicitly confirmed Preview deployment belongs to earlier commit `4a755640a3c2c9490f2590a0326fe2947c579c7e`; its branch Preview URL is `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev`. Do not treat that older Preview as a deployment of the current head. Production deployment and live MCP/CircleCI authentication and API access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
+Cloudflare Workers Builds and the Cloudflare Preview deployment both succeeded for the current branch head commit `3e3262c7b7664f19b436d67537150f5bba4e78e0` on 2026-11-12. Preview URL: `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev`. This is a branch Preview only; no production deployment has been performed. No live CircleCI token or API request has been used, so CircleCI authentication, project resolution, and end-to-end MCP access remain unverified. The GitHub Actions Wrangler dry-run does not deploy.
 
 ## Known limitations
 
-- Prototype only; not production-ready.
+- In development; not production-ready.
 - CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
 - The v3 adapter and MCP tools are tested with mocked HTTP responses. Live project resolution, run retrieval, failed-step log retrieval, test-result access, and artifact access still require verification against CircleCI using the configured token. The `diagnose_run` aggregator limits itself to five failed jobs per run and two report artifacts per job to control API usage and response size.
 - CircleCI API v3 test-result and artifact endpoints may return no data when test metadata or artifacts were not uploaded by the job. Artifact retrieval is restricted to exact paths returned by CircleCI and allowlisted HTTPS hosts.
