@@ -461,7 +461,7 @@ function createServer(env: Env) {
             const reports = listed.filter((artifact) => {
               const path = artifact.attributes?.path ?? "";
               const size = artifact.attributes?.size ?? 0;
-              return /(?:junit|test-results).*\\.xml$/i.test(path) && size <= 500_000;
+              return /(?:junit|test-results).*\.xml$/i.test(path) && size <= 500_000;
             }).slice(0, 2);
             for (const artifact of reports) {
               const path = artifact.attributes?.path ?? "";
