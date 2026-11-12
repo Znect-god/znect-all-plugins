@@ -5,12 +5,16 @@ describe("browser dashboard security", () => {
   it("renders untrusted API values only as text nodes", () => {
     expect(DASHBOARD_HTML).toContain("node.textContent=String(text)");
     expect(DASHBOARD_HTML).toContain("rawBox.textContent=JSON.stringify(data,null,2)");
-    expect(DASHBOARD_HTML).not.toMatch(/\\binnerHTML\\s*=|\\bouterHTML\\s*=|insertAdjacentHTML|document\\.write|\\beval\\s*\\(|new Function/);
+    for (const sink of ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function"]) {
+      expect(DASHBOARD_HTML).not.toContain(sink);
+    }
   });
 
   it("does not persist the web token in browser storage or URL state", () => {
     expect(DASHBOARD_HTML).toContain('var token=""');
-    expect(DASHBOARD_HTML).not.toMatch(/localStorage|sessionStorage|location\\.search|location\\.hash/);
+    for (const storageOrUrl of ["localStorage", "sessionStorage", "location.search", "location.hash"]) {
+      expect(DASHBOARD_HTML).not.toContain(storageOrUrl);
+    }
     expect(DASHBOARD_HTML).toContain("tokenInput.value");
     expect(DASHBOARD_HTML).toContain("tokenInput.value=\"\"");
   });
