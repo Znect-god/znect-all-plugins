@@ -15,15 +15,15 @@ Legacy v1.1 tools remain available for compatibility:
 - `get_build_logs(build_num, step_index?, max_actions?)` — bounded legacy console output.
 
 New API v3 tools are also exposed:
+- `check_connection()` — verifies read-only API v3 access and resolves the fixed project slug to its UUID.
 - `list_recent_runs(limit)` — latest project runs with UUIDs and current outcomes; limit 1–30.
 - `get_run_details(run_id)` — one run plus its workflows and jobs, addressed by UUID.
+- `get_job_details(job_id)` — details for one job addressed by UUID.
 - `get_job_logs(job_id, step_num, execution?, stream?, max_chars?)` — bounded stdout/stderr for a job step.
 - `get_job_test_results(job_id, max_chars?)` — structured test results as bounded JSON Lines.
 - `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
 - `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output .
 - `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
-
-The `check_connection` tool verifies that the configured CircleCI Personal API Token can resolve the exact fixed project slug before diagnostics are attempted.
 
 The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. `diagnose_run` collects failed-step metadata, bounded stdout/stderr, structured test results, and up to two small JUnit/test-report artifacts per failed job. All tools are read-only; no build mutation tools exist.
 
