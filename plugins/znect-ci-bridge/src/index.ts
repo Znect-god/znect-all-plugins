@@ -5,6 +5,8 @@ import { circleGet } from "./circleci";
 import {
   getCircleCiJob,
   getCircleCiJobStepOutput,
+  getCircleCiJobTests,
+  listCircleCiJobArtifacts,
   getCircleCiRun,
   listCircleCiJobs,
   listCircleCiRuns,
@@ -273,6 +275,53 @@ function createServer(env: Env) {
           }, null, 2)
         }]
       };
+    }
+  );
+
+
+  server.registerTool(
+    "get_job_test_results",
+    {
+      description: "Read structured CircleCI test results for a job as bounded JSON Lines. Read-only; requires a job UUID from get_run_details.",
+      inputSchema: {
+        job_id: z.string().uuid(),
+        max_chars: z.number().int().min(1).max(80_000).default(40_000)
+      }
+    },
+    async ({ job_id, max_chars }) => {
+      const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job_id, max_chars * 4);
+      const redacted = redactKnownSecrets(result.text, env);
+      const limited = limitText(redacted, max_chars, result.truncated);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            job_id,
+            format: "jsonl",
+            results: limited.text,
+            truncated: limited.truncated
+          }, null, 2)
+        }]
+      };
+    }
+  );
+
+  server.registerTool(
+    "list_job_artifacts",
+    {
+      description: "List metadata for artifacts uploaded by a CircleCI job. Presigned download URLs are deliberately not exposed. Read-only.",
+      inputSchema: { job_id: z.string().uuid() }
+    },
+    async ({ job_id }) => {
+      const artifacts = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job_id);
+      const safe = artifacts.map((artifact) => ({
+        id: artifact.id,
+        path: artifact.attributes?.path,
+        size: artifact.attributes?.size,
+        node_index: artifact.attributes?.node_index
+      }));
+      const payload = redactKnownSecrets(JSON.stringify({ job_id, artifacts: safe }, null, 2), env);
+      return { content: [{ type: "text", text: limitText(payload, 30_000).text }] };
     }
   );
 
