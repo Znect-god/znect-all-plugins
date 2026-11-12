@@ -1,0 +1,66 @@
+name: Znect CI Bridge Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: znect-ci-bridge-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Deploy isolated Cloudflare Worker Preview
+    if: github.repository == 'Znect-god/znect-all-plugins' && github.ref == 'refs/heads/feature/ci-bridge-test-reports'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: plugins/znect-ci-bridge
+    steps:
+      - name: Checkout approved feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feature/ci-bridge-test-reports
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: plugins/znect-ci-bridge/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Create or update the named Cloudflare Preview
+        id: preview
+        run: |
+          set -euo pipefail
+          output="$(npx wrangler preview --name feature-ci-bridge-test-reports --json)"
+          printf '%s\n' "$output"
+          preview_url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
+          deployment_url="$(printf '%s' "$output" | jq -er '.preview.deployment_url // .preview.deploymentUrl // empty' || true)"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          if [ -n "$deployment_url" ]; then
+            echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Publish Preview result
+        if: success()
+        run: |
+          {
+            echo "## Znect CI Bridge Preview"
+            echo
+            echo "- Preview URL: $PREVIEW_URL"
+            echo "- Branch: feature/ci-bridge-test-reports"
+            echo "- Environment: Cloudflare Worker Preview only"
+            echo "- Production deployment: not performed"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
