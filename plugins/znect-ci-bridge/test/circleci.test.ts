@@ -33,7 +33,7 @@ describe("CircleCI read-only HTTP adapter", () => {
         "Circle-Token": "synthetic-token",
         "Accept": "application/json"
       },
-      redirect: "error"
+      redirect: "manual"
     });
     expect(init.signal).toBeDefined();
   });
