@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
 
 const env = {
@@ -9,6 +9,8 @@ const env = {
   }
 };
 const ctx = {} as ExecutionContext;
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("Worker HTTP boundary", () => {
   it("serves a minimal health response without exposing secrets", async () => {
@@ -187,6 +189,55 @@ describe("Worker HTTP boundary", () => {
     expect(html).toContain("Znect CI Bridge");
     expect(html).toContain("/api/v1/status");
     expect(html).toContain("not saved to browser storage");
+  });
+
+  it("returns CircleCI connection status through the authenticated API", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174000";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/status", {
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      connected: true,
+      permissions: "read-only",
+      project: { id: projectId, slug: "gh/Znect-god/znect-forge" }
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns recent CircleCI runs through the authenticated API", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174000";
+    const runId = "123e4567-e89b-42d3-a456-426614174001";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: runId, attributes: { status: "success" } }],
+        page: { next: null }
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs?limit=5", {
+        headers: { authorization: "Bearer bridge-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      project: { id: projectId },
+      runs: [{ id: runId, attributes: { status: "success" } }]
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
 });
