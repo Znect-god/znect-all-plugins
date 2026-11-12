@@ -20,7 +20,7 @@ New API v3 tools are also exposed:
 - `get_job_logs(job_id, step_num, execution?, stream?, max_chars?)` — bounded stdout/stderr for a job step.
 - `get_job_test_results(job_id, max_chars?)` — structured test results as bounded JSON Lines.
 - `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
-- `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.
+- `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.\n- `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum five failed jobs per run).
 
 The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. All tools are read-only; no build mutation tools exist.
 
@@ -86,7 +86,7 @@ No live CircleCI token or endpoint has been used, and no Cloudflare deployment h
 
 - Prototype only; not production-ready.
 - CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
-- The v3 adapter and MCP tools are tested with mocked HTTP responses only; live test-result and artifact access still require verification against CircleCI using the configured token.
+- The v3 adapter and MCP tools are tested with mocked HTTP responses only; live test-result and artifact access still require verification against CircleCI using the configured token. The `diagnose_run` aggregator limits itself to five failed jobs per run and two report artifacts per job to control API usage and response size.
 - CircleCI API v3 test-result and artifact endpoints may return no data when test metadata or artifacts were not uploaded by the job. Artifact retrieval is restricted to exact paths returned by CircleCI and allowlisted HTTPS hosts.
 - Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
