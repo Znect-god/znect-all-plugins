@@ -242,11 +242,11 @@ export async function fetchAllowedArtifact(
 ): Promise<Response> {
   let currentUrl = initialUrl;
   for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
-    const response = await fetch(currentUrl.toString(), {
+    const response = await fetchWithSafeErrors(currentUrl.toString(), {
       method: "GET",
       redirect: "manual",
       signal: AbortSignal.timeout(15_000)
-    });
+    }, "CircleCI artifact");
     if (![301, 302, 303, 307, 308].includes(response.status)) {
       return response;
     }
