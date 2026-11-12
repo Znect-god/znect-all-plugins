@@ -29,7 +29,7 @@ export async function circleGet<T>(
   const response = await fetch(url.toString(), {
     method: "GET",
     headers: { "Circle-Token": token, "Accept": "application/json" },
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   });
 
