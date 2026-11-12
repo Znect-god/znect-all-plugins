@@ -4,6 +4,7 @@ const CIRCLECI_V3_API = "https://circleci.com/api/v3";
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_JSON_BYTES = 1_000_000;
 const MAX_TEXT_BYTES = 1_000_000;
+const MAX_ARTIFACTS = 100;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface V3Resource<T = Record<string, unknown>> {
@@ -258,4 +259,44 @@ export async function getCircleCiJobStepOutput(
     `/api/v3/jobs/${jobId}/${stream}?${query.toString()}`,
     maxBytes
   );
+}
+
+
+export interface CircleCiArtifact {
+  id?: string;
+  attributes?: {
+    path?: string;
+    url?: string;
+    node_index?: number;
+    size?: number;
+  };
+}
+
+/** Read the structured test results as bounded JSON Lines. */
+export async function getCircleCiJobTests(
+  token: string,
+  jobId: string,
+  maxBytes = MAX_TEXT_BYTES
+): Promise<{ text: string; truncated: boolean }> {
+  assertUuid(jobId, "job ID");
+  return circleV3GetText(token, `/api/v3/jobs/${jobId}/tests`, maxBytes);
+}
+
+/** List artifact metadata for one job; presigned URLs are kept internal. */
+export async function listCircleCiJobArtifacts(
+  token: string,
+  jobId: string
+): Promise<CircleCiArtifact[]> {
+  assertUuid(jobId, "job ID");
+  const result = await circleV3Get<V3Collection<CircleCiArtifact["attributes"]>>(
+    token,
+    `/api/v3/jobs/${jobId}/artifacts`
+  );
+  if (!Array.isArray(result.data)) {
+    throw new Error("CircleCI API v3 returned an invalid artifacts collection.");
+  }
+  if (result.data.length > MAX_ARTIFACTS) {
+    throw new Error("CircleCI job returned more than 100 artifacts; refusing an unbounded response.");
+  }
+  return result.data;
 }
