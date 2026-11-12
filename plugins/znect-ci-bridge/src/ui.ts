@@ -55,6 +55,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   "use strict";
   var token="";
   var lastDetails=null;
+  var sessionVersion=0;
+  var detailsRequestId=0;
   var tokenInput=document.getElementById("token");
   var message=document.getElementById("message");
   var runsPanel=document.getElementById("runs-panel");
@@ -71,19 +73,29 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     });
   }
   function connect(){
+    var version=++sessionVersion;
+    detailsRequestId++;
     token=tokenInput.value.trim();
+    runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
+    runsBox.replaceChildren();detailsBox.replaceChildren();rawBox.textContent="";
     if(!token){setMessage("Enter the Bridge access token.","error");return;}
     setMessage("Checking connection…");
     request("/api/v1/status").then(function(data){
+      if(version!==sessionVersion)return;
       setMessage("Connected to "+(data.project.slug||"CircleCI project")+". Read-only access confirmed.","good");
       runsPanel.hidden=false;
       loadRuns();
-    }).catch(function(error){token="";tokenInput.value="";setMessage(error.message,"error");});
+    }).catch(function(error){
+      if(version!==sessionVersion)return;
+      token="";tokenInput.value="";setMessage(error.message,"error");
+    });
   }
   function loadRuns(){
     if(!token)return;
+    var version=sessionVersion;
     runsBox.replaceChildren(element("p","status","Loading runs…"));
     request("/api/v1/runs?limit=20").then(function(data){
+      if(version!==sessionVersion)return;
       runsBox.replaceChildren();
       var items=Array.isArray(data.runs)?data.runs:[];
       if(!items.length){runsBox.appendChild(element("p","status","No recent runs were returned."));return;}
@@ -100,11 +112,17 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         row.appendChild(main);row.appendChild(button);row.appendChild(element("span","pill",attrs.status||attrs.outcome||"unknown"));
         runsBox.appendChild(row);
       });
-    }).catch(function(error){runsBox.replaceChildren(element("p","status error",error.message));});
+    }).catch(function(error){
+      if(version!==sessionVersion)return;
+      runsBox.replaceChildren(element("p","status error",error.message));
+    });
   }
   function loadDetails(id){
+    var version=sessionVersion;
+    var requestId=++detailsRequestId;
     setMessage("Loading run details…");
     request("/api/v1/runs/"+encodeURIComponent(id)).then(function(data){
+      if(version!==sessionVersion||requestId!==detailsRequestId)return;
       lastDetails=data;detailsPanel.hidden=false;detailsBox.replaceChildren();
       var run=data.run||{};var attrs=run.attributes||{};
       detailsBox.appendChild(element("p","meta","Run "+run.id+" · "+(attrs.status||attrs.outcome||"status unavailable")));
@@ -124,11 +142,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       rawBox.textContent=JSON.stringify(data,null,2);
       detailsPanel.scrollIntoView({behavior:"smooth",block:"start"});
       setMessage("Run details loaded.","good");
-    }).catch(function(error){setMessage(error.message,"error");});
+    }).catch(function(error){
+      if(version!==sessionVersion||requestId!==detailsRequestId)return;
+      setMessage(error.message,"error");
+    });
   }
   document.getElementById("connect").addEventListener("click",connect);
   document.getElementById("refresh").addEventListener("click",loadRuns);
   document.getElementById("disconnect").addEventListener("click",function(){
+    sessionVersion++;detailsRequestId++;
     token="";tokenInput.value="";runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
     runsBox.replaceChildren();detailsBox.replaceChildren();rawBox.textContent="";
     setMessage("Token cleared from this tab.","");
