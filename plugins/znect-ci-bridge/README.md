@@ -66,7 +66,7 @@ See [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage gui
 - MCP requests require `MCP_ACCESS_TOKEN`; browser API requests require the separate `WEB_ACCESS_TOKEN`. Comparison uses fixed-length SHA-256 digests.
 - MCP and browser API requests are rate-limited to 60 authenticated requests per 60 seconds per Cloudflare location. Each endpoint uses a SHA-256 digest of its own access token as the rate-limit key, never the raw token.
 - If the rate-limit binding is absent or unavailable, both the MCP endpoint and browser JSON API fail closed with HTTP 503.
-- Cloudflare's built-in rate limiter is approximate and local to each Cloudflare location; it is not a strict global quota. Failed authentication attempts are not covered by this per-token limit.
+- Cloudflare's built-in rate limiter is approximate and local to each Cloudflare location; it is not a strict global quota. Authenticated requests are keyed by a SHA-256 digest of the relevant access token; failed authentication attempts are separately keyed by a SHA-256 digest of Cloudflare's client-IP header, so repeated token guesses from one address are rate-limited without storing the raw address as the limiter key.
 - Artifact URLs and every redirect target must use HTTPS, a CircleCI artifact subdomain or S3-style AWS endpoint, and the default HTTPS port. Redirect chains are limited to three hops.
 - Log response bodies are streamed with a byte ceiling, then limited to 80,000 characters per action and 160,000 across the complete response.
 - Configured Worker secrets and common credential patterns are redacted heuristically. This is best-effort and cannot guarantee detection of every upstream secret.
