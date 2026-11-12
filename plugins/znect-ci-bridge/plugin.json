@@ -85,7 +85,8 @@
       "Current CI validates the latest read-only MCP Worker bundle with dependency audit, TypeScript, Vitest, and Wrangler dry-run",
       "MCP transport regression tests reject untrusted, null, and file Origin headers with HTTP 403",
       "CircleCI timeout/network errors and Retry-After parsing covered by mocked tests",
-      "Nested CircleCI pagination enforces caller-selected page ceilings; run diagnostics are bounded to fit Workers Free subrequest limits"
+      "Nested CircleCI pagination enforces caller-selected page ceilings; run diagnostics are bounded to fit Workers Free subrequest limits",
+      "Browser dashboard security tests verify text-only DOM rendering, no token persistence, omitted ambient credentials, redirect rejection, and no-referrer requests"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
