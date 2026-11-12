@@ -355,6 +355,101 @@ function createServer(env: Env) {
     }
   );
 
+
+  server.registerTool(
+    "diagnose_run",
+    {
+      description: "Automatically inspect one CircleCI run: traverse workflows and jobs, collect failed job steps, structured test results, and small JUnit/test-report artifacts. Read-only; does not rerun or modify pipelines.",
+      inputSchema: { run_id: z.string().uuid() }
+    },
+    async ({ run_id }) => {
+      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, run_id);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id);
+      const workflowReports = await Promise.all(workflows.slice(0, 20).map(async (workflow) => {
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id);
+        const failedJobs = jobs.filter((job) => {
+          const attributes = job.attributes as Record<string, unknown> | undefined;
+          return attributes?.outcome === "failed" || attributes?.status === "failed";
+        }).slice(0, 10);
+        const diagnostics = await Promise.all(failedJobs.map(async (job) => {
+          const attributes = job.attributes as Record<string, unknown> | undefined;
+          const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
+          const detailAttributes = details.attributes as Record<string, unknown> | undefined;
+          const executions = Array.isArray(detailAttributes?.parallel_executions)
+            ? detailAttributes.parallel_executions as Array<Record<string, unknown>>
+            : [];
+          const failedSteps = executions.flatMap((execution) => {
+            const steps = Array.isArray(execution.steps) ? execution.steps as Array<Record<string, unknown>> : [];
+            return steps.filter((step) => {
+              const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
+              return actions.some((action) => action.status === "failed" || action.outcome === "failed");
+            }).map((step) => ({
+              name: step.name,
+              actions: (Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [])
+                .filter((action) => action.status === "failed" || action.outcome === "failed")
+                .map((action) => ({
+                  name: action.name,
+                  status: action.status,
+                  exit_code: action.exit_code,
+                  step_num: action.step_num
+                }))
+            }));
+          });
+          let testResults = "";
+          let testResultsError: string | undefined;
+          try {
+            const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 300_000);
+            testResults = result.text;
+            if (result.truncated) testResults += "\\n[TRUNCATED]";
+          } catch {
+            testResultsError = "Unable to retrieve structured test results.";
+          }
+          let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
+          try {
+            const listed = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job.id);
+            const reports = listed.filter((artifact) => {
+              const path = artifact.attributes?.path ?? "";
+              const size = artifact.attributes?.size ?? 0;
+              return /(?:junit|test-results).*\\.xml$/i.test(path) && size <= 1_000_000;
+            }).slice(0, 3);
+            artifacts = await Promise.all(reports.map(async (artifact) => {
+              const path = artifact.attributes?.path ?? "";
+              try {
+                const report = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job.id, path, 1_000_000);
+                return { path, size: artifact.attributes?.size, content: report.text };
+              } catch {
+                return { path, size: artifact.attributes?.size, error: "Unable to retrieve this report artifact." };
+              }
+            }));
+          } catch {
+            artifacts = [{ error: "Unable to list job artifacts." }];
+          }
+          return {
+            job_id: job.id,
+            name: attributes?.name ?? detailAttributes?.name,
+            outcome: attributes?.outcome ?? attributes?.status,
+            failed_steps: failedSteps,
+            test_results: testResults,
+            test_results_error: testResultsError,
+            report_artifacts: artifacts
+          };
+        }));
+        return {
+          workflow_id: workflow.id,
+          workflow_name: (workflow.attributes as Record<string, unknown> | undefined)?.name,
+          jobs_total: jobs.length,
+          failed_jobs: diagnostics
+        };
+      }));
+      const payload = redactKnownSecrets(JSON.stringify({
+        run,
+        workflows: workflowReports,
+        limits: { max_workflows: 20, max_failed_jobs_per_workflow: 10, max_report_artifacts_per_job: 3, max_report_bytes: 1_000_000 }
+      }, null, 2), env);
+      return { content: [{ type: "text", text: limitText(payload, 120_000).text }] };
+    }
+  );
+
   return server;
 }
 
