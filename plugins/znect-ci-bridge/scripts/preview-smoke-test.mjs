@@ -75,13 +75,15 @@ async function rpc(mcpToken, id, method, params = {}) {
       jsonrpc: "2.0",
       id,
       method,
-      params,
-      _meta: {
-        "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
-        "io.modelcontextprotocol/clientCapabilities": {},
-        ...(method === "server/discover"
-          ? { "io.modelcontextprotocol/clientInfo": { name: "znect-ci-bridge-preview-smoke", version: "1.0.0" } }
-          : {})
+      params: {
+        ...params,
+        _meta: {
+          "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
+          "io.modelcontextprotocol/clientCapabilities": {},
+          ...(method === "server/discover"
+            ? { "io.modelcontextprotocol/clientInfo": { name: "znect-ci-bridge-preview-smoke", version: "1.0.0" } }
+            : {})
+        }
       }
     })
   });
