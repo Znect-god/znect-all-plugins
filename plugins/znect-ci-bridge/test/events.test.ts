@@ -83,7 +83,7 @@ describe("Durable event inbox storage contract", () => {
       const sql = query.replace(/\\s+/g, " ").trim();
       if (sql.startsWith("SELECT seq FROM build_events WHERE event_id")) {
         const row = this.rows.find((entry) => entry.event_id === values[0]);
-        return { one: () => row ? { seq: row.seq } : null };
+        return { toArray: () => row ? [{ seq: row.seq }] : [] };
       }
       if (sql.startsWith("INSERT INTO build_events")) {
         this.rows.push({
