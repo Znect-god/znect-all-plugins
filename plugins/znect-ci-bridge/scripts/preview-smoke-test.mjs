@@ -1,3 +1,5 @@
+import { createHmac, randomUUID } from "node:crypto";
+
 #!/usr/bin/env node
 
 /**
@@ -237,6 +239,105 @@ async function main() {
     throw new Error("MCP check_connection did not confirm the fixed read-only CircleCI project.");
   }
   console.log("PASS: MCP tool call verifies CircleCI read access");
+
+  const eventFeed = await rpc(mcpToken, 4, "tools/call", {
+    name: "list_recent_events",
+    arguments: { after: 0, limit: 50 }
+  });
+  if (eventFeed?.isError === true || !Array.isArray(eventFeed?.content)) {
+    throw new Error("MCP list_recent_events did not return a successful tool result.");
+  }
+  const feedText = eventFeed.content.find((item) => item.type === "text")?.text ?? "";
+  let feedData;
+  try { feedData = JSON.parse(feedText); } catch {
+    throw new Error("MCP list_recent_events returned invalid JSON.");
+  }
+  if (!Array.isArray(feedData.events) || !Number.isSafeInteger(feedData.next_cursor)) {
+    throw new Error("MCP list_recent_events returned an invalid event cursor.");
+  }
+  console.log("PASS: MCP event inbox read");
+
+  const webhookSecret = process.env.CIRCLECI_WEBHOOK_SECRET;
+  if (!webhookSecret || !webhookSecret.trim()) {
+    console.log("NOT RUN: CIRCLECI_WEBHOOK_SECRET is not configured in GitHub Actions; signed webhook delivery test was skipped.");
+  } else {
+    const eventId = randomUUID();
+    const workflowId = randomUUID();
+    const pipelineId = randomUUID();
+    const payload = {
+      id: eventId,
+      type: "workflow-completed",
+      happened_at: new Date().toISOString(),
+      project: { slug: "gh/Znect-god/znect-forge" },
+      workflow: {
+        id: workflowId,
+        name: "preview-webhook-smoke",
+        status: "success",
+        url: "https://app.circleci.com/pipelines/github/Znect-god/znect-forge/1/workflows/" + workflowId
+      },
+      pipeline: {
+        id: pipelineId,
+        number: 1,
+        vcs: {
+          branch: "ci-bridge-preview-smoke",
+          revision: "0".repeat(40),
+          commit: { subject: "Synthetic signed webhook smoke event" }
+        }
+      }
+    };
+    const body = JSON.stringify(payload);
+    const signature = createHmac("sha256", webhookSecret).update(body).digest("hex");
+    const webhookRequest = () => request(PREVIEW_ORIGIN + "/webhooks/circleci", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "circleci-event-type": "workflow-completed",
+        "circleci-signature": "v1=" + signature
+      },
+      body
+    });
+
+    const acceptedResponse = await webhookRequest();
+    if (!acceptedResponse.ok) {
+      const detail = (await acceptedResponse.text()).slice(0, 180);
+      throw new Error("Signed CircleCI webhook returned HTTP " + acceptedResponse.status + " (" + detail + ").");
+    }
+    const accepted = await acceptedResponse.json();
+    if (accepted.accepted !== true || accepted.duplicate !== false) {
+      throw new Error("First signed webhook delivery was not accepted as a new event.");
+    }
+
+    const duplicateResponse = await webhookRequest();
+    if (!duplicateResponse.ok) throw new Error("Duplicate webhook delivery returned HTTP " + duplicateResponse.status + ".");
+    const duplicate = await duplicateResponse.json();
+    if (duplicate.accepted !== true || duplicate.duplicate !== true) {
+      throw new Error("Repeated CircleCI event ID was not deduplicated.");
+    }
+
+    const afterCursor = eventsData.next_cursor;
+    const storedResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?after=" + afterCursor + "&limit=10", {
+      headers: { authorization: "Bearer " + webToken }
+    });
+    if (!storedResponse.ok) throw new Error("Event inbox read after webhook returned HTTP " + storedResponse.status + ".");
+    const stored = await storedResponse.json();
+    if (!stored.events.some((event) => event.id === eventId)) {
+      throw new Error("Signed webhook event was not persisted in the browser event inbox.");
+    }
+
+    const mcpStored = await rpc(mcpToken, 5, "tools/call", {
+      name: "list_recent_events",
+      arguments: { after: afterCursor, limit: 10 }
+    });
+    const mcpStoredText = mcpStored?.content?.find((item) => item.type === "text")?.text ?? "";
+    let mcpStoredData;
+    try { mcpStoredData = JSON.parse(mcpStoredText); } catch {
+      throw new Error("MCP event inbox returned invalid JSON after webhook delivery.");
+    }
+    if (!mcpStoredData.events?.some((event) => event.id === eventId)) {
+      throw new Error("Signed webhook event was not visible through MCP.");
+    }
+    console.log("PASS: signed webhook delivery, duplicate suppression, durable storage, and MCP event retrieval");
+  }
 
   console.log("SUCCESS: all Preview smoke checks passed.");
 }
