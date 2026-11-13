@@ -1,6 +1,6 @@
-import { createHmac, randomUUID } from "node:crypto";
-
 #!/usr/bin/env node
+
+import { createHmac, randomUUID } from "node:crypto";
 
 /**
  * Read-only smoke test for the Znect CI Bridge Preview deployment.
