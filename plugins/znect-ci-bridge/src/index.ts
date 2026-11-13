@@ -628,7 +628,7 @@ function createServer(env: Env) {
       const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
         .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
       if (!response.ok) throw new Error("CircleCI event storage is unavailable.");
-      const result = await response.json();
+      const result = await response.json() as Record<string, unknown>;
       return { content: [{ type: "text", text: stringifyBoundedJson(result, 60_000) }] };
     }
   );
