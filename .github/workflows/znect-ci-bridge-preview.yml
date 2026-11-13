@@ -1,4 +1,5 @@
 name: Znect CI Bridge Preview
+# Exercise the current MCP request-envelope smoke test on every branch push.
 
 on:
   workflow_dispatch:
