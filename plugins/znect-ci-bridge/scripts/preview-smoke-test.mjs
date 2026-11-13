@@ -112,7 +112,15 @@ async function main() {
   const status = await request(PREVIEW_ORIGIN + "/api/v1/status", {
     headers: { authorization: "Bearer " + webToken }
   });
-  if (!status.ok) throw new Error("/api/v1/status returned HTTP " + status.status + ".");
+  if (!status.ok) {
+    const errorBody = await status.text();
+    let safeDetail = "";
+    try {
+      const parsed = JSON.parse(errorBody);
+      if (typeof parsed.error === "string") safeDetail = " (" + parsed.error.slice(0, 180) + ")";
+    } catch { /* Do not print arbitrary response bodies. */ }
+    throw new Error("/api/v1/status returned HTTP " + status.status + safeDetail + ".");
+  }
   const statusData = await status.json();
   if (
     statusData.connected !== true ||
