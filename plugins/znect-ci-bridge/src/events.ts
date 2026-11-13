@@ -182,8 +182,8 @@ export class BuildEventStore {
           !EXPECTED_PROJECTS.has(event.project_slug) || !Number.isFinite(Date.parse(event.happened_at))) {
         return Response.json({ error: "Invalid normalized event." }, { status: 400 });
       }
-      const existing = this.sql.exec("SELECT seq FROM build_events WHERE event_id = ?", event.id).one();
-      if (existing) return Response.json({ accepted: true, duplicate: true });
+      const existing = this.sql.exec("SELECT seq FROM build_events WHERE event_id = ?", event.id).toArray();
+      if (existing.length > 0) return Response.json({ accepted: true, duplicate: true });
       this.sql.exec(
         "INSERT INTO build_events (event_id, happened_at, event_json) VALUES (?, ?, ?)",
         event.id,
