@@ -161,7 +161,16 @@ async function main() {
   const eventsResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?limit=1", {
     headers: { authorization: "Bearer " + webToken }
   });
-  if (!eventsResponse.ok) throw new Error("/api/v1/events returned HTTP " + eventsResponse.status + ".");
+  if (!eventsResponse.ok) {
+    const errorBody = await eventsResponse.text();
+    let safeDetail = "";
+    try {
+      const parsed = JSON.parse(errorBody);
+      if (typeof parsed.error === "string") safeDetail = " (" + parsed.error.slice(0, 180) + ")";
+      if (Number.isInteger(parsed.event_store_status)) safeDetail += " [event store HTTP " + parsed.event_store_status + "]";
+    } catch { /* Do not print arbitrary response bodies. */ }
+    throw new Error("/api/v1/events returned HTTP " + eventsResponse.status + safeDetail + ".");
+  }
   const eventsData = await eventsResponse.json();
   if (!Array.isArray(eventsData.events) || !Number.isSafeInteger(eventsData.next_cursor)) {
     throw new Error("Event inbox returned an invalid response.");
