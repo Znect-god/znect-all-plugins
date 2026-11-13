@@ -623,7 +623,7 @@ describe("Worker HTTP boundary", () => {
       : JSON.parse(responseText);
     const tools = payload.result?.tools;
     expect(Array.isArray(tools)).toBe(true);
-    expect(tools).toHaveLength(12);
+    expect(tools).toHaveLength(13);
     expect(tools.every((tool: { annotations?: { readOnlyHint?: boolean } }) =>
       tool.annotations?.readOnlyHint === true
     )).toBe(true);
@@ -631,6 +631,7 @@ describe("Worker HTTP boundary", () => {
     expect(names).toContain("check_connection");
     expect(names).toContain("list_recent_runs");
     expect(names).toContain("diagnose_run");
+    expect(names).toContain("list_recent_events");
     expect(names.some((name: string) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(name))).toBe(false);
   });
 
