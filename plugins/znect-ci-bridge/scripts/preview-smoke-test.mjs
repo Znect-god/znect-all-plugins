@@ -18,7 +18,7 @@
  */
 
 const PREVIEW_ORIGIN =
-  "https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev";
+  "https://feature-ci-bridge-test-reports-v2-v2-znect-ci-bridge.znect699.workers.dev";
 const PROTOCOL_VERSION = "2026-07-28";
 const TIMEOUT_MS = 15_000;
 
@@ -119,7 +119,7 @@ async function main() {
   if (
     target.protocol !== "https:" ||
     target.hostname === "znect-ci-bridge.znect699.workers.dev" ||
-    target.hostname !== "feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev"
+    target.hostname !== "feature-ci-bridge-test-reports-v2-v2-znect-ci-bridge.znect699.workers.dev"
   ) {
     throw new Error("Refusing to run: target is not the approved Preview alias.");
   }
