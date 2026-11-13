@@ -78,3 +78,13 @@
 - Matched the v3 jobs-list request to its documented filter parameters.
 - Applied best-effort secret redaction and response-size ceilings to v3 run/job output.
 - Updated the README and migration plan: the Forge project is already set up on CircleCI Cloud; live v3 token/project access remains to be verified.
+
+
+### Signed CircleCI webhook event inbox (in development)
+- Added a public webhook receiver that validates CircleCI's v1 HMAC-SHA256 signature against the exact raw request body.
+- Added strict project/event validation, a 64 KiB request ceiling, safe field normalization, and CircleCI event-ID deduplication.
+- Added a SQLite-backed Durable Object event inbox with a 500-event cap and 30-day retention.
+- Exposed the inbox through the read-only MCP tool `list_recent_events` and authenticated browser endpoint `GET /api/v1/events`.
+- Added unit and Worker-boundary tests for signature validation, event normalization, foreign-project filtering, and inbox access.
+- Updated Preview smoke checks to require the event inbox and new MCP tool.
+- Live webhook registration, webhook-secret provisioning, end-to-end delivery, and proactive ChatGPT notification delivery remain pending. An MCP event feed alone does not push messages into an open ChatGPT conversation.
