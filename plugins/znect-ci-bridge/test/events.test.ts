@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeCircleCiWebhook, verifyCircleCiSignature } from "../src/events";
+import { BuildEventStore, normalizeCircleCiWebhook, verifyCircleCiSignature } from "../src/events";
 
 const workflowPayload = {
   id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895",
@@ -70,5 +70,78 @@ describe("CircleCI webhook verification", () => {
       ...workflowPayload,
       happened_at: "2001-01-01T00:00:00.000Z"
     }, "workflow-completed")).toBeNull();
+  });
+});
+
+
+describe("Durable event inbox storage contract", () => {
+  class FakeSql {
+    rows: Array<{ seq: number; event_id: string; happened_at: string; event_json: string }> = [];
+    next = 1;
+
+    exec(query: string, ...values: unknown[]) {
+      const sql = query.replace(/\\s+/g, " ").trim();
+      if (sql.startsWith("SELECT seq FROM build_events WHERE event_id")) {
+        const row = this.rows.find((entry) => entry.event_id === values[0]);
+        return { one: () => row ? { seq: row.seq } : null };
+      }
+      if (sql.startsWith("INSERT INTO build_events")) {
+        this.rows.push({
+          seq: this.next++,
+          event_id: String(values[0]),
+          happened_at: String(values[1]),
+          event_json: String(values[2])
+        });
+        return { toArray: () => [] };
+      }
+      if (sql.startsWith("DELETE FROM build_events WHERE happened_at")) {
+        this.rows = this.rows.filter((entry) => entry.happened_at >= String(values[0]));
+        return { toArray: () => [] };
+      }
+      if (sql.startsWith("DELETE FROM build_events WHERE seq NOT IN")) {
+        const keep = Number(values[0]);
+        this.rows = this.rows.sort((a, b) => b.seq - a.seq).slice(0, keep);
+        return { toArray: () => [] };
+      }
+      if (sql.startsWith("SELECT seq, event_json FROM build_events")) {
+        const after = Number(values[0]);
+        const limit = Number(values[1]);
+        return {
+          toArray: () => this.rows
+            .filter((entry) => entry.seq > after)
+            .sort((a, b) => a.seq - b.seq)
+            .slice(0, limit)
+            .map((entry) => ({ seq: entry.seq, event_json: entry.event_json }))
+        };
+      }
+      return { toArray: () => [] };
+    }
+  }
+
+  it("deduplicates CircleCI event IDs and serves cursor-based event reads", async () => {
+    const sql = new FakeSql();
+    const store = new BuildEventStore({
+      storage: { sql }
+    } as unknown as DurableObjectState);
+    const event = normalizeCircleCiWebhook(workflowPayload, "workflow-completed");
+    expect(event).not.toBeNull();
+
+    const append = () => store.fetch(new Request("https://event-store/append", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(event)
+    }));
+    const first = await append();
+    await expect(first.json()).resolves.toMatchObject({ accepted: true, duplicate: false });
+    const duplicate = await append();
+    await expect(duplicate.json()).resolves.toMatchObject({ accepted: true, duplicate: true });
+
+    const page = await store.fetch(new Request("https://event-store/events?after=0&limit=10"));
+    await expect(page.json()).resolves.toMatchObject({
+      events: [{ cursor: 1, id: workflowPayload.id, workflow_status: "failed" }],
+      next_cursor: 1
+    });
+    const empty = await store.fetch(new Request("https://event-store/events?after=1&limit=10"));
+    await expect(empty.json()).resolves.toMatchObject({ events: [], next_cursor: 1 });
   });
 });
