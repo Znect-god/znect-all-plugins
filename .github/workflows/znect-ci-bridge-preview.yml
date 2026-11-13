@@ -55,13 +55,29 @@ jobs:
         run: |
           set -euo pipefail
           output="$(npx wrangler preview --name feature-ci-bridge-test-reports --json)"
-          printf '%s\n' "$output"
+          printf '%s\\n' "$output"
           preview_url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
           deployment_url="$(printf '%s' "$output" | jq -er '.preview.deployment_url // .preview.deploymentUrl // empty' || true)"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
           if [ -n "$deployment_url" ]; then
             echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Diagnose Preview secret scopes (names only)
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          echo "## Cloudflare Preview secret scope diagnostic" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Named Preview: feature-ci-bridge-test-reports" >> "$GITHUB_STEP_SUMMARY"
+          npx wrangler preview secret list --name feature-ci-bridge-test-reports | tee /tmp/preview-secret-names.txt
+          cat /tmp/preview-secret-names.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "### Previews Base" >> "$GITHUB_STEP_SUMMARY"
+          npx wrangler preview base-config secret list | tee /tmp/preview-base-secret-names.txt
+          cat /tmp/preview-base-secret-names.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "Only secret names are listed; secret values are never requested or printed."
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
