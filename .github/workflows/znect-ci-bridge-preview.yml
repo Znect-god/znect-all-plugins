@@ -2,6 +2,14 @@ name: Znect CI Bridge Preview
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/ci-bridge-test-reports
+      - fix/ci-bridge-preview-workflow
+  pull_request:
+    branches:
+      - feature/ci-bridge-test-reports
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -13,7 +21,7 @@ concurrency:
 jobs:
   preview:
     name: Deploy isolated Cloudflare Worker Preview
-    if: github.repository == 'Znect-god/znect-all-plugins' && github.ref == 'refs/heads/feature/ci-bridge-test-reports'
+    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports' || github.ref == 'refs/heads/fix/ci-bridge-preview-workflow')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -23,7 +31,7 @@ jobs:
       - name: Checkout approved feature branch
         uses: actions/checkout@v7
         with:
-          ref: feature/ci-bridge-test-reports
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -35,7 +43,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Run typecheck and unit tests
+        run: |
+          npm run check
+          node --check scripts/preview-smoke-test.mjs
+
       - name: Create or update the named Cloudflare Preview
+        if: github.event_name != 'pull_request'
         id: preview
         run: |
           set -euo pipefail
@@ -52,7 +66,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Publish Preview result
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         run: |
           {
             echo "## Znect CI Bridge Preview"
