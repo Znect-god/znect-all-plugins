@@ -18,7 +18,7 @@
  */
 
 const PREVIEW_ORIGIN =
-  "https://feature-ci-bridge-test-reports-v2-v2-znect-ci-bridge.znect699.workers.dev";
+  "https://feature-ci-bridge-test-reports-v2-znect-ci-bridge.znect699.workers.dev";
 const PROTOCOL_VERSION = "2026-07-28";
 const TIMEOUT_MS = 15_000;
 
