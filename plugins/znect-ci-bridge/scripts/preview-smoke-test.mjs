@@ -173,7 +173,7 @@ async function main() {
     } catch { /* Do not print arbitrary response bodies. */ }
     throw new Error("/api/v1/events returned HTTP " + eventsResponse.status + safeDetail + ".");
   }
-  const eventsData = await eventsResponse.json();
+  let eventsData = await eventsResponse.json();
   if (!Array.isArray(eventsData.events) || !Number.isSafeInteger(eventsData.next_cursor)) {
     throw new Error("Event inbox returned an invalid response.");
   }
