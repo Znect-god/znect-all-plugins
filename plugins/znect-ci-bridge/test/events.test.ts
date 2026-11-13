@@ -32,6 +32,7 @@ describe("CircleCI webhook verification", () => {
   it("rejects an invalid signature and missing v1 signature", async () => {
     const body = new TextEncoder().encode("foo").buffer;
     expect(await verifyCircleCiSignature(body, "v1=not-a-valid-signature", "secret")).toBe(false);
+    expect(await verifyCircleCiSignature(body, "v1=" + "a".repeat(64) + ",v2=" + "b".repeat(64), "secret")).toBe(false);
     expect(await verifyCircleCiSignature(body, "v2=" + "a".repeat(64), "secret")).toBe(false);
   });
 
@@ -64,10 +65,10 @@ describe("CircleCI webhook verification", () => {
     expect(event?.workflow_url).toBeUndefined();
   });
 
-  it("rejects timestamps outside the accepted window", () => {
-    expect(() => normalizeCircleCiWebhook({
+  it("ignores stale webhook events rather than asking CircleCI to retry them", () => {
+    expect(normalizeCircleCiWebhook({
       ...workflowPayload,
       happened_at: "2001-01-01T00:00:00.000Z"
-    }, "workflow-completed")).toThrow(/outside the accepted window/i);
+    }, "workflow-completed")).toBeNull();
   });
 });
