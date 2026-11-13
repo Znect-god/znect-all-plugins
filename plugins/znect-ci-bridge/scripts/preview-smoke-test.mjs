@@ -74,7 +74,20 @@ async function rpc(mcpToken, id, method, params = {}) {
     body: JSON.stringify({ jsonrpc: "2.0", id, method, params })
   });
   if (!response.ok) {
-    throw new Error("MCP " + method + " returned HTTP " + response.status + ".");
+    const errorBody = await response.text();
+    let safeDetail = "";
+    try {
+      const parsed = JSON.parse(errorBody);
+      const candidate = typeof parsed.error === "string"
+        ? parsed.error
+        : typeof parsed.error?.message === "string"
+          ? parsed.error.message
+          : typeof parsed.message === "string"
+            ? parsed.message
+            : "";
+      if (candidate) safeDetail = " (" + candidate.slice(0, 180) + ")";
+    } catch { /* Do not print arbitrary response bodies. */ }
+    throw new Error("MCP " + method + " returned HTTP " + response.status + safeDetail + ".");
   }
   const payload = await parseRpcResponse(response);
   if (payload.error) {
