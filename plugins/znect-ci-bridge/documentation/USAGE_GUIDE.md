@@ -469,7 +469,8 @@ openssl rand -hex 32
 Один и тот же секрет нужно сохранить:
 - в Cloudflare Worker Preview Secrets как `CIRCLECI_WEBHOOK_SECRET`;
 - в Cloudflare Production Worker Secrets как `CIRCLECI_WEBHOOK_SECRET` — только перед отдельным Production deployment;
-- в форме CircleCI Webhook как Secret token.
+- в форме CircleCI Webhook как Secret token;
+- в GitHub repository Actions Secrets как `CIRCLECI_WEBHOOK_SECRET` — для автоматического синтетического webhook smoke-теста. Workflow использует значение только для подписи тестового события и не выводит его в логи.
 
 Preview и Production хранят свои секреты независимо. Не используйте `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` или `WEB_ACCESS_TOKEN` в качестве webhook signing secret.
 
