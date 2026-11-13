@@ -49,6 +49,7 @@ jobs:
           node --check scripts/preview-smoke-test.mjs
 
       - name: Create or update the named Cloudflare Preview
+        if: github.event_name != 'pull_request'
         id: preview
         run: |
           set -euo pipefail
@@ -65,7 +66,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Publish Preview result
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         run: |
           {
             echo "## Znect CI Bridge Preview"
