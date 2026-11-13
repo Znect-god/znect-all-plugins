@@ -24,6 +24,7 @@ New API v3 tools are also exposed:
 - `list_job_artifacts(job_id)` — artifact path/size metadata; presigned URLs are not exposed.
 - `get_job_artifact(job_id, artifact_path, max_chars?)` — fetch one artifact by exact listed path through an internal HTTPS host allowlist; bounded text output.
 - `diagnose_run(run_id)` — one-call diagnostic: finds failed jobs, failed steps, structured test results, and small JUnit artifacts automatically (maximum three failed jobs per run).
+- `list_recent_events(after, limit)` — reads the durable inbox of verified CircleCI workflow/job completion webhooks; continue from the returned `next_cursor`.
 
 The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. Workflow and job collection endpoints follow opaque pagination cursors with a hard ceiling of 200 resources per collection; repeated cursors and collections exceeding that ceiling fail explicitly rather than silently returning partial data. Nested run inspection applies tighter page budgets: `get_run_details` inspects at most 10 workflows and 40 jobs per workflow; `diagnose_run` inspects at most five workflows, 40 jobs per workflow, three failed jobs per run, logs for three failed actions total, and one small JUnit/test-report artifact per failed job. These tighter limits keep the worst-case diagnostic path below Cloudflare Workers Free's 50-subrequest per-invocation ceiling, including up to three artifact redirects. Its `diagnostics_summary` reports total versus inspected workflows, failed-job and log-action limits, and an `incomplete` flag so a bounded report cannot be mistaken for exhaustive diagnostics. All tools are read-only; no build mutation tools exist.
 
@@ -41,6 +42,7 @@ Read-only JSON endpoints (all require `Authorization: Bearer <WEB_ACCESS_TOKEN>`
 - `GET /api/v1/status` — verify CircleCI project access.
 - `GET /api/v1/runs?limit=10` — list 1–30 recent runs.
 - `GET /api/v1/runs/{run_uuid}` — inspect run workflows and jobs.
+- `GET /api/v1/events?after=0&limit=20` — read the signed CircleCI event inbox using its cursor.
 
 The API rejects non-GET methods, validates UUIDs and limits, applies the Worker rate limiter, redacts known secrets, and enforces response-size ceilings. Run details inspect at most 10 workflows and 40 jobs per workflow, matching the MCP run-details limits and staying within the Worker subrequest budget. This initial browser release does not expose pipeline mutation actions.
 
@@ -53,6 +55,7 @@ See [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage gui
 - `src/circleci.ts` — legacy v1.1 fixed-origin, read-only HTTP adapter.
 - `src/circleci-v3.ts` — CircleCI Cloud API v3 read-only adapter used by the v3 MCP tools, including structured test results and safe artifact retrieval.
 - `src/security.ts` — authentication comparison, artifact URL validation, bounded streams, redaction, output limits, and safe redirect handling.
+- `src/events.ts` — CircleCI HMAC webhook verification, strict event normalization, and SQLite-backed Durable Object inbox with event-ID deduplication.
 - `test/security.test.ts` — security helper and artifact-host/redirect tests.
 - `test/circleci.test.ts` — mocked v1.1 adapter tests.
 - `test/circleci-v3.test.ts` — mocked v3 authentication, project resolution, pagination, resource traversal, and bounded job-output tests.
@@ -74,6 +77,8 @@ See [the free access plan](documentation/FREE_ACCESS_PLAN.md) and [the usage gui
 - Log response bodies are streamed with a byte ceiling, then limited to 80,000 characters per action and 160,000 across the complete response. Legacy log retrieval is capped at 10 output actions per call to keep worst-case artifact redirect requests below the Worker subrequest ceiling.
 - Configured Worker secrets and common credential patterns are redacted heuristically. This is best-effort and cannot guarantee detection of every upstream secret.
 - CORS is disabled. No arbitrary artifact URL is accepted from the MCP caller.
+- CircleCI webhook ingress accepts only signed HMAC-SHA256 requests, caps payloads at 64 KiB, filters the fixed Forge project, and stores a minimal normalized event rather than the raw webhook body.
+- Event IDs are deduplicated; the Durable Object inbox retains at most 500 events and prunes entries older than 30 days.
 
 The rate-limit namespace ID in `wrangler.toml` must be unique within the Cloudflare account. Check it before deployment.
 
@@ -83,7 +88,7 @@ These controls reduce risk but do not constitute a complete security audit.
 
 The Forge project was set up on CircleCI Cloud in the earlier project workflow. CircleCI's current API for new Cloud integrations is v3; the v3 adapter powers the run, job, test-result, artifact, and automatic-diagnosis tools. CircleCI Server is not the target for this project.
 
-The legacy v1.1 tools remain temporarily for compatibility. They use build numbers, while v3 uses UUIDs, so no automatic mapping or fallback is attempted. The exact v3 project resolution and Bearer-token access still require a live check using the user's CircleCI API token. See [the migration plan](documentation/CIRCLECI_API_MIGRATION.md).
+The legacy v1.1 tools remain temporarily for compatibility. They use build numbers, while v3 uses UUIDs, so no automatic mapping or fallback is attempted. A live Preview smoke test on 2026-11-13 confirmed CircleCI v3 token authentication and resolution of `gh/Znect-god/znect-forge`; full failed-run diagnostics, logs, test results, and artifact retrieval still need live verification. See [the migration plan](documentation/CIRCLECI_API_MIGRATION.md).
 
 ## Development
 
@@ -104,19 +109,20 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 2. Configure `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN`, and `WEB_ACCESS_TOKEN` as Worker Secrets. Never commit them.
 3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
 
-GitHub Actions validates each pull-request revision with dependency installation, npm audit, TypeScript typecheck, unit tests, smoke-test syntax validation, and a Wrangler Worker bundle dry-run. Consult the [PR checks](https://github.com/Znect-god/znect-all-plugins/pull/2) for the status of the current revision. These checks validate source code only; Wrangler dry-run does not deploy a Worker. The latest explicitly confirmed Cloudflare Preview deployment remains the older commit `51ea70791fa1f2862095653dd4ffd6a4664f5d3e` (2026-11-12 11:14 UTC), with alias URL `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev` and immutable deployment URL `https://0cf637e9-znect-ci-bridge.znect699.workers.dev`. The current branch head has not been independently deployed to Preview. No Production deployment has been performed. No live CircleCI token or API request has been used, so CircleCI authentication, project resolution, and end-to-end MCP access remain unverified.
+GitHub Actions validates each pull-request revision with dependency installation, npm audit, TypeScript typecheck, unit tests, smoke-test syntax validation, and a Wrangler Worker bundle dry-run. Consult the [PR checks](https://github.com/Znect-god/znect-all-plugins/pull/2) for the status of the current revision. These checks validate source code only; Wrangler dry-run does not deploy a Worker. The latest confirmed live Preview smoke test before this webhook branch ran on commit `bbd47ac426c25ce7d0c2debd19f7ef4a610d02f2` and verified health, authenticated browser status, MCP discovery, the read-only tool list, and live CircleCI project access. The webhook/event-inbox branch is being validated separately; it is not yet confirmed deployed. No Production deployment has been performed.
 
 ## Known limitations
 
 - In development; not production-ready.
-- CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
+- CircleCI Cloud hosting is established, and live Preview verification has confirmed API v3 token access and project resolution; detailed run/job/log/test/artifact paths still require real-run verification.
 - The v3 adapter and MCP tools are tested with mocked HTTP responses. Live project resolution, run retrieval, failed-step log retrieval, test-result access, and artifact access still require verification against CircleCI using the configured token. `get_run_details` inspects at most 10 workflows and 40 jobs per workflow; `diagnose_run` inspects at most five workflows, three failed jobs, three failed-action log bundles, and one report artifact per failed job to control Worker subrequests and response size.
 - CircleCI API v3 test-result and artifact endpoints may return no data when test metadata or artifacts were not uploaded by the job. Artifact retrieval is restricted to exact paths returned by CircleCI and allowlisted HTTPS hosts.
 - Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
 - Rate limiting is approximate and per Cloudflare location, not a strict global limit.
 - Failed Bearer-token attempts use a separate per-client-IP digest bucket; this is approximate and location-local, and does not replace a dedicated edge WAF rule.
 - Log redaction is best-effort.
-- No persistent storage, scheduled polling, alerts, or push notifications yet.
+- Signed CircleCI webhook ingestion and a persistent SQLite-backed event inbox are implemented in the webhook feature branch; CI/Preview verification and CircleCI webhook registration remain pending.
+- The event inbox exposes updates to MCP and the browser API, but it does not itself push unsolicited messages into an open ChatGPT conversation. A supported ChatGPT integration or scheduled polling/delivery channel is still required for proactive assistant notifications.
 - Wrangler/workerd is unsupported in the current Android ARM64 Termux environment.
 - License remains undecided; public visibility does not grant reuse or redistribution rights.
 
