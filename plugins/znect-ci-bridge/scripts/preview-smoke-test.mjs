@@ -185,8 +185,8 @@ async function main() {
     }
   });
   const tools = listing?.tools;
-  if (!Array.isArray(tools) || tools.length !== 12) {
-    throw new Error("MCP tools/list did not return the expected 12 tools.");
+  if (!Array.isArray(tools) || tools.length !== 13) {
+    throw new Error("MCP tools/list did not return the expected 13 tools.");
   }
   if (!tools.every((tool) => tool.annotations?.readOnlyHint === true)) {
     throw new Error("At least one MCP tool is missing readOnlyHint: true.");
@@ -194,7 +194,10 @@ async function main() {
   if (tools.some((tool) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(tool.name))) {
     throw new Error("MCP tool list contains a prohibited pipeline mutation tool.");
   }
-  console.log("PASS: tools/list exposes 12 explicitly read-only tools");
+  if (!tools.some((tool) => tool.name === "list_recent_events")) {
+    throw new Error("MCP tool list does not expose the signed CircleCI event inbox.");
+  }
+  console.log("PASS: tools/list exposes 13 explicitly read-only tools including the event inbox");
 
   const connection = await rpc(mcpToken, 3, "tools/call", {
     name: "check_connection",
