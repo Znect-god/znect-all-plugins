@@ -103,6 +103,7 @@ jobs:
         env:
           MCP_ACCESS_TOKEN: ${{ secrets.MCP_ACCESS_TOKEN }}
           WEB_ACCESS_TOKEN: ${{ secrets.WEB_ACCESS_TOKEN }}
+          CIRCLECI_WEBHOOK_SECRET: ${{ secrets.CIRCLECI_WEBHOOK_SECRET }}
 
       - name: Publish Preview result
         if: success() && github.event_name != 'pull_request'
