@@ -134,12 +134,11 @@ export async function resolveCircleCiProject(
   }
   const project = result.data[0];
   assertUuid(project.id, "project ID");
-  // CircleCI v3 resolves this resource through filter[slug]. The API's
-  // project collection guarantees that a single returned item is the project
-  // matching that filter; unlike many other v3 resources, the project slug is
-  // not guaranteed to be present in attributes on every response shape.
-  // Requiring attributes.slug here can reject a valid, successfully resolved
-  // project even though the server already applied the exact slug filter.
+  const slug = project.attributes?.slug;
+  if (typeof slug !== "string" || slug !== projectSlug) {
+    const received = typeof slug === "string" ? slug : "<missing>";
+    throw new Error(`CircleCI project identity did not match the configured slug (received: ${received}).`);
+  }
   return project;
 }
 
