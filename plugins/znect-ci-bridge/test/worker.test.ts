@@ -102,6 +102,7 @@ describe("Worker HTTP boundary", () => {
       new Request("https://bridge.example/webhooks/circleci", {
         method: "POST",
         headers: {
+          "content-type": "application/json",
           "circleci-event-type": "workflow-completed",
           "circleci-signature": await circleCiSignature(body, "webhook-test-secret")
         },
