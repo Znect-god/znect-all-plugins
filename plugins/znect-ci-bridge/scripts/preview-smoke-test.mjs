@@ -71,7 +71,19 @@ async function rpc(mcpToken, id, method, params = {}) {
         ? { "Mcp-Name": params.name }
         : {})
     },
-    body: JSON.stringify({ jsonrpc: "2.0", id, method, params })
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id,
+      method,
+      params,
+      _meta: {
+        "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
+        "io.modelcontextprotocol/clientCapabilities": {},
+        ...(method === "server/discover"
+          ? { "io.modelcontextprotocol/clientInfo": { name: "znect-ci-bridge-preview-smoke", version: "1.0.0" } }
+          : {})
+      }
+    })
   });
   if (!response.ok) {
     const errorBody = await response.text();
