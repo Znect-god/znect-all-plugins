@@ -76,3 +76,30 @@ Reference: https://developers.cloudflare.com/agents/model-context-protocol/proto
 - Perform a separate independent security review before any production deployment.
 
 No deployment or real-secret test was performed during this review. The current source-level review does not establish live CircleCI connectivity.
+
+
+### Signed CircleCI webhook ingress and durable event inbox — implemented, live verification pending
+
+The feature branch adds `POST /webhooks/circleci` with the following controls:
+
+- Verifies the `circleci-signature` v1 HMAC-SHA256 digest against the exact raw request bytes before JSON parsing.
+- Rejects unknown/newer signature versions instead of accepting a v1 downgrade when a higher version is present.
+- Requires `application/json`, caps the body at 64 KiB, and rate-limits failed signatures using the existing hashed client-IP limiter.
+- Requires the webhook event type header to match the JSON payload type.
+- Accepts only workflow/job completion events for the fixed Forge project; supports the CircleCI GitHub OAuth and API v3 slug spellings for that same repository.
+- Extracts only a small allowlist of fields. It does not store the raw payload, author emails, arbitrary URLs, or webhook signing secret.
+- Restricts workflow links to HTTPS `app.circleci.com` URLs.
+- Deduplicates by CircleCI event ID in a SQLite-backed Durable Object, retains at most 500 events, and prunes records older than 30 days.
+- Exposes the inbox through a read-only MCP tool and the authenticated browser API.
+
+The signing secret must be configured independently as Cloudflare Preview/Production Worker Secret `CIRCLECI_WEBHOOK_SECRET` and as the CircleCI project webhook's Secret token. The Bridge does not create or mutate CircleCI webhook settings; that is a deliberate read-only boundary.
+
+### Remaining webhook/notification verification
+
+- Run the latest typecheck, unit tests, and Wrangler dry-run for the event-inbox branch.
+- Confirm the SQLite Durable Object binding/migration deploys to the isolated Cloudflare Preview and the event inbox endpoint works against its real storage.
+- Configure the Preview `CIRCLECI_WEBHOOK_SECRET` and register a CircleCI project webhook for `workflow-completed`.
+- Verify a real signed event arrives, duplicate delivery is idempotent, and the MCP/browser event cursors return the stored event.
+- The inbox is not a push channel into an open ChatGPT conversation. A supported polling/delivery integration is still required before proactive assistant notifications can be claimed.
+
+The event receiver has not been promoted to Production. No webhook secret values or CircleCI credentials are stored in Git.
