@@ -158,6 +158,16 @@ async function main() {
   }
   console.log("PASS: authenticated browser API and CircleCI project access");
 
+  const eventsResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?limit=1", {
+    headers: { authorization: "Bearer " + webToken }
+  });
+  if (!eventsResponse.ok) throw new Error("/api/v1/events returned HTTP " + eventsResponse.status + ".");
+  const eventsData = await eventsResponse.json();
+  if (!Array.isArray(eventsData.events) || !Number.isSafeInteger(eventsData.next_cursor)) {
+    throw new Error("Event inbox returned an invalid response.");
+  }
+  console.log("PASS: authenticated event inbox and persistent event storage");
+
   const discovery = await rpc(mcpToken, 1, "server/discover", {
     _meta: {
       "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
