@@ -721,6 +721,9 @@ async function handleCircleCiWebhook(request: Request, env: Env): Promise<Respon
   if (!env.CIRCLECI_WEBHOOK_SECRET || !env.EVENT_STORE) {
     return json({ error: "CircleCI webhook secret or event storage is not configured." }, 503);
   }
+  if (!/^application\\/json(?:;|$)/i.test(request.headers.get("content-type") ?? "")) {
+    return new Response("Unsupported media type", { status: 415, headers: { "accept": "application/json" } });
+  }
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(declaredLength) && declaredLength > 65_536) {
     return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
@@ -729,6 +732,8 @@ async function handleCircleCiWebhook(request: Request, env: Env): Promise<Respon
   if (body.byteLength > 65_536) return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
   const signature = request.headers.get("circleci-signature");
   if (!(await verifyCircleCiSignature(body, signature, env.CIRCLECI_WEBHOOK_SECRET))) {
+    const limited = await rateLimitFailedAuthentication(request, env);
+    if (limited) return limited;
     return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
   }
   let payload: unknown;
