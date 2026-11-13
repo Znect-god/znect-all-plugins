@@ -445,4 +445,64 @@ Read-only JSON API, используемый интерфейсом:
 
 ---
 
-**Коротко:** сначала подтвердить подходящий MCP-клиент и план, затем подготовить CircleCI и Cloudflare secrets, развернуть и проверить Worker, подключить его как custom MCP server, выполнить \`check_connection\`, затем читать runs/jobs/logs и использовать \`diagnose_run\` для анализа ошибок. Пока live deployment и CircleCI access не проверены, Bridge остаётся разработкой, а не готовым production-инструментом.
+**Коротко:** сначала подтвердить подходящий MCP-клиент и план, затем подготовить CircleCI и Cloudflare secrets, развернуть и проверить Worker, подключить его как custom MCP server, выполнить \`check_connection\`, затем читать runs/jobs/logs и использовать \`diagnose_run\` для анализа ошибок. Production пока не развёрнут; webhook требует отдельной настройки в CircleCI и проверки в Preview.
+
+
+## 13. События и уведомления CircleCI
+
+В Bridge добавлен отдельный входящий webhook endpoint:
+
+`POST /webhooks/circleci`
+
+Он предназначен для исходящих уведомлений CircleCI по проекту `Znect-god/znect-forge`. Запрос принимается только при корректной подписи `circleci-signature` (HMAC-SHA256, версия `v1`). Worker проверяет тип события и проект, сохраняет только нормализованные поля и не сохраняет исходное тело webhook. Повторные доставки с одинаковым CircleCI event ID не создают дубликаты.
+
+### 13.1. Секрет подписи
+
+Создайте отдельный случайный секрет длиной не менее 32 байт. На Linux/Termux его можно сгенерировать командой:
+
+```bash
+openssl rand -hex 32
+```
+
+Не отправляйте это значение в чат и не помещайте в Git.
+
+Один и тот же секрет нужно сохранить:
+- в Cloudflare Worker Preview Secrets как `CIRCLECI_WEBHOOK_SECRET`;
+- в Cloudflare Production Worker Secrets как `CIRCLECI_WEBHOOK_SECRET` — только перед отдельным Production deployment;
+- в форме CircleCI Webhook как Secret token.
+
+Preview и Production хранят свои секреты независимо. Не используйте `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` или `WEB_ACCESS_TOKEN` в качестве webhook signing secret.
+
+### 13.2. Регистрация webhook в CircleCI
+
+Регистрация выполняется в CircleCI, а не через Bridge: сам Bridge сохраняет строго read-only поведение и не создаёт/не меняет настройки CircleCI.
+
+1. Откройте проект `Znect-god/znect-forge` в CircleCI.
+2. Перейдите в Project Settings → Webhooks → Add Webhook.
+3. Укажите имя, например `Znect CI Bridge`.
+4. В URL укажите проверенный HTTPS адрес Worker с путём `/webhooks/circleci`. Для Preview используйте только URL, который был подтверждён успешным Preview deployment; Production URL до отдельного разрешённого deployment не использовать.
+5. Включите Certificate Validation.
+6. Вставьте созданный выше секрет в поле Secret token.
+7. Выберите событие `workflow-completed`. Это рекомендуемый режим: одно событие на завершение workflow, без потока уведомлений по каждой job. `job-completed` можно добавить отдельно, если позже понадобится детальная лента завершения каждой job.
+8. Сохраните webhook и проверьте его доставку в CircleCI Webhooks.
+
+Для добавления и изменения project webhooks CircleCI требует права администратора организации. На проекте действует лимит в пять outbound webhooks.
+
+Официальные документы:
+- https://circleci.com/docs/guides/integration/outbound-webhooks/
+- https://circleci.com/docs/reference/outbound-webhooks-reference/
+
+### 13.3. Чтение накопленных событий
+
+После успешного webhook delivery события доступны через:
+
+- MCP: `list_recent_events(after, limit)`;
+- Browser API: `GET /api/v1/events?after=0&limit=20` с `WEB_ACCESS_TOKEN`.
+
+Ответ содержит события и `next_cursor`. Для следующего запроса передавайте полученный курсор как `after`, чтобы читать только новые записи. Хранилище дедуплицирует CircleCI event ID, хранит не более 500 записей и удаляет записи старше 30 дней.
+
+### 13.4. Что означает «уведомления ассистенту»
+
+Webhook создаёт входящий канал CircleCI → Worker и сохраняет события в доступной Bridge ленте. Однако это ещё не означает, что ChatGPT сам получает unsolicited-сообщение в открытый диалог: MCP-инструменты вызываются клиентом по запросу, а обычный MCP endpoint не умеет сам инициировать реплику в чате.
+
+Для полноценного автоматического оповещения ассистента потребуется поддерживаемый канал доставки или расписание, которое периодически читает event inbox и сообщает о новых событиях. До реализации и проверки такого канала нельзя считать автоматические уведомления в ChatGPT завершёнными.
