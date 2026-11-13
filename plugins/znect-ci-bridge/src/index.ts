@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { DASHBOARD_HTML } from "./ui";
+import { BuildEventStore, normalizeCircleCiWebhook, verifyCircleCiSignature } from "./events";
+export { BuildEventStore };
 import { circleGet } from "./circleci";
 import {
   getCircleCiJob,
@@ -29,6 +31,8 @@ interface Env {
   CIRCLECI_TOKEN: string;
   MCP_ACCESS_TOKEN: string;
   WEB_ACCESS_TOKEN: string;
+  CIRCLECI_WEBHOOK_SECRET: string;
+  EVENT_STORE: DurableObjectNamespace;
   MCP_RATE_LIMITER: {
     limit(options: { key: string }): Promise<{ success: boolean }>;
   };
@@ -609,6 +613,26 @@ function createServer(env: Env) {
     }
   );
 
+  server.registerTool(
+    "list_recent_events",
+    {
+      description: "Read newly received, signed CircleCI workflow/job completion events for the fixed Znect Forge project. Use the returned next_cursor as after on the next call. Read-only.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        after: z.number().int().min(0).default(0),
+        limit: z.number().int().min(1).max(50).default(20)
+      }
+    },
+    async ({ after, limit }) => {
+      if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
+      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+        .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
+      if (!response.ok) throw new Error("CircleCI event storage is unavailable.");
+      const result = await response.json();
+      return { content: [{ type: "text", text: stringifyBoundedJson(result, 60_000) }] };
+    }
+  );
+
   return server;
 }
 
@@ -632,6 +656,21 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
 
   const url = new URL(request.url);
   try {
+    if (url.pathname === "/api/v1/events") {
+      if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
+      const afterRaw = url.searchParams.get("after") ?? "0";
+      const limitRaw = url.searchParams.get("limit") ?? "20";
+      const after = Number(afterRaw);
+      const limit = Number(limitRaw);
+      if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(limit) || limit < 1 || limit > 50) {
+        return json({ error: "after must be a non-negative integer and limit must be 1–50." }, 400);
+      }
+      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+        .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
+      if (!response.ok) return json({ error: "Event storage is unavailable." }, 503);
+      const result = await response.json();
+      return boundedJson(JSON.stringify(result), 60_000);
+    }
     if (url.pathname === "/api/v1/status") {
       const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
       return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG }, permissions: "read-only" });
@@ -677,6 +716,46 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
   }
 }
 
+async function handleCircleCiWebhook(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
+  if (!env.CIRCLECI_WEBHOOK_SECRET || !env.EVENT_STORE) {
+    return json({ error: "CircleCI webhook secret or event storage is not configured." }, 503);
+  }
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > 65_536) {
+    return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
+  }
+  const body = await request.arrayBuffer();
+  if (body.byteLength > 65_536) return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
+  const signature = request.headers.get("circleci-signature");
+  if (!(await verifyCircleCiSignature(body, signature, env.CIRCLECI_WEBHOOK_SECRET))) {
+    return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(new TextDecoder().decode(body));
+  } catch {
+    return json({ error: "Invalid webhook JSON." }, 400);
+  }
+  let event;
+  try {
+    event = normalizeCircleCiWebhook(payload, request.headers.get("circleci-event-type"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid CircleCI webhook event.";
+    return json({ error: limitText(message, 300).text }, 400);
+  }
+  if (!event) return json({ accepted: true, ignored: true, reason: "Unsupported event type or project." }, 202);
+  const stored = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+    .fetch("https://event-store/append", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(event)
+    });
+  if (!stored.ok) return json({ error: "Unable to persist CircleCI event; CircleCI may retry delivery." }, 503);
+  const result = await stored.json() as { duplicate?: boolean };
+  return json({ accepted: true, duplicate: result.duplicate === true }, 202);
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -695,6 +774,7 @@ export default {
         }
       });
     }
+    if (url.pathname === "/webhooks/circleci") return handleCircleCiWebhook(request, env);
     if (url.pathname.startsWith("/api/")) return handleReadOnlyApi(request, env);
     if (url.pathname !== "/mcp") return json({ error: "Not found" }, 404);
     if (!env.CIRCLECI_TOKEN || !env.MCP_ACCESS_TOKEN) return json({ error: "Worker secrets are not configured." }, 503);
