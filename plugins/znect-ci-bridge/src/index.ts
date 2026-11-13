@@ -627,7 +627,7 @@ function createServer(env: Env) {
       if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
       const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
         .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
-      if (!response.ok) throw new Error("CircleCI event storage is unavailable.");
+      if (!response.ok) throw new Error(`CircleCI event storage is unavailable (HTTP ${response.status}).`);
       const result = await response.json() as Record<string, unknown>;
       return { content: [{ type: "text", text: stringifyBoundedJson(result, 60_000) }] };
     }
@@ -667,7 +667,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       }
       const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
         .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
-      if (!response.ok) return json({ error: "Event storage is unavailable." }, 503);
+      if (!response.ok) return json({ error: "Event storage is unavailable.", event_store_status: response.status }, 503);
       const result = await response.json();
       return boundedJson(JSON.stringify(result), 60_000);
     }
