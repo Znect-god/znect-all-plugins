@@ -84,7 +84,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Run authenticated read-only Preview smoke test
-        if: success() && github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (success() || steps.preview.outcome == 'failure')
         run: |
           set -euo pipefail
           if [ -z "${MCP_ACCESS_TOKEN:-}" ] || [ -z "${WEB_ACCESS_TOKEN:-}" ]; then
