@@ -160,7 +160,7 @@ async function main() {
   }
   console.log("PASS: authenticated browser API and CircleCI project access");
 
-  const eventsResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?limit=1", {
+  const eventsResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?limit=50", {
     headers: { authorization: "Bearer " + webToken }
   });
   if (!eventsResponse.ok) {
@@ -176,6 +176,18 @@ async function main() {
   const eventsData = await eventsResponse.json();
   if (!Array.isArray(eventsData.events) || !Number.isSafeInteger(eventsData.next_cursor)) {
     throw new Error("Event inbox returned an invalid response.");
+  }
+  let eventCursor = eventsData.next_cursor;
+  for (let pageIndex = 0; pageIndex < 10 && eventsData.events.length === 50; pageIndex++) {
+    const pageResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?after=" + eventCursor + "&limit=50", {
+      headers: { authorization: "Bearer " + webToken }
+    });
+    if (!pageResponse.ok) throw new Error("Event inbox pagination returned HTTP " + pageResponse.status + ".");
+    eventsData = await pageResponse.json();
+    if (!Array.isArray(eventsData.events) || !Number.isSafeInteger(eventsData.next_cursor)) {
+      throw new Error("Event inbox pagination returned an invalid cursor.");
+    }
+    eventCursor = eventsData.next_cursor;
   }
   console.log("PASS: authenticated event inbox and persistent event storage");
 
@@ -314,7 +326,7 @@ async function main() {
       throw new Error("Repeated CircleCI event ID was not deduplicated.");
     }
 
-    const afterCursor = eventsData.next_cursor;
+    const afterCursor = eventCursor;
     const storedResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?after=" + afterCursor + "&limit=10", {
       headers: { authorization: "Bearer " + webToken }
     });
