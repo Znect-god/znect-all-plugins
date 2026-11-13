@@ -129,3 +129,84 @@ describe("MCP tool schemas and error boundary", () => {
     });
   });
 });
+
+
+describe("Worker transport and fail-closed rate limiting", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("rejects authenticated browser API mutations with an explicit GET-only response", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs", {
+        method: "POST",
+        headers: { authorization: "Bearer web-test-token" },
+        body: JSON.stringify({ action: "rerun" })
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET");
+    expect(await response.text()).toBe("Method not allowed");
+  });
+
+  it("fails closed when the authenticated MCP rate limit is exhausted", async () => {
+    const limitedEnv = {
+      ...env,
+      MCP_RATE_LIMITER: { limit: async () => ({ success: false }) }
+    };
+    const response = await worker.fetch(rpcRequest(10, "tools/list"), limitedEnv, ctx);
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({
+      error: "Rate limit exceeded. Retry after the current window."
+    });
+  });
+
+  it("fails closed when the rate-limit service throws", async () => {
+    const unavailableEnv = {
+      ...env,
+      MCP_RATE_LIMITER: { limit: async () => { throw new Error("internal limiter detail"); } }
+    };
+    const response = await worker.fetch(rpcRequest(11, "tools/list"), unavailableEnv, ctx);
+
+    expect(response.status).toBe(503);
+    const body = await response.text();
+    expect(body).toContain("Rate limiting is temporarily unavailable.");
+    expect(body).not.toContain("internal limiter detail");
+  });
+
+  it("rate-limits failed MCP authentication without reaching the MCP handler", async () => {
+    const limitedEnv = {
+      ...env,
+      MCP_RATE_LIMITER: { limit: async () => ({ success: false }) }
+    };
+    const request = rpcRequest(12, "tools/list");
+    request.headers.set("authorization", "Bearer invalid-token");
+    const response = await worker.fetch(request, limitedEnv, ctx);
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({
+      error: "Too many failed authentication attempts. Retry after the current window."
+    });
+  });
+
+  it("fails closed when browser API rate limiting is exhausted", async () => {
+    const limitedEnv = {
+      ...env,
+      MCP_RATE_LIMITER: { limit: async () => ({ success: false }) }
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/status", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      limitedEnv,
+      ctx
+    );
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({
+      error: "Rate limit exceeded. Retry after the current window."
+    });
+  });
+});
