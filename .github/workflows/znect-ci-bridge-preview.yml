@@ -56,7 +56,7 @@ jobs:
         id: preview
         run: |
           set -euo pipefail
-          output="$(npx wrangler preview --name feature-ci-bridge-test-reports-v2 --json)"
+          output="$(npx --yes wrangler@4.161.0 preview --name feature-ci-bridge-test-reports-v2 --json)"
           printf '%s\\n' "$output"
           preview_url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
           deployment_url="$(printf '%s' "$output" | jq -er '.preview.deployment_url // .preview.deploymentUrl // empty' || true)"
