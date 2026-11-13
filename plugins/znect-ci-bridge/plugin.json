@@ -3,7 +3,7 @@
   "name": "Znect CI Bridge",
   "version": "0.1.0",
   "status": "in-development",
-  "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
+  "description": "Experimental read-only CircleCI bridge with MCP tools, browser API, and signed webhook event inbox.",
   "platforms": {
     "intended": [
       "Cloudflare Workers",
@@ -46,18 +46,22 @@
     "Separate Bearer authentication for /mcp (MCP_ACCESS_TOKEN) and /api/v1/* (WEB_ACCESS_TOKEN)",
     "Cloudflare Rate Limiting binding: 60 authenticated MCP and browser API requests per 60 seconds per Cloudflare location",
     "Authenticated rate-limit keys are SHA-256 digests of their respective access tokens; raw tokens are not used as keys",
-    "Failed MCP and browser API authentication attempts use a separate SHA-256 client-IP digest bucket"
+    "Failed MCP and browser API authentication attempts use a separate SHA-256 client-IP digest bucket",
+    "CircleCI outbound webhook ingress verifies v1 HMAC-SHA256 signatures against the exact raw request body",
+    "Webhook payloads are capped at 64 KiB, filtered to the fixed Forge project, normalized to allowlisted fields, and deduplicated by CircleCI event ID",
+    "SQLite-backed Durable Object stores at most 500 normalized events and prunes events older than 30 days"
   ],
   "limitations": [
     "In development; not production-ready",
     "Production Cloudflare deployment and end-to-end production MCP behavior not verified; current branch head Preview deployment is not independently confirmed",
-    "Live CircleCI connectivity, token authentication, and log retrieval not verified",
     "CircleCI API v1.1 tools remain for legacy compatibility; API v3 adapter is implemented but live token authentication, project UUID resolution, and response mapping remain unverified",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit; dedicated edge WAF hardening remains advisable.",
     "Rate-limit namespace ID must be unique within the user's Cloudflare account",
-    "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials"
+    "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials",
+    "Webhook ingestion and durable event inbox are implemented on an isolated feature branch; CI/Preview verification and CircleCI webhook registration are pending",
+    "Event inbox is queryable through MCP and browser API but does not push unsolicited messages into an open ChatGPT conversation; a supported notification delivery or polling channel remains to be implemented"
   ],
   "testing": {
     "performed": [
@@ -87,19 +91,26 @@
       "CircleCI timeout/network errors and Retry-After parsing covered by mocked tests",
       "Nested CircleCI pagination enforces caller-selected page ceilings; run diagnostics are bounded to fit Workers Free subrequest limits",
       "Browser dashboard security tests verify text-only DOM rendering, no token persistence, omitted ambient credentials, redirect rejection, and no-referrer requests",
-      "Browser run-details API enforces the same 10-workflow/40-job inspection ceilings as MCP and marks truncated workflow summaries incomplete"
+      "Browser run-details API enforces the same 10-workflow/40-job inspection ceilings as MCP and marks truncated workflow summaries incomplete",
+      "CircleCI v1 webhook HMAC verification and normalized event parsing tests added",
+      "Worker tests added for signed webhook acceptance, invalid signatures, foreign-project filtering, and authenticated event inbox API"
     ],
     "pending": [
       "Live Cloudflare Worker deployment and endpoint checks",
       "Live CircleCI API integration and log retrieval",
       "Dedicated Cloudflare WAF rule for failed-authentication traffic and broader log-secret exposure review",
-      "Verify live API v3 token authentication, project identity resolution, and end-to-end data retrieval; mock tests do not establish live compatibility"
+      "Verify live API v3 token authentication, project identity resolution, and end-to-end data retrieval; mock tests do not establish live compatibility",
+      "Run CI/typecheck/unit tests and deploy the webhook event inbox to isolated Cloudflare Preview",
+      "Configure CIRCLECI_WEBHOOK_SECRET in Preview and register a CircleCI project webhook for workflow-completed events",
+      "Verify real CircleCI webhook delivery, deduplication, persistent event reads, and live MCP list_recent_events response",
+      "Implement and verify a supported proactive delivery/polling path from the event inbox to the assistant workflow"
     ]
   },
   "secrets": [
     "CIRCLECI_TOKEN",
     "MCP_ACCESS_TOKEN",
-    "WEB_ACCESS_TOKEN"
+    "WEB_ACCESS_TOKEN",
+    "CIRCLECI_WEBHOOK_SECRET"
   ],
   "license": "undecided"
 }
