@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/ci-bridge-test-reports
+      - fix/ci-bridge-preview-workflow
   pull_request:
     branches:
       - feature/ci-bridge-test-reports
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   preview:
     name: Deploy isolated Cloudflare Worker Preview
-    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports')
+    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports' || github.ref == 'refs/heads/fix/ci-bridge-preview-workflow')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
