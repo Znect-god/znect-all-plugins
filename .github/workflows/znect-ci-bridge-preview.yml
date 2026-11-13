@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - feature/ci-bridge-test-reports
+  pull_request:
+    branches:
+      - feature/ci-bridge-test-reports
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -16,7 +20,7 @@ concurrency:
 jobs:
   preview:
     name: Deploy isolated Cloudflare Worker Preview
-    if: github.repository == 'Znect-god/znect-all-plugins' && github.ref == 'refs/heads/feature/ci-bridge-test-reports'
+    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -26,7 +30,7 @@ jobs:
       - name: Checkout approved feature branch
         uses: actions/checkout@v7
         with:
-          ref: feature/ci-bridge-test-reports
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -39,7 +43,9 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Run typecheck and unit tests
-        run: npm run check
+        run: |
+          npm run check
+          node --check scripts/preview-smoke-test.mjs
 
       - name: Create or update the named Cloudflare Preview
         id: preview
@@ -56,13 +62,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Run read-only Preview smoke tests
-        if: ${{ secrets.MCP_ACCESS_TOKEN != '' && secrets.WEB_ACCESS_TOKEN != '' }}
-        run: node scripts/preview-smoke-test.mjs
-        env:
-          MCP_ACCESS_TOKEN: ${{ secrets.MCP_ACCESS_TOKEN }}
-          WEB_ACCESS_TOKEN: ${{ secrets.WEB_ACCESS_TOKEN }}
 
       - name: Publish Preview result
         if: success()
