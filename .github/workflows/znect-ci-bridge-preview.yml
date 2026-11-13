@@ -6,6 +6,7 @@ on:
     branches:
       - feature/ci-bridge-test-reports
       - fix/ci-bridge-preview-workflow
+      - test/ci-bridge-live-preview-smoke
   pull_request:
     branches:
       - feature/ci-bridge-test-reports
@@ -21,7 +22,7 @@ concurrency:
 jobs:
   preview:
     name: Deploy isolated Cloudflare Worker Preview
-    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports' || github.ref == 'refs/heads/fix/ci-bridge-preview-workflow')
+    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports' || github.ref == 'refs/heads/fix/ci-bridge-preview-workflow' || github.ref == 'refs/heads/test/ci-bridge-live-preview-smoke')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -64,6 +65,25 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Run authenticated read-only Preview smoke test
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          if [ -z "${MCP_ACCESS_TOKEN:-}" ] || [ -z "${WEB_ACCESS_TOKEN:-}" ]; then
+            {
+              echo "## Live CircleCI smoke test"
+              echo
+              echo "NOT RUN: configure repository Actions secrets MCP_ACCESS_TOKEN and WEB_ACCESS_TOKEN to enable authenticated Preview verification."
+              echo "No token values are printed or written to artifacts."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Live smoke test skipped: required GitHub Actions secrets are not configured."
+            exit 0
+          fi
+          node scripts/preview-smoke-test.mjs
+        env:
+          MCP_ACCESS_TOKEN: ${{ secrets.MCP_ACCESS_TOKEN }}
+          WEB_ACCESS_TOKEN: ${{ secrets.WEB_ACCESS_TOKEN }}
 
       - name: Publish Preview result
         if: success() && github.event_name != 'pull_request'
