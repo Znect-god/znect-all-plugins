@@ -64,10 +64,23 @@ export async function verifyCircleCiSignature(
 ): Promise<boolean> {
   if (!signatureHeader || !secret) return false;
   const signatures = signatureHeader.split(",").map((part) => part.trim());
-  const v1 = signatures.filter((part) => part.startsWith("v1="));
+  const parsed: Array<{ version: number; digest: string }> = [];
+  for (const part of signatures) {
+    const separator = part.indexOf("=");
+    if (separator < 0) return false;
+    const versionLabel = part.slice(0, separator).trim();
+    const digest = part.slice(separator + 1).trim().toLowerCase();
+    const versionMatch = /^v([1-9][0-9]*)$/.exec(versionLabel);
+    if (!versionMatch || !/^[0-9a-f]{64}$/.test(digest)) return false;
+    parsed.push({ version: Number(versionMatch[1]), digest });
+  }
+  const highestVersion = Math.max(...parsed.map((entry) => entry.version));
+  // CircleCI requires clients to validate only the newest signature version.
+  // Fail closed on an unknown newer version instead of downgrading to v1.
+  if (highestVersion !== 1) return false;
+  const v1 = parsed.filter((entry) => entry.version === 1);
   if (v1.length !== 1) return false;
-  const supplied = v1[0].slice(3).trim().toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(supplied)) return false;
+  const supplied = v1[0].digest;
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -106,9 +119,8 @@ export function normalizeCircleCiWebhook(
     throw new Error("Invalid CircleCI webhook timestamp.");
   }
   const happenedTime = Date.parse(happenedAt);
-  if (happenedTime > Date.now() + 5 * 60 * 1000 || happenedTime < Date.now() - MAX_EVENT_AGE_MS) {
-    throw new Error("CircleCI webhook timestamp is outside the accepted window.");
-  }
+  if (happenedTime > Date.now() + 5 * 60 * 1000) throw new Error("CircleCI webhook timestamp is in the future.");
+  if (happenedTime < Date.now() - MAX_EVENT_AGE_MS) return null;
 
   const pipeline = record(root.pipeline);
   const vcs = record(pipeline.vcs);
