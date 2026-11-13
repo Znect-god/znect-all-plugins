@@ -49,6 +49,13 @@ jobs:
           npm run check
           node --check scripts/preview-smoke-test.mjs
 
+      - name: Recreate isolated Preview to inherit current Base secrets
+        if: github.event_name != 'pull_request'
+        run: npx wrangler preview delete --name feature-ci-bridge-test-reports --skip-confirmation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Create or update the named Cloudflare Preview
         if: github.event_name != 'pull_request'
         id: preview
