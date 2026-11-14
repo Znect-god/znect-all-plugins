@@ -213,13 +213,21 @@ export class BuildEventStore {
       if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(limit) || limit < 1 || limit > 50) {
         return Response.json({ error: "after must be a non-negative integer and limit must be 1–50." }, { status: 400 });
       }
-      const rows = this.sql.exec(
-        "SELECT seq, event_json FROM build_events WHERE seq > ? ORDER BY seq ASC LIMIT ?",
-        after,
-        limit
-      ).toArray() as Array<{ seq: number; event_json: string }>;
+      // The initial read is a recent snapshot (newest first). Once a caller
+      // stores next_cursor, subsequent reads return only events received later.
+      const rows = (after === 0
+        ? this.sql.exec(
+            "SELECT seq, event_json FROM build_events ORDER BY seq DESC LIMIT ?",
+            limit
+          )
+        : this.sql.exec(
+            "SELECT seq, event_json FROM build_events WHERE seq > ? ORDER BY seq ASC LIMIT ?",
+            after,
+            limit
+          )).toArray() as Array<{ seq: number; event_json: string }>;
       const events = rows.map((row) => ({ cursor: row.seq, ...JSON.parse(row.event_json) as BridgeEvent }));
-      return Response.json({ events, next_cursor: rows.length ? rows[rows.length - 1].seq : after });
+      const nextCursor = rows.length ? Math.max(...rows.map((row) => row.seq)) : after;
+      return Response.json({ events, next_cursor: nextCursor });
     }
     return new Response("Not found", { status: 404 });
   }
