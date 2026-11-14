@@ -49,6 +49,12 @@ describe("CircleCI webhook verification", () => {
     expect(event?.workflow_url).toBe(workflowPayload.workflow.url);
   });
 
+  it("acknowledges abbreviated CircleCI ping payloads without storing them", () => {
+    expect(normalizeCircleCiWebhook({ type: "ping", webhook: { name: "Preview" } }, "ping")).toBeNull();
+    expect(normalizeCircleCiWebhook({ webhook: { name: "Preview" } }, "workflow-completed")).toBeNull();
+    expect(normalizeCircleCiWebhook({}, null)).toBeNull();
+  });
+
   it("ignores events from other projects", () => {
     expect(normalizeCircleCiWebhook({
       ...workflowPayload,
