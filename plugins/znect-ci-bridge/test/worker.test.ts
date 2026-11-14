@@ -409,7 +409,7 @@ describe("Worker HTTP boundary", () => {
         data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: runId, attributes: { status: "success" }, references: { project: { id: projectId } } }],
+        data: [{ id: runId, attributes: { phase: "ended", current_outcome: "succeeded" }, references: { project: { id: projectId } } }],
         page: { next: null }
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
