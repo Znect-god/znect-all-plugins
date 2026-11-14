@@ -164,7 +164,7 @@ describe("Read-only browser API run details", () => {
     expect(body).toContain("sample test");
     expect(body).toContain("[REDACTED]");
     expect(body).not.toContain("web-test-token");
-    expect(body).toContain('"incomplete":false');
+    expect(JSON.parse(body).diagnostics_summary.incomplete).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
