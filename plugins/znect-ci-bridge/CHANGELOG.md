@@ -88,3 +88,12 @@
 - Added unit and Worker-boundary tests for signature validation, event normalization, foreign-project filtering, and inbox access.
 - Updated Preview smoke checks to require the event inbox and new MCP tool.
 - Live webhook registration, webhook-secret provisioning, end-to-end delivery, and proactive ChatGPT notification delivery remain pending. An MCP event feed alone does not push messages into an open ChatGPT conversation.
+
+
+## [0.1.0] — 2026-11-14 documentation/status correction
+
+- Replaced stale branch, PR, Preview URL, workflow and verification statements in the README and usage guide with the current feature-branch state.
+- Documented the exact isolated Preview endpoint, current Draft PR #5, and latest confirmed GitHub Actions run #43568774133.
+- Clarified that CircleCI's successful Add Webhook ping/check verifies endpoint acknowledgement only; a real `workflow-completed` delivery is still pending.
+- Added an ordered launch and end-to-end verification procedure, including delivery-history correlation, durable inbox inspection, duplicate verification, and MCP retrieval.
+- Reaffirmed that the bridge remains in-development, Production is not deployed, and no PR merge or Production change is authorized.
