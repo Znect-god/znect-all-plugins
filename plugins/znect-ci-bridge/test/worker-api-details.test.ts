@@ -145,7 +145,7 @@ describe("Read-only browser API run details", () => {
         return new Response(JSON.stringify({ data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
       }
       if (url.pathname === "/api/v3/runs") {
-        return new Response(JSON.stringify({ data: [{ id: runId }], page: { next: null } }), { status: 200 });
+        return new Response(JSON.stringify({ data: [{ id: runId, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" } } }], page: { next: null } }), { status: 200 });
       }
       if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({ data: { id: runId, attributes: { phase: "ended", current_outcome: "succeeded" }, references: { project: { id: projectId } } } }), { status: 200 });
@@ -216,7 +216,7 @@ describe("Read-only browser API run details", () => {
         return new Response(JSON.stringify({ data: [{ id: "123e4567-e89b-42d3-a456-426614174000", attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
       }
       if (url.pathname === "/api/v3/runs") {
-        return new Response(JSON.stringify({ data: [{ id: runId }], page: { next: null } }), { status: 200 });
+        return new Response(JSON.stringify({ data: [{ id: runId, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" } } }], page: { next: null } }), { status: 200 });
       }
       if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({
