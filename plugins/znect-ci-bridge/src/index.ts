@@ -685,6 +685,162 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       return boundedJson(safe, 100_000);
     }
     const segments = url.pathname.split("/");
+    if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "diagnostics") {
+      const parsed = z.string().uuid().safeParse(segments[4]);
+      if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
+      const runId = parsed.data;
+      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, runId);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId, 2);
+      const workflowReports: Array<Record<string, unknown>> = [];
+      let failedJobsInspected = 0;
+      let failedJobLimitReached = false;
+      let logActionsInspected = 0;
+      let logActionLimitReached = false;
+      const workflowsInspected = workflows.slice(0, 5);
+
+      for (const workflow of workflowsInspected) {
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        const failedJobs = jobs.filter((job) => {
+          const attributes = job.attributes as Record<string, unknown> | undefined;
+          return attributes?.outcome === "failed" || attributes?.status === "failed";
+        });
+        const diagnostics: Array<Record<string, unknown>> = [];
+
+        for (const job of failedJobs) {
+          if (failedJobsInspected >= 3) {
+            failedJobLimitReached = true;
+            break;
+          }
+          failedJobsInspected++;
+          const attributes = job.attributes as Record<string, unknown> | undefined;
+          const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
+          const detailAttributes = details.attributes as Record<string, unknown> | undefined;
+          const executions = Array.isArray(detailAttributes?.parallel_executions)
+            ? detailAttributes.parallel_executions as Array<Record<string, unknown>>
+            : [];
+          const failedSteps = executions.flatMap((execution) => {
+            const steps = Array.isArray(execution.steps) ? execution.steps as Array<Record<string, unknown>> : [];
+            return steps.filter((step) => {
+              const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
+              return actions.some((action) => action.status === "failed" || action.outcome === "failed");
+            }).map((step) => ({
+              name: step.name,
+              execution_index: execution.execution ?? 0,
+              actions: (Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [])
+                .filter((action) => action.status === "failed" || action.outcome === "failed")
+                .map((action) => ({
+                  name: action.name,
+                  status: action.status,
+                  exit_code: action.exit_code,
+                  step_num: action.step_num
+                }))
+            }));
+          });
+
+          const failedStepLogs: Array<Record<string, unknown>> = [];
+          for (const step of failedSteps) {
+            const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
+            for (const action of actions) {
+              if (logActionsInspected >= 3) {
+                logActionLimitReached = true;
+                break;
+              }
+              const stepNum = action.step_num;
+              if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) continue;
+              logActionsInspected++;
+              const execution = typeof step.execution_index === "number" && Number.isInteger(step.execution_index)
+                ? step.execution_index
+                : 0;
+              const output: Record<string, unknown> = {};
+              for (const stream of ["stdout", "stderr"] as const) {
+                try {
+                  const result = await getCircleCiJobStepOutput(
+                    env.CIRCLECI_TOKEN, job.id, stepNum, stream, execution, 12_000 * 4
+                  );
+                  output[stream] = limitText(redactKnownSecrets(result.text, env), 12_000, result.truncated).text;
+                } catch {
+                  output[stream] = "Unable to retrieve this output stream.";
+                }
+              }
+              failedStepLogs.push({
+                step_num: stepNum,
+                execution,
+                action_name: action.name,
+                stdout: output.stdout,
+                stderr: output.stderr
+              });
+            }
+            if (logActionLimitReached) break;
+          }
+
+          let testResults = "";
+          let testResultsError: string | undefined;
+          try {
+            const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 200_000);
+            testResults = result.text + (result.truncated ? "\n[TRUNCATED]" : "");
+          } catch {
+            testResultsError = "Unable to retrieve structured test results.";
+          }
+
+          let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
+          try {
+            const listed = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job.id);
+            const reports = listed.filter((artifact) => {
+              const artifactPath = artifact.attributes?.path ?? "";
+              const size = artifact.attributes?.size ?? 0;
+              return /(?:junit|test-results).*\.xml$/i.test(artifactPath) && size <= 500_000;
+            }).slice(0, 1);
+            for (const artifact of reports) {
+              const artifactPath = artifact.attributes?.path ?? "";
+              try {
+                const report = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job.id, artifactPath, 500_000);
+                artifacts.push({ path: artifactPath, size: artifact.attributes?.size, content: report.text });
+              } catch {
+                artifacts.push({ path: artifactPath, size: artifact.attributes?.size, error: "Unable to retrieve this report artifact." });
+              }
+            }
+          } catch {
+            artifacts = [{ error: "Unable to list job artifacts." }];
+          }
+
+          diagnostics.push({
+            job_id: job.id,
+            name: attributes?.name ?? detailAttributes?.name,
+            outcome: attributes?.outcome ?? attributes?.status,
+            failed_steps: failedSteps,
+            failed_step_logs: failedStepLogs,
+            test_results: testResults,
+            test_results_error: testResultsError,
+            report_artifacts: artifacts
+          });
+        }
+
+        workflowReports.push({
+          workflow_id: workflow.id,
+          workflow_name: (workflow.attributes as Record<string, unknown> | undefined)?.name,
+          jobs_total: jobs.length,
+          failed_jobs_total: failedJobs.length,
+          failed_jobs: diagnostics
+        });
+      }
+
+      const safePayload = redactKnownSecrets(JSON.stringify({
+        run,
+        workflows: workflowReports,
+        diagnostics_summary: {
+          workflows_total: workflows.length,
+          workflows_inspected: workflowReports.length,
+          workflows_truncated: workflows.length > workflowsInspected.length,
+          failed_jobs_inspected: failedJobsInspected,
+          failed_job_limit_reached: failedJobLimitReached,
+          incomplete: workflows.length > workflowsInspected.length || failedJobLimitReached || logActionLimitReached,
+          log_actions_inspected: logActionsInspected,
+          log_action_limit_reached: logActionLimitReached
+        },
+        limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
+      }), env);
+      return boundedJson(safePayload, 120_000);
+    }
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "runs") {
       const parsed = z.string().uuid().safeParse(segments[4]);
       if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
