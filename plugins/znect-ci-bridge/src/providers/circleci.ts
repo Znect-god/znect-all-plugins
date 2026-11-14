@@ -35,7 +35,7 @@ function text(value: unknown): string | undefined {
 
 function statusOf(resource: V3Resource): string {
   const attrs = attributes(resource);
-  return text(attrs.status) ?? text(attrs.phase) ?? text(attrs.current_outcome) ?? "unknown";
+  return text(attrs.status) ?? text(attrs.current_outcome) ?? text(attrs.phase) ?? "unknown";
 }
 
 function iso(value: unknown): string | undefined {
