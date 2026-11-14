@@ -173,9 +173,14 @@ export async function getCircleCiRunForProject(
     if (!Array.isArray(page.data)) {
       throw new Error("CircleCI API v3 returned an invalid project-scoped runs collection.");
     }
-    for (const run of page.data) assertUuid(run.id, "run ID");
+    for (const run of page.data) {
+      assertUuid(run.id, "run ID");
+      assertCircleCiRunOwnership(run, projectId);
+    }
     if (page.data.some((run) => run.id === runId)) {
-      return getCircleCiRun(token, runId);
+      const detail = await getCircleCiRun(token, runId);
+      assertCircleCiRunOwnership(detail, projectId);
+      return detail;
     }
     const next = readNextCursor(page, "project-scoped runs");
     if (next === null) {
@@ -189,6 +194,16 @@ export async function getCircleCiRunForProject(
   }
   throw new Error("CircleCI run ownership could not be verified within the 400-run safety window.");
 }
+/** Verify a run's explicit project relationship, not just the collection filter. */
+export function assertCircleCiRunOwnership(run: V3Resource, projectId: string): void {
+  assertUuid(projectId, "project ID");
+  const references = run.references as Record<string, unknown> | undefined;
+  const projectReference = references?.project as Record<string, unknown> | undefined;
+  if (projectReference?.id !== projectId) {
+    throw new Error("CircleCI run does not belong to the selected project.");
+  }
+}
+
 /** Verify a workflow's explicit run relationship; API filters alone are not an ownership proof. */
 export function assertCircleCiWorkflowOwnership(workflow: V3Resource, runId: string): void {
   assertUuid(runId, "run ID");
@@ -259,7 +274,10 @@ export async function listCircleCiRuns(
       `/api/v3/runs?${query.toString()}`
     );
     if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid runs collection.");
-    for (const run of page.data) assertUuid(run.id, "run ID");
+    for (const run of page.data) {
+      assertUuid(run.id, "run ID");
+      assertCircleCiRunOwnership(run, projectId);
+    }
     runs.push(...page.data);
     const next = readNextCursor(page, "runs");
     if (next === null) break;
