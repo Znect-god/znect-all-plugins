@@ -30,6 +30,8 @@ The adapter is constructed from a server-side CircleCI token, a registered Circl
 
 CircleCI v3's workflow collection is cursor-paginated, but its jobs-in-workflow endpoint returns a single unpaginated `data` collection and does not define page parameters. The adapter follows cursors only for workflows and reads jobs using only the required `filter[workflow_id]` parameter, with a 200-job safety ceiling.
 
+Run metadata is normalized from the v3 run shape: the run's `created_at` is its available start timestamp, and branch, revision, commit subject and commit URL are read from `references.event.attributes.vcs`. A run completion timestamp is omitted when the API does not provide one. Job timestamps use `started_at` and `ended_at`. MCP diagnostics and browser run/diagnostics endpoints inspect at most 40 jobs per workflow and explicitly report `jobs_truncated`/incomplete when the cap is reached.
+
 The browser JSON API and dashboard now consume the provider-neutral run/workflow/job model. The legacy v1.1 `list_recent_builds`, `get_build_details` and `get_build_logs` tools are an explicit CircleCI-only compatibility API, not part of the provider-neutral contract. They retain numeric `build_num` identifiers and the v1.1 project-scoped endpoint; they must never translate a build number into a v3 run UUID or be used as a future Znect Build integration. The log tool only follows CircleCI-supplied output URLs that pass the shared HTTPS artifact-host allowlist, applies per-action and aggregate output limits, and redacts known secrets. Automatic `diagnose_run` uses normalized `CiJobStep`/`CiJobAction` structures rather than exposing provider response objects.
 
 ## Znect Build adapter
