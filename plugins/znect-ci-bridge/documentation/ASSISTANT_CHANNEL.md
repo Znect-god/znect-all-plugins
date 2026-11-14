@@ -8,7 +8,7 @@
 1. The user asks ChatGPT to check Znect Forge.
 2. ChatGPT posts the exact command `/znect-ci-bridge check` to the private inbox issue [#8](https://github.com/Znect-god/znect-forge/issues/8).
 3. A GitHub Actions `issue_comment` workflow in the private `Znect-god/znect-forge` repository calls the existing Cloudflare Worker Preview using the Bridge browser API token.
-4. The workflow collects repository branches, recent commits, open PRs/issues, GitHub Actions runs/jobs/failed-job logs and artifact metadata, plus CircleCI status, runs, webhook events and bounded failed-step diagnostics.
+4. The workflow collects repository branches, recent commits, open PRs/issues, GitHub Actions runs/jobs/failed-job logs and selected test/JUnit/report artifacts, plus CircleCI status, runs, webhook events and bounded failed-step diagnostics.
 5. It uploads the full JSON report as a private GitHub Actions artifact with a one-day retention period. The issue comment contains only a run link and a short status.
 6. ChatGPT reads the private workflow run and downloads the artifact through the GitHub integration, then analyzes the report and continues the project work.
 
@@ -18,7 +18,7 @@
 - Added `GET /api/v1/diagnostics/{run_uuid}` to expose bounded failed-step stdout/stderr, structured test results, and one small JUnit/test-results XML artifact per failed job. It uses the same fixed CircleCI project, GET-only API adapter, secret redaction, and inspection limits as the MCP diagnostic tool.
 - Added a regression test covering a failed run, log retrieval, structured test results, and redaction of the configured browser token.
 - Added the private Forge inbox issue #8.
-- Added a private Forge report collector script for repository state and GitHub Actions run/job diagnostics, including bounded failed-job log downloads and secret redaction.
+- Added a private Forge report collector script for repository state and GitHub Actions run/job diagnostics, including bounded failed-job log downloads, selected test-report artifact downloads and secret redaction. Its shell syntax and mocked fixture flow have been checked locally.
 - Added a Draft PR #9 with an on-demand workflow that gathers GitHub Actions and CircleCI reports and stores them only as private artifacts.
 
 ## One-time setup and activation
