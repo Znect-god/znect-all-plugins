@@ -114,6 +114,7 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
 
 function mapJob(resource: V3Resource, projectId: string, workflowId: string, runId?: string): CiJob {
   const attrs = attributes(resource);
+  const steps = mapJobSteps(attrs);
   return {
     id: resource.id,
     projectId,
@@ -123,7 +124,7 @@ function mapJob(resource: V3Resource, projectId: string, workflowId: string, run
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
     ...(iso(attrs.start_time) ? { startedAt: iso(attrs.start_time) } : {}),
     ...(iso(attrs.stop_time) ? { completedAt: iso(attrs.stop_time) } : {}),
-    ...(mapJobSteps(attrs).length ? { steps: mapJobSteps(attrs) } : {})
+    ...(steps.length ? { steps } : {})
   };
 }
 
