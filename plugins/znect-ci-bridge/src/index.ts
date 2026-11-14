@@ -314,7 +314,6 @@ function createServer(env: Env) {
       const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id, 2);
       const workflowResults = await Promise.all(workflows.slice(0, 10).map(async (workflow) => {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
-        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         return {
           workflow,
           jobs: jobs.slice(0, 40)
@@ -510,7 +509,6 @@ function createServer(env: Env) {
 
       for (const workflow of workflowsInspected) {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
-        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         const failedJobs = jobs.filter((job) => {
           const attributes = job.attributes as Record<string, unknown> | undefined;
           return attributes?.outcome === "failed" || attributes?.status === "failed";
@@ -778,7 +776,6 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
 
       for (const workflow of workflowsInspected) {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
-        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         const failedJobs = jobs.filter((job) => {
           const attributes = job.attributes as Record<string, unknown> | undefined;
           return attributes?.outcome === "failed" || attributes?.status === "failed";
@@ -934,7 +931,6 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const inspected = workflows.slice(0, 10);
       const workflowReports = await Promise.all(inspected.map(async (workflow) => {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
-        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         return { workflow, jobs: jobs.slice(0, 40), jobs_total: jobs.length };
       }));
       const safe = redactKnownSecrets(JSON.stringify({
