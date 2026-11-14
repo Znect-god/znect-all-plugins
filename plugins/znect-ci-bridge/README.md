@@ -14,7 +14,7 @@ Znect CI Bridge is a read-only Cloudflare Worker for inspecting CircleCI runs, w
 - [Draft PR #5](https://github.com/Znect-god/znect-all-plugins/pull/5) remains open and unmerged. Its base is `feature/ci-bridge-test-reports`; it is not `main`.
 - Isolated Cloudflare Preview: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`.
 - MCP endpoint: append `/mcp`. CircleCI webhook endpoint: append `/webhooks/circleci`.
-- GitHub Actions Preview run [#43580375853](https://github.com/Znect-god/znect-all-plugins/actions/runs/43580375853) passed on commit `d642e0cd79a23575c09aeb437011283dc84eeb53`: typecheck, all 103 tests, isolated Preview deployment, Preview webhook-secret installation, authenticated browser API, live diagnostics endpoint, event inbox and MCP read-only smoke checks.
+- GitHub Actions Preview run [#43581014497](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581014497) passed on commit `aae93a027626c978a049dd95f7e2254e97f78c7e`: typecheck, all 103 tests, isolated Preview deployment, Preview webhook-secret installation, authenticated browser API, live diagnostics endpoint, event inbox and MCP read-only smoke checks.
 - On 2026-11-12, after replacing a CircleCI API token that v3 rejected, live `list_recent_runs` returned three Forge runs and `get_job_details` returned the real `build-0-7-0` job (115 tests, 2 failed). This is verified live API read coverage.
 - The later Preview smoke test verified authenticated MCP discovery/read-only connection and browser API access, plus a **synthetic** signed webhook path, deduplication, durable storage and retrieval. Synthetic delivery is not a real CircleCI workflow delivery.
 - The CircleCI project webhook has since been registered successfully. CircleCI's automatic Add Webhook ping/check was accepted with a 2xx response.
@@ -48,7 +48,7 @@ All JSON API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
 
 ### Signed CircleCI webhook inbox
 
-CircleCI sends signed events to `POST /webhooks/circleci`. The Worker verifies the HMAC-SHA256 signature, filters the fixed Forge project, normalizes a small field allowlist, deduplicates event IDs and stores events in a SQLite-backed Durable Object. The inbox is readable through `list_recent_events` and `GET /api/v1/events`.
+CircleCI sends signed events to `POST /webhooks/circleci`. The Worker verifies the HMAC-SHA256 signature, filters the fixed Forge project, normalizes a small field allowlist, deduplicates event IDs and stores events in a SQLite-backed Durable Object. The inbox is readable through `list_recent_events` and `GET /api/v1/events`. Its initial `after=0` read returns the newest events first; the returned cursor then lets clients request only later arrivals.
 
 The inbox does **not** push unsolicited messages into an open ChatGPT conversation. A separate supported polling/delivery mechanism would be needed for proactive assistant notifications.
 
