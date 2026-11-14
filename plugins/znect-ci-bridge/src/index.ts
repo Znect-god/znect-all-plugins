@@ -501,13 +501,13 @@ function createServer(env: Env) {
           }
           const failedSteps = (details.steps ?? [])
             .filter((step) => step.actions.some((action) =>
-              action.status === "failed" || action.outcome === "failed"
+              (action.status === "failed" || action.outcome === "failed") && action.isInsignificant !== true
             ))
             .map((step) => ({
               name: step.name,
               execution_index: step.execution,
               actions: step.actions
-                .filter((action) => action.status === "failed" || action.outcome === "failed")
+                .filter((action) => (action.status === "failed" || action.outcome === "failed") && action.isInsignificant !== true)
                 .map((action) => ({
                   name: action.name,
                   status: action.status,
@@ -749,13 +749,13 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           const details = await adapter.getJob(scope, job.id);
           if (details.workflowId !== workflow.id) throw new Error("CI job does not belong to the selected run workflow.");
           const failedSteps = (details.steps ?? []).flatMap((step) => {
-            const actions = step.actions.filter((action) => action.status === "failed" || action.outcome === "failed");
+            const actions = step.actions.filter((action) => (action.status === "failed" || action.outcome === "failed") && action.isInsignificant !== true);
             return actions.length ? [{ name: step.name, execution: step.execution, actions }] : [];
           });
           const failedStepLogs: Array<Record<string, unknown>> = [];
           for (const step of details.steps ?? []) {
             for (const action of step.actions) {
-              if (action.status !== "failed" && action.outcome !== "failed") continue;
+              if ((action.status !== "failed" && action.outcome !== "failed") || action.isInsignificant === true) continue;
               if (logActionsInspected >= 3) { logActionLimitReached = true; incomplete = true; break; }
               if (typeof action.stepNumber !== "number" || !Number.isInteger(action.stepNumber) || action.stepNumber < 0) continue;
               logActionsInspected++;
