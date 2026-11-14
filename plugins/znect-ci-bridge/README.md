@@ -21,7 +21,7 @@ Znect CI Bridge is a read-only Cloudflare Worker for inspecting CircleCI runs, w
 - **Still pending:** a real CircleCI `workflow-completed` delivery from an ordinary Forge workflow, verification of that event in the durable inbox and retrieval through MCP. The actual event has not yet been confirmed.
 - Production is not deployed or authorized. Do not change Production, `main`, or merge PR #5 without explicit approval.
 
-See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks.
+See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks. The intended free ChatGPT access path is documented in [ASSISTANT_CHANNEL.md](documentation/ASSISTANT_CHANNEL.md).
 
 ## Capabilities
 
@@ -40,6 +40,7 @@ Open the root URL of a confirmed Worker deployment in a modern browser. The dash
 - `GET /api/v1/status`
 - `GET /api/v1/runs?limit=10`
 - `GET /api/v1/runs/{run_uuid}`
+- `GET /api/v1/diagnostics/{run_uuid}` — bounded failed-step logs, structured tests, and a small JUnit/test-results artifact for failed jobs.
 - `GET /api/v1/events?after=0&limit=20`
 
 All JSON API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
