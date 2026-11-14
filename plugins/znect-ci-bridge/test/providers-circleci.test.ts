@@ -60,7 +60,7 @@ describe("CircleCI read-only provider adapter", () => {
     const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
 
     await expect(adapter.listRuns({ ...scope, connectionId: "other-connection" }, 10))
-      .rejects.toThrow("does not match the configured CircleCI connection");
+      .rejects.toThrow("does not match the configured CircleCI project connection");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
