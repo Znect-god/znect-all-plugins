@@ -429,6 +429,12 @@ describe("Worker HTTP boundary", () => {
     );
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
+      if (url.pathname === "/api/v3/projects") {
+        return new Response(JSON.stringify({ data: [{ id: "123e4567-e89b-42d3-a456-426614174000", attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/runs") {
+        return new Response(JSON.stringify({ data: [{ id: runId }], page: { next: null } }), { status: 200 });
+      }
       if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({ data: { id: runId, attributes: { status: "success" } } }), { status: 200 });
       }
@@ -441,7 +447,7 @@ describe("Worker HTTP boundary", () => {
       if (url.pathname === "/api/v3/jobs") {
         const workflowId = url.searchParams.get("filter[workflow_id]")!;
         return new Response(JSON.stringify({
-          data: [{ id: "123e4567-e89b-42d3-a456-426614174999", attributes: { status: "success", workflow_id: workflowId } }],
+          data: [{ id: "123e4567-e89b-42d3-a456-426614174999", attributes: { status: "success", workflow_id: workflowId }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
           page: { next: null }
         }), { status: 200 });
       }
@@ -470,7 +476,7 @@ describe("Worker HTTP boundary", () => {
       incomplete: true
     });
     expect(body.limits).toEqual({ max_workflows: 10, max_jobs_per_workflow: 40 });
-    expect(fetchMock).toHaveBeenCalledTimes(12);
+    expect(fetchMock).toHaveBeenCalledTimes(14);
   });
 
   it("redacts configured credentials from browser API upstream errors", async () => {
