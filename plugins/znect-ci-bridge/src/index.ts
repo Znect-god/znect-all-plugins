@@ -8,19 +8,6 @@ export { BuildEventStore };
 import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
 import {
-  getCircleCiJob,
-  getCircleCiJobStepOutput,
-  getCircleCiJobTests,
-  getCircleCiJobArtifact,
-  listCircleCiJobArtifacts,
-  getCircleCiRunForProject,
-  assertCircleCiJobOwnership,
-  listCircleCiJobs,
-  listCircleCiRuns,
-  listCircleCiWorkflows,
-  resolveCircleCiProject
-} from "./circleci-v3";
-import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
   limitText,
