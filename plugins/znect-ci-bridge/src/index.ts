@@ -900,6 +900,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       }
 
       const safePayload = redactKnownSecrets(JSON.stringify({
+        project: { id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
@@ -932,6 +933,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         return { workflow, jobs: jobs.slice(0, 40), jobs_total: jobs.length };
       }));
       const safe = redactKnownSecrets(JSON.stringify({
+        project: { id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
