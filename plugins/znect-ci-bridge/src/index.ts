@@ -723,7 +723,9 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const workflows = await adapter.listWorkflows(scope, run.id);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
+      let failedJobLimitReached = false;
       let logActionsInspected = 0;
+      let logActionLimitReached = false;
       let incomplete = false;
 
       for (const workflow of workflows.slice(0, 5)) {
@@ -731,7 +733,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         const failedJobs = jobs.filter((job) => job.status === "failed" || job.status === "failure");
         const reports: Array<Record<string, unknown>> = [];
         for (const job of failedJobs) {
-          if (failedJobsInspected >= 3) { incomplete = true; break; }
+          if (failedJobsInspected >= 3) { failedJobLimitReached = true; incomplete = true; break; }
           failedJobsInspected++;
           const details = await adapter.getJob(scope, job.id);
           if (details.workflowId !== workflow.id) throw new Error("CI job does not belong to the selected run workflow.");
@@ -743,7 +745,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           for (const step of details.steps ?? []) {
             for (const action of step.actions) {
               if (action.status !== "failed" && action.outcome !== "failed") continue;
-              if (logActionsInspected >= 3) { incomplete = true; break; }
+              if (logActionsInspected >= 3) { logActionLimitReached = true; incomplete = true; break; }
               if (typeof action.stepNumber !== "number" || !Number.isInteger(action.stepNumber) || action.stepNumber < 0) continue;
               logActionsInspected++;
               const output: Record<string, string> = {};
@@ -757,7 +759,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
               }
               failedStepLogs.push({ step_num: action.stepNumber, execution: step.execution, action_name: action.name, ...output });
             }
-            if (logActionsInspected >= 3) break;
+            if (logActionLimitReached) break;
           }
           let testResults: string | undefined;
           let testResultsError: string | undefined;
@@ -798,10 +800,10 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           workflows_inspected: workflowReports.length,
           workflows_truncated: workflows.length > 5,
           failed_jobs_inspected: failedJobsInspected,
-          failed_job_limit_reached: failedJobsInspected >= 3 && workflows.some((workflow) => workflowReports.some((report) => report.workflow === workflow)),
+          failed_job_limit_reached: failedJobLimitReached,
           incomplete,
           log_actions_inspected: logActionsInspected,
-          log_action_limit_reached: logActionsInspected >= 3
+          log_action_limit_reached: logActionLimitReached
         },
         limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
       };
