@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.0] - 2026-11-15 compatibility follow-up
+### Changed
+- Defined the three CircleCI API v1.1 tools as an explicit CircleCI-only compatibility API, separate from the provider-neutral API v3 adapter.
+- Documented that legacy numeric build numbers are never converted into API v3 UUID run IDs and are not a future Znect Build integration path.
+
+### Tests added
+- Added MCP-level mocked coverage for legacy build listing, build details, bounded action-log retrieval, project-scoped v1.1 request paths, and rejection of artifact URLs outside the HTTPS host allowlist.
+- Tests and typecheck have not yet been executed; no GitHub Actions workflow was manually triggered.
+
+
 ## [0.1.0] - 2026-11-11
 ### Added
 - Imported the complete initial Cloudflare Worker/MCP source project.
