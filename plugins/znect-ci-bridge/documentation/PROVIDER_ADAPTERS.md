@@ -27,7 +27,7 @@ Currently routed through the adapter:
 
 The adapter is constructed from a server-side CircleCI token, a registered CircleCI project slug, the stable Bridge project ID and the registered connection ID. Both project ID and connection ID must match the caller's scope; checking only the connection ID would be unsafe because connection IDs are unique only within a project. Run access is verified against the selected project's paginated run collection. Workflow access is verified against the selected run. Job details must expose the expected project before sensitive job data is read. If a workflow reference is supplied, it must be a valid UUID; run diagnostics additionally require it to match the workflow already verified for that run.
 
-The browser JSON API and dashboard now consume the provider-neutral run/workflow/job model. The legacy v1.1 `list_recent_builds`, `get_build_details` and `get_build_logs` tools remain direct compatibility paths. Automatic `diagnose_run` now uses normalized `CiJobStep`/`CiJobAction` structures rather than exposing provider response objects.
+The browser JSON API and dashboard now consume the provider-neutral run/workflow/job model. The legacy v1.1 `list_recent_builds`, `get_build_details` and `get_build_logs` tools are an explicit CircleCI-only compatibility API, not part of the provider-neutral contract. They retain numeric `build_num` identifiers and the v1.1 project-scoped endpoint; they must never translate a build number into a v3 run UUID or be used as a future Znect Build integration. The log tool only follows CircleCI-supplied output URLs that pass the shared HTTPS artifact-host allowlist, applies per-action and aggregate output limits, and redacts known secrets. Automatic `diagnose_run` uses normalized `CiJobStep`/`CiJobAction` structures rather than exposing provider response objects.
 
 ## Znect Build adapter
 
@@ -43,11 +43,11 @@ The proposed route/schema contract is documented separately in [ZNECT_BUILD_API_
 
 ## Migration order
 
-1. Keep the CircleCI v3 adapter and legacy compatibility paths behaviourally equivalent.
+1. Keep the CircleCI v3 adapter and the explicit v1.1 compatibility API isolated; preserve their distinct identifier and response contracts.
 2. Preserve the browser API and dashboard's alignment with the shared model. The MCP and browser diagnostics paths both use normalized step/action/execution types; extend those types deliberately if another provider needs additional diagnostic detail.
 3. Decide whether legacy v1.1 build tools should be represented as a compatibility API or replaced by provider-neutral run/job operations.
 4. Implement Znect Build only after its real API and credentials are available.
-5. Add provider contract tests and provider-specific fixture tests before switching any registered project from CircleCI to Znect Build.
+5. Maintain focused compatibility tests for the three v1.1 tools, including project-scoped URLs and artifact URL validation. Add provider contract tests and provider-specific fixture tests before switching any registered project from CircleCI to Znect Build.
 
 ## Verification status
 
