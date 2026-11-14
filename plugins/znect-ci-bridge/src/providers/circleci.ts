@@ -150,6 +150,7 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
   private projectPromise?: ReturnType<typeof resolveCircleCiProject>;
   private readonly runCache = new Map<string, Promise<CiRun>>();
   private readonly workflowCache = new Map<string, Promise<CiWorkflow[]>>();
+  private readonly jobCache = new Map<string, Promise<CiJob>>();
 
   constructor(
     private readonly token: string,
@@ -211,14 +212,22 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
   }
 
   async getJob(scope: CiProjectScope, jobId: string): Promise<CiJob> {
-    const project = await this.project(scope);
-    const job = await getCircleCiJob(this.token, jobId);
-    assertCircleCiJobOwnership(job, project.id);
-    const workflowId = workflowReference(job);
-    if (workflowId && !isCircleCiUuid(workflowId)) {
-      throw new Error("CircleCI job contains an invalid workflow ownership reference.");
+    this.assertScope(scope);
+    let pending = this.jobCache.get(jobId);
+    if (!pending) {
+      pending = (async () => {
+        const project = await this.project(scope);
+        const job = await getCircleCiJob(this.token, jobId);
+        assertCircleCiJobOwnership(job, project.id);
+        const workflowId = workflowReference(job);
+        if (workflowId && !isCircleCiUuid(workflowId)) {
+          throw new Error("CircleCI job contains an invalid workflow ownership reference.");
+        }
+        return mapJob(job, scope.projectId, workflowId);
+      })();
+      this.jobCache.set(jobId, pending);
     }
-    return mapJob(job, scope.projectId, workflowId);
+    return pending;
   }
 
   async getJobLogs(scope: CiProjectScope, jobId: string, options: {
