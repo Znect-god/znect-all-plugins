@@ -65,8 +65,7 @@ describe("Read-only browser API run details", () => {
         branch: "feature/example",
         commitSha: "abc123",
         commitMessage: "Fix CI diagnostics",
-        startedAt: "2026-11-15T10:00:00.000Z",
-        completedAt: "2026-11-15T10:05:00.000Z"
+        startedAt: "2026-11-15T10:00:00.000Z"
       }]
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
