@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0] - 2026-11-15 CI verification
+### Validation
+- GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) validated feature-branch HEAD `e1b5438f96503536fd33fd0b08a3df4d056f1e56` through PR #2.
+- Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, all 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed.
+- Recorded the non-fatal npm `allowScripts` warning for `core-js-pure`, `esbuild` and `workerd` for follow-up review. No Worker deployment occurred.
+
+
 ## [0.1.0] - 2026-11-15 compatibility follow-up
 ### Changed
 - Defined the three CircleCI API v1.1 tools as an explicit CircleCI-only compatibility API, separate from the provider-neutral API v3 adapter.
