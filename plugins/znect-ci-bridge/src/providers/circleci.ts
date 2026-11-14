@@ -99,25 +99,46 @@ function mapWorkflow(resource: V3Resource, runId: string): CiWorkflow {
 }
 
 function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
-  if (!Array.isArray(attrs.parallel_executions)) return [];
+  const executions = attrs.parallel_executions;
+  if (executions === undefined || executions === null) return [];
+  if (!Array.isArray(executions)) {
+    throw new Error("CircleCI API v3 returned malformed job parallel-execution data.");
+  }
   const result: CiJobStep[] = [];
   // API v3 returns parallel executions as an ordered array; the array position
   // is the execution number. Each entry contains step records directly (not
   // nested action arrays).
-  for (let executionIndex = 0; executionIndex < attrs.parallel_executions.length; executionIndex++) {
-    const execution = attrs.parallel_executions[executionIndex];
-    if (execution === null || typeof execution !== "object" || Array.isArray(execution)) continue;
+  for (let executionIndex = 0; executionIndex < executions.length; executionIndex++) {
+    const execution = executions[executionIndex];
+    if (execution === null || typeof execution !== "object" || Array.isArray(execution)) {
+      throw new Error("CircleCI API v3 returned malformed job parallel-execution data.");
+    }
     const executionRecord = execution as Record<string, unknown>;
-    if (!Array.isArray(executionRecord.steps)) continue;
+    if (!Array.isArray(executionRecord.steps)) {
+      throw new Error("CircleCI API v3 returned malformed job step data.");
+    }
     for (const step of executionRecord.steps) {
-      if (step === null || typeof step !== "object" || Array.isArray(step)) continue;
+      if (step === null || typeof step !== "object" || Array.isArray(step)) {
+        throw new Error("CircleCI API v3 returned malformed job step data.");
+      }
       const stepRecord = step as Record<string, unknown>;
+      if (
+        typeof stepRecord.name !== "string" ||
+        typeof stepRecord.num !== "number" ||
+        !Number.isInteger(stepRecord.num) ||
+        stepRecord.num < 0 ||
+        typeof stepRecord.phase !== "string" ||
+        typeof stepRecord.type !== "string" ||
+        typeof stepRecord.is_insignificant !== "boolean" ||
+        (stepRecord.outcome !== undefined && stepRecord.outcome !== null && typeof stepRecord.outcome !== "string") ||
+        (stepRecord.exit_code !== undefined && stepRecord.exit_code !== null &&
+          (typeof stepRecord.exit_code !== "number" || !Number.isInteger(stepRecord.exit_code)))
+      ) {
+        throw new Error("CircleCI API v3 returned malformed job step data.");
+      }
       const name = text(stepRecord.name);
       const outcome = text(stepRecord.outcome);
       const phase = text(stepRecord.phase);
-      const stepNumber = typeof stepRecord.num === "number" && Number.isInteger(stepRecord.num) && stepRecord.num >= 0
-        ? stepRecord.num
-        : undefined;
       result.push({
         execution: executionIndex,
         ...(name ? { name } : {}),
@@ -126,7 +147,7 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
           ...(outcome ?? phase ? { status: outcome ?? phase } : {}),
           ...(outcome ? { outcome } : {}),
           ...(typeof stepRecord.exit_code === "number" ? { exitCode: stepRecord.exit_code } : {}),
-          ...(stepNumber !== undefined ? { stepNumber } : {})
+          stepNumber: stepRecord.num
         }]
       });
     }
