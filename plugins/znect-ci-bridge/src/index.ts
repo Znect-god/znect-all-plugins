@@ -404,7 +404,7 @@ function createServer(env: Env) {
     async ({ project_id, job_id, max_chars }) => {
       const { scope, adapter } = getCircleCiAdapter(env, project_id);
       const result = await adapter.getTestReport(scope, job_id, max_chars * 4);
-      const redacted = redactKnownSecrets(result.text, env);
+      const redacted = redactKnownSecrets(result.content, env);
       const limited = limitText(redacted, max_chars, result.truncated);
       return {
         content: [{
@@ -456,7 +456,7 @@ function createServer(env: Env) {
     async ({ project_id, job_id, artifact_path, max_chars }) => {
       const { scope, adapter } = getCircleCiAdapter(env, project_id);
       const result = await adapter.getArtifact(scope, job_id, artifact_path, max_chars * 4);
-      const redacted = redactKnownSecrets(result.text, env);
+      const redacted = redactKnownSecrets(result.content, env);
       const limited = limitText(redacted, max_chars, result.truncated);
       return {
         content: [{
