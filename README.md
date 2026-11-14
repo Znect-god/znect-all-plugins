@@ -11,6 +11,7 @@ This repository is the central home for Znect plugins, integrations, developer t
 ```text
 plugins/                 Individual plugin projects
   znect-ci-bridge/       Cloudflare Worker / MCP bridge for CircleCI (prototype)
+  znect-screen-bridge/   Android screen-sharing bridge concept (prototype; docs only)
 documentation/           Repository-wide standards and guides
 templates/               Starter files for new plugins
 ```
@@ -32,6 +33,7 @@ A status describes maturity, not a guarantee of security. Each plugin must docum
 | Plugin | Status | Current version | Purpose |
 |---|---|---:|---|
 | [Znect CI Bridge](plugins/znect-ci-bridge/) | `prototype` | `0.1.0` | Read-only MCP bridge to CircleCI build information |
+| [Znect Screen Bridge](plugins/znect-screen-bridge/) | `prototype` | `0.1.0` | Android screen-sharing bridge concept; implementation deferred until after the Znect Forge foundation |
 
 ## Required information for every plugin
 
