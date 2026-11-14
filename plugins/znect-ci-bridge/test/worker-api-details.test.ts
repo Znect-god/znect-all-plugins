@@ -93,6 +93,81 @@ describe("Read-only browser API run details", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("returns bounded failed-step logs and test results through the authenticated diagnostics API", async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      expect(init?.method).toBe("GET");
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer circle-test-token");
+
+      if (url.pathname === `/api/v3/runs/${runId}`) {
+        return new Response(JSON.stringify({
+          data: { id: runId, attributes: { status: "failed", pipeline_number: 43 } }
+        }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/workflows") {
+        return new Response(JSON.stringify({
+          data: [{ id: workflowId, attributes: { name: "build-and-test", status: "failed" } }],
+          page: { next: null }
+        }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/jobs") {
+        return new Response(JSON.stringify({
+          data: [{ id: jobId, attributes: { name: "unit-tests", outcome: "failed" } }],
+          page: { next: null }
+        }), { status: 200 });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}`) {
+        return new Response(JSON.stringify({
+          data: {
+            id: jobId,
+            attributes: {
+              name: "unit-tests",
+              parallel_executions: [{
+                execution: 0,
+                steps: [{
+                  name: "Run tests",
+                  actions: [{ name: "npm test", status: "failed", exit_code: 1, step_num: 0 }]
+                }]
+              }]
+            }
+          }
+        }), { status: 200 });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}/stdout`) {
+        return new Response("Authorization: Bearer web-test-token\nAssertionError: expected 1 to equal 2", { status: 200 });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}/stderr`) {
+        return new Response("Test suite failed", { status: 200 });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}/tests`) {
+        return new Response('{"name":"sample test","result":"failure"}\n', { status: 200 });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}/artifacts`) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 });
+      }
+      throw new Error("Unexpected upstream request: " + url.pathname);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request(`https://bridge.example/api/v1/diagnostics/${runId}`, {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("AssertionError");
+    expect(body).toContain("Test suite failed");
+    expect(body).toContain("sample test");
+    expect(body).toContain("[REDACTED]");
+    expect(body).not.toContain("web-test-token");
+    expect(JSON.parse(body).diagnostics_summary.incomplete).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+  });
+
   it("returns 404 for unknown API paths without contacting CircleCI", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

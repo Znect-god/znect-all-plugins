@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { DASHBOARD_HTML } from "./ui";
+import { BuildEventStore, normalizeCircleCiWebhook, verifyCircleCiSignature } from "./events";
+export { BuildEventStore };
 import { circleGet } from "./circleci";
 import {
   getCircleCiJob,
@@ -29,11 +31,14 @@ interface Env {
   CIRCLECI_TOKEN: string;
   MCP_ACCESS_TOKEN: string;
   WEB_ACCESS_TOKEN: string;
+  CIRCLECI_WEBHOOK_SECRET: string;
+  EVENT_STORE: DurableObjectNamespace;
   MCP_RATE_LIMITER: {
     limit(options: { key: string }): Promise<{ success: boolean }>;
   };
 }
 
+const PROJECT_SLUG = "gh/Znect-god/znect-forge";
 const PROJECT_PATH = "/project/github/Znect-god/znect-forge";
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
@@ -240,11 +245,11 @@ function createServer(env: Env) {
       inputSchema: z.object({})
     },
     async (_args) => {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
       return { content: [{ type: "text", text: JSON.stringify({
         connected: true,
         provider: "CircleCI Cloud API v3",
-        project: { id: project.id, slug: project.attributes?.slug },
+        project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG },
         permissions: "read-only"
       }, null, 2) }] };
     }
@@ -257,10 +262,10 @@ function createServer(env: Env) {
       inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ limit }) => {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
       const payload = JSON.stringify({
-        project: { id: project.id, slug: project.attributes?.slug ?? "gh/Znect-god/znect-forge" },
+        project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG },
         runs
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
@@ -608,6 +613,26 @@ function createServer(env: Env) {
     }
   );
 
+  server.registerTool(
+    "list_recent_events",
+    {
+      description: "Read signed CircleCI workflow/job completion events for the fixed Znect Forge project. The initial after=0 read returns the newest events first; pass next_cursor as after on subsequent reads to receive only newer events. Read-only.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        after: z.number().int().min(0).default(0),
+        limit: z.number().int().min(1).max(50).default(20)
+      }
+    },
+    async ({ after, limit }) => {
+      if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
+      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+        .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
+      if (!response.ok) throw new Error(`CircleCI event storage is unavailable (HTTP ${response.status}).`);
+      const result = await response.json() as Record<string, unknown>;
+      return { content: [{ type: "text", text: stringifyBoundedJson(result, 60_000) }] };
+    }
+  );
+
   return server;
 }
 
@@ -631,20 +656,191 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
 
   const url = new URL(request.url);
   try {
+    if (url.pathname === "/api/v1/events") {
+      if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
+      const afterRaw = url.searchParams.get("after") ?? "0";
+      const limitRaw = url.searchParams.get("limit") ?? "20";
+      const after = Number(afterRaw);
+      const limit = Number(limitRaw);
+      if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(limit) || limit < 1 || limit > 50) {
+        return json({ error: "after must be a non-negative integer and limit must be 1–50." }, 400);
+      }
+      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+        .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
+      if (!response.ok) return json({ error: "Event storage is unavailable.", event_store_status: response.status }, 503);
+      const result = await response.json();
+      return boundedJson(JSON.stringify(result), 60_000);
+    }
     if (url.pathname === "/api/v1/status") {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
-      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, slug: project.attributes?.slug }, permissions: "read-only" });
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
+      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG }, permissions: "read-only" });
     }
     if (url.pathname === "/api/v1/runs") {
       const rawLimit = url.searchParams.get("limit");
       const limit = rawLimit === null ? 10 : Number(rawLimit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 30) return json({ error: "limit must be an integer between 1 and 30." }, 400);
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
-      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, slug: project.attributes?.slug ?? "gh/Znect-god/znect-forge" }, runs }), env);
+      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG }, runs }), env);
       return boundedJson(safe, 100_000);
     }
     const segments = url.pathname.split("/");
+    if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "diagnostics") {
+      const parsed = z.string().uuid().safeParse(segments[4]);
+      if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
+      const runId = parsed.data;
+      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, runId);
+      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId, 2);
+      const workflowReports: Array<Record<string, unknown>> = [];
+      let failedJobsInspected = 0;
+      let failedJobLimitReached = false;
+      let logActionsInspected = 0;
+      let logActionLimitReached = false;
+      const workflowsInspected = workflows.slice(0, 5);
+
+      for (const workflow of workflowsInspected) {
+        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        const failedJobs = jobs.filter((job) => {
+          const attributes = job.attributes as Record<string, unknown> | undefined;
+          return attributes?.outcome === "failed" || attributes?.status === "failed";
+        });
+        const diagnostics: Array<Record<string, unknown>> = [];
+
+        for (const job of failedJobs) {
+          if (failedJobsInspected >= 3) {
+            failedJobLimitReached = true;
+            break;
+          }
+          failedJobsInspected++;
+          const attributes = job.attributes as Record<string, unknown> | undefined;
+          const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
+          const detailAttributes = details.attributes as Record<string, unknown> | undefined;
+          const executions = Array.isArray(detailAttributes?.parallel_executions)
+            ? detailAttributes.parallel_executions as Array<Record<string, unknown>>
+            : [];
+          const failedSteps = executions.flatMap((execution) => {
+            const steps = Array.isArray(execution.steps) ? execution.steps as Array<Record<string, unknown>> : [];
+            return steps.filter((step) => {
+              const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
+              return actions.some((action) => action.status === "failed" || action.outcome === "failed");
+            }).map((step) => ({
+              name: step.name,
+              execution_index: execution.execution ?? 0,
+              actions: (Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [])
+                .filter((action) => action.status === "failed" || action.outcome === "failed")
+                .map((action) => ({
+                  name: action.name,
+                  status: action.status,
+                  exit_code: action.exit_code,
+                  step_num: action.step_num
+                }))
+            }));
+          });
+
+          const failedStepLogs: Array<Record<string, unknown>> = [];
+          for (const step of failedSteps) {
+            const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
+            for (const action of actions) {
+              if (logActionsInspected >= 3) {
+                logActionLimitReached = true;
+                break;
+              }
+              const stepNum = action.step_num;
+              if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) continue;
+              logActionsInspected++;
+              const execution = typeof step.execution_index === "number" && Number.isInteger(step.execution_index)
+                ? step.execution_index
+                : 0;
+              const output: Record<string, unknown> = {};
+              for (const stream of ["stdout", "stderr"] as const) {
+                try {
+                  const result = await getCircleCiJobStepOutput(
+                    env.CIRCLECI_TOKEN, job.id, stepNum, stream, execution, 12_000 * 4
+                  );
+                  output[stream] = limitText(redactKnownSecrets(result.text, env), 12_000, result.truncated).text;
+                } catch {
+                  output[stream] = "Unable to retrieve this output stream.";
+                }
+              }
+              failedStepLogs.push({
+                step_num: stepNum,
+                execution,
+                action_name: action.name,
+                stdout: output.stdout,
+                stderr: output.stderr
+              });
+            }
+            if (logActionLimitReached) break;
+          }
+
+          let testResults = "";
+          let testResultsError: string | undefined;
+          try {
+            const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 200_000);
+            testResults = result.text + (result.truncated ? "\n[TRUNCATED]" : "");
+          } catch {
+            testResultsError = "Unable to retrieve structured test results.";
+          }
+
+          let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
+          try {
+            const listed = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job.id);
+            const reports = listed.filter((artifact) => {
+              const artifactPath = artifact.attributes?.path ?? "";
+              const size = artifact.attributes?.size ?? 0;
+              return /(?:junit|test-results).*\.xml$/i.test(artifactPath) && size <= 500_000;
+            }).slice(0, 1);
+            for (const artifact of reports) {
+              const artifactPath = artifact.attributes?.path ?? "";
+              try {
+                const report = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job.id, artifactPath, 500_000);
+                artifacts.push({ path: artifactPath, size: artifact.attributes?.size, content: report.text });
+              } catch {
+                artifacts.push({ path: artifactPath, size: artifact.attributes?.size, error: "Unable to retrieve this report artifact." });
+              }
+            }
+          } catch {
+            artifacts = [{ error: "Unable to list job artifacts." }];
+          }
+
+          diagnostics.push({
+            job_id: job.id,
+            name: attributes?.name ?? detailAttributes?.name,
+            outcome: attributes?.outcome ?? attributes?.status,
+            failed_steps: failedSteps,
+            failed_step_logs: failedStepLogs,
+            test_results: testResults,
+            test_results_error: testResultsError,
+            report_artifacts: artifacts
+          });
+        }
+
+        workflowReports.push({
+          workflow_id: workflow.id,
+          workflow_name: (workflow.attributes as Record<string, unknown> | undefined)?.name,
+          jobs_total: jobs.length,
+          failed_jobs_total: failedJobs.length,
+          failed_jobs: diagnostics
+        });
+      }
+
+      const safePayload = redactKnownSecrets(JSON.stringify({
+        run,
+        workflows: workflowReports,
+        diagnostics_summary: {
+          workflows_total: workflows.length,
+          workflows_inspected: workflowReports.length,
+          workflows_truncated: workflows.length > workflowsInspected.length,
+          failed_jobs_inspected: failedJobsInspected,
+          failed_job_limit_reached: failedJobLimitReached,
+          incomplete: workflows.length > workflowsInspected.length || failedJobLimitReached || logActionLimitReached,
+          log_actions_inspected: logActionsInspected,
+          log_action_limit_reached: logActionLimitReached
+        },
+        limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
+      }), env);
+      return boundedJson(stringifyBoundedJson(JSON.parse(safePayload), 120_000), 120_000);
+    }
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "runs") {
       const parsed = z.string().uuid().safeParse(segments[4]);
       if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
@@ -676,6 +872,51 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
   }
 }
 
+async function handleCircleCiWebhook(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
+  if (!env.CIRCLECI_WEBHOOK_SECRET || !env.EVENT_STORE) {
+    return json({ error: "CircleCI webhook secret or event storage is not configured." }, 503);
+  }
+  if (!/^application\/json(?:;|$)/i.test(request.headers.get("content-type") ?? "")) {
+    return new Response("Unsupported media type", { status: 415, headers: { "accept": "application/json" } });
+  }
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > 65_536) {
+    return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
+  }
+  const body = await request.arrayBuffer();
+  if (body.byteLength > 65_536) return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
+  const signature = request.headers.get("circleci-signature");
+  if (!(await verifyCircleCiSignature(body, signature, env.CIRCLECI_WEBHOOK_SECRET))) {
+    const limited = await rateLimitFailedAuthentication(request, env);
+    if (limited) return limited;
+    return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(new TextDecoder().decode(body));
+  } catch {
+    return json({ error: "Invalid webhook JSON." }, 400);
+  }
+  let event;
+  try {
+    event = normalizeCircleCiWebhook(payload, request.headers.get("circleci-event-type"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid CircleCI webhook event.";
+    return json({ error: limitText(message, 300).text }, 400);
+  }
+  if (!event) return json({ accepted: true, ignored: true, reason: "Unsupported event type or project." }, 202);
+  const stored = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+    .fetch("https://event-store/append", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(event)
+    });
+  if (!stored.ok) return json({ error: "Unable to persist CircleCI event; CircleCI may retry delivery." }, 503);
+  const result = await stored.json() as { duplicate?: boolean };
+  return json({ accepted: true, duplicate: result.duplicate === true }, 202);
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -694,6 +935,7 @@ export default {
         }
       });
     }
+    if (url.pathname === "/webhooks/circleci") return handleCircleCiWebhook(request, env);
     if (url.pathname.startsWith("/api/")) return handleReadOnlyApi(request, env);
     if (url.pathname !== "/mcp") return json({ error: "Not found" }, 404);
     if (!env.CIRCLECI_TOKEN || !env.MCP_ACCESS_TOKEN) return json({ error: "Worker secrets are not configured." }, 503);

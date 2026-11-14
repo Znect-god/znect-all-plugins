@@ -5,15 +5,133 @@ const env = {
   CIRCLECI_TOKEN: "circle-test-token",
   MCP_ACCESS_TOKEN: "bridge-test-token",
   WEB_ACCESS_TOKEN: "web-test-token",
+  CIRCLECI_WEBHOOK_SECRET: "webhook-test-secret",
+  EVENT_STORE: { idFromName: () => "forge", get: () => ({ fetch: async () => Response.json({ events: [], next_cursor: 0 }) }) },
   MCP_RATE_LIMITER: {
     limit: async () => ({ success: true })
   }
 };
 const ctx = {} as ExecutionContext;
 
+async function circleCiSignature(body: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const digest = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body)));
+  return "v1=" + Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Worker HTTP boundary", () => {
+  it("accepts a signed CircleCI workflow event and stores only the normalized Forge event", async () => {
+    const payload = {
+      id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895",
+      type: "workflow-completed",
+      happened_at: new Date().toISOString(),
+      project: { slug: "gh/Znect-god/znect-forge" },
+      workflow: {
+        id: "fda08377-fe7e-46b1-8992-3a7aaecac9c3",
+        name: "build-test",
+        status: "failed",
+        url: "https://app.circleci.com/pipelines/github/Znect-god/znect-forge/1/workflows/fda08377-fe7e-46b1-8992-3a7aaecac9c3"
+      },
+      pipeline: {
+        id: "1285fe1d-d3a6-44fc-8886-8979558254c4",
+        number: 130,
+        vcs: { branch: "work/0.7.0", revision: "a".repeat(40), commit: { subject: "Fix tests" } }
+      }
+    };
+    const body = JSON.stringify(payload);
+    const storeFetch = vi.fn().mockResolvedValue(Response.json({ accepted: true, duplicate: false }));
+    const namespace = { idFromName: vi.fn(() => "forge"), get: vi.fn(() => ({ fetch: storeFetch })) };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/webhooks/circleci", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "content-type": "application/json",
+          "circleci-event-type": "workflow-completed",
+          "circleci-signature": await circleCiSignature(body, "webhook-test-secret")
+        },
+        body
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toMatchObject({ accepted: true, duplicate: false });
+    expect(storeFetch).toHaveBeenCalledTimes(1);
+    const forwarded = JSON.parse(storeFetch.mock.calls[0][1].body);
+    expect(forwarded).toMatchObject({
+      id: payload.id,
+      project_slug: "gh/Znect-god/znect-forge",
+      workflow_status: "failed",
+      branch: "work/0.7.0"
+    });
+    expect(JSON.stringify(forwarded)).not.toContain("author.email");
+  });
+
+  it("rejects unsigned or invalid CircleCI webhook requests", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/webhooks/circleci", {
+        method: "POST",
+        headers: { "content-type": "application/json", "circleci-event-type": "workflow-completed", "circleci-signature": "v1=" + "0".repeat(64) },
+        body: "{}"
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("ignores a correctly signed webhook for another project", async () => {
+    const body = JSON.stringify({
+      id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895",
+      type: "workflow-completed",
+      happened_at: new Date().toISOString(),
+      project: { slug: "gh/other/project" }
+    });
+    const storeFetch = vi.fn();
+    const namespace = { idFromName: vi.fn(() => "forge"), get: vi.fn(() => ({ fetch: storeFetch })) };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/webhooks/circleci", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "circleci-event-type": "workflow-completed",
+          "circleci-signature": await circleCiSignature(body, "webhook-test-secret")
+        },
+        body
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toMatchObject({ accepted: true, ignored: true });
+    expect(storeFetch).not.toHaveBeenCalled();
+  });
+
+  it("serves the authenticated event inbox through the browser API", async () => {
+    const event = { id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895", type: "workflow-completed", workflow_status: "failed" };
+    const storeFetch = vi.fn().mockResolvedValue(Response.json({ events: [{ cursor: 7, ...event }], next_cursor: 7 }));
+    const namespace = { idFromName: vi.fn(() => "forge"), get: vi.fn(() => ({ fetch: storeFetch })) };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?after=3&limit=10", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ events: [{ cursor: 7, id: event.id }], next_cursor: 7 });
+    expect(String(storeFetch.mock.calls[0][0])).toContain("after=3&limit=10");
+  });
+
   it("serves a minimal health response without exposing secrets", async () => {
     const response = await worker.fetch(
       new Request("https://bridge.example/health"),
@@ -507,7 +625,7 @@ describe("Worker HTTP boundary", () => {
       : JSON.parse(responseText);
     const tools = payload.result?.tools;
     expect(Array.isArray(tools)).toBe(true);
-    expect(tools).toHaveLength(12);
+    expect(tools).toHaveLength(13);
     expect(tools.every((tool: { annotations?: { readOnlyHint?: boolean } }) =>
       tool.annotations?.readOnlyHint === true
     )).toBe(true);
@@ -515,6 +633,7 @@ describe("Worker HTTP boundary", () => {
     expect(names).toContain("check_connection");
     expect(names).toContain("list_recent_runs");
     expect(names).toContain("diagnose_run");
+    expect(names).toContain("list_recent_events");
     expect(names.some((name: string) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(name))).toBe(false);
   });
 

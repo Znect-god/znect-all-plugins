@@ -1,70 +1,95 @@
-# Znect CI Bridge — бесплатный способ использования
+# Znect CI Bridge — бесплатный канал ChatGPT
 
-**Статус:** код API и браузерного интерфейса реализован в рабочей ветке; deployment и live-проверка ожидаются  
-**Цель:** предоставить доступ к диагностике CircleCI без подписки ChatGPT Pro и без обязательного MCP-клиента.
+**Статус:** Bridge Preview и read-only диагностика проверены; on-demand канал через приватный GitHub Actions workflow подготовлен в Draft PR и ожидает активации.
 
-## 1. Принцип
+**Цель:** по команде пользователя ChatGPT самостоятельно получает актуальное состояние Znect Forge — репозиторий, запуски CI, статусы workflows/jobs, ошибки, логи, результаты тестов и события — без обязательного custom MCP и без платной подписки ChatGPT.
 
-Бесплатный способ использования реализован как самостоятельный веб-интерфейс Znect CI Bridge. Пользователь открывает адрес Worker в обычном браузере, вводит отдельный токен доступа Bridge и просматривает сведения о CI. ChatGPT и его тарифы в этом сценарии не участвуют.
+## 1. Архитектурный принцип
 
-MCP endpoint сохраняется для совместимых клиентов. Веб-интерфейс и MCP используют один серверный адаптер CircleCI и одинаковые ограничения доступа.
+MCP остаётся дополнительным интерфейсом для совместимых клиентов. Основной бесплатный путь ChatGPT строится через уже подключённую GitHub-интеграцию и приватный GitHub Actions workflow:
 
-## 2. Реализованная схема в рабочей ветке
+1. ChatGPT по запросу пользователя инициирует команду в приватном inbox Forge.
+2. GitHub Actions обращается к защищённому read-only API Znect CI Bridge.
+3. Workflow отдельно читает GitHub API Forge (ветки, коммиты, PR/issues, Actions runs/jobs/logs и выбранные test artifacts), а Bridge получает CircleCI сведения; оба источника используются только для чтения.
+4. Workflow сохраняет полный JSON-отчёт в приватном Actions artifact с коротким сроком хранения.
+5. ChatGPT находит workflow run, скачивает artifact через GitHub-интеграцию и анализирует его.
+
+Этот сценарий не отправляет unsolicited-уведомления в открытый чат: он запускается только после запроса пользователя.
+
+## 2. Схема
 
 ```
-Обычный браузер (desktop / Android)
-        |
-        | HTTPS + Bearer token Bridge
-        v
-Cloudflare Worker
-  |-- Web UI (/)
-  |-- Read-only JSON API (/api/v1/...)
-  |-- MCP endpoint (/mcp)
-  |
-  | CircleCI Personal API Token
-  v
-CircleCI Cloud API v3
-  |
-  v
-Только чтение данных проекта gh/Znect-god/znect-forge
+Пользователь → ChatGPT → GitHub integration
+                         |
+                         v
+              Private Forge inbox issue #8
+                         |
+                         v
+              GitHub Actions workflow
+                 /                       \\
+                v                         v
+      GitHub API (GET)           HTTPS + WEB token
+      repository + Actions              |
+      runs/jobs/logs/artifacts           v
+                               Cloudflare Worker Preview
+                                          |
+                                   CircleCI API (GET)
+                                          v
+                               CircleCI runs, failed-step
+                               logs, tests, artifacts, events
+                         |
+                         v
+              Private Actions artifact
+                         |
+              GitHub integration reads it
+                         v
+                   ChatGPT analysis
 ```
 
-## 3. Безопасность
+## 3. Уже реализовано и проверено
 
-- `CIRCLECI_TOKEN` остаётся только в Cloudflare Worker Secrets и никогда не отправляется в браузер.
-- Браузер предъявляет только отдельный `WEB_ACCESS_TOKEN`. MCP продолжает использовать `MCP_ACCESS_TOKEN`; токены не взаимозаменяемы.
-- Токен вводится в интерфейсе и хранится только в памяти вкладки; не помещается в URL, localStorage, cookies или журналы.
-- API принимает только явно определённые GET-маршруты и UUID/ограниченные параметры.
-- Все запросы к CircleCI остаются GET-only, с фиксированным origin, таймаутами, ограничением объёма ответа и редактированием известных секретов.
-- Доступ к интерфейсу не должен открывать CircleCI API напрямую и не должен раскрывать presigned URLs.
-- Запросы проходят авторизацию и rate limiting. Неавторизованные запросы не получают сведения о запусках.
-- В интерфейсе не будет действий запуска, повтора, отмены, изменения или публикации сборок.
+- Browser API и UI с отдельным `WEB_ACCESS_TOKEN`.
+- Read-only API для статуса проекта, списка запусков, сведений о запуске и webhook inbox.
+- `GET /api/v1/diagnostics/{run_uuid}`: ограниченные stdout/stderr упавших шагов, structured test results и небольшой JUnit/test-results artifact.
+- Redaction известных секретов и ограничения числа workflows, failed jobs, логов и размера отчёта.
+- Регрессионный тест диагностики, включая проверку редактирования токена.
+- Private Forge inbox issue #8.
+- Draft PR #9 с on-demand workflow для закрытого отчёта.
+- Preview deployment и authenticated smoke test: diagnostics API вернул корректный отчёт по доступному CircleCI run; failed-step logs, structured tests и secret redaction отдельно покрыты регрессионным тестом.
+- Typecheck и 103 unit tests прошли в GitHub Actions.
+- GitHub Actions report collector прошёл `bash -n` и локальный mocked fixture test для repo metadata, failed jobs, log download, test artifact extraction и secret redaction.
 
-## 4. Бесплатный сценарий
+## 4. Безопасность и стоимость
 
-1. Владелец развёртывает Worker и задаёт три секрета в Cloudflare: `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` и `WEB_ACCESS_TOKEN`.
-2. Пользователь открывает Worker URL в обычном браузере, включая браузер Android.
-3. Пользователь вводит выданный владельцем `WEB_ACCESS_TOKEN`.
-4. Интерфейс получает список последних запусков, показывает статусы и позволяет открыть сведения о workflows/jobs.
-5. Пользователь может скопировать отчёт и при желании передать его в ChatGPT Free вручную. Это необязательно для работы веб-интерфейса.
+- CircleCI token хранится только в Cloudflare Worker Secrets.
+- GitHub Actions получает отдельный `ZNECT_CI_BRIDGE_WEB_TOKEN`; секрет не помещается в репозиторий, issue или комментарии.
+- Workflow разрешает только точную команду владельца репозитория в issue #8.
+- GitHub API и CircleCI используются только для чтения. В CircleCI выполняются только GET-запросы; запуск, повтор, отмена и изменение pipelines не предусмотрены.
+- Полный отчёт хранится в приватном Forge artifact один день. Комментарий содержит только ссылку на workflow run и краткое сообщение.
+- Данные диагностики и CI-логи не копируются в публичный `znect-all-plugins`.
+- CircleCI build minutes не расходуются. GitHub Actions usage учитывается в квотах GitHub.
+- Используется только изолированный Cloudflare Preview; Production не переключается автоматически.
 
-Само приложение не требует платного ChatGPT-плана. Это не означает, что инфраструктура Cloudflare или CircleCI гарантированно бесплатна при любом объёме использования: действуют тарифы и лимиты соответствующих поставщиков.
+## 5. Активация
 
-## 5. Границы первой версии
+1. Проверить и одобрить Draft PR #5 в `Znect-god/znect-all-plugins`, затем отдельно разрешить его слияние.
+2. Проверить и одобрить Draft PR #9 в приватном `Znect-god/znect-forge`, затем отдельно разрешить его слияние в default branch. Workflow с событием `issue_comment` должен находиться в default branch.
+3. Добавить в Forge Actions secret `ZNECT_CI_BRIDGE_WEB_TOKEN`, совпадающий с Preview `WEB_ACCESS_TOKEN`. Значение секрета не передавать в чат.
+4. Убедиться, что Preview Worker доступен.
+5. После активации ChatGPT публикует в issue #8 команду `/znect-ci-bridge check`, дожидается workflow run и получает приватный artifact.
+6. Проверить полный round-trip: запрос → workflow → artifact → чтение ChatGPT → корректная диагностика.
 
-Первая бесплатная версия предназначена для одного фиксированного проекта Forge, уже заданного в конфигурации Bridge. Она не является multi-tenant SaaS и не предоставляет публичную регистрацию пользователей. Токены доступа выдаются и ротируются владельцем вручную.
+PR #5 и PR #9 остаются Draft. Их слияние и Production deployment требуют отдельного явного разрешения.
 
-## 6. Этапы реализации
+## 6. Критерии готовности
 
-1. Зафиксировать архитектуру бесплатного браузерного клиента и модель безопасности — завершено.
-2. Добавить read-only JSON API — завершено.
-3. Добавить браузерный интерфейс — завершено.
-4. Добавить API/UI тесты и проверить безопасность границ — завершено; GitHub Actions прошёл успешно на commit `abd036b`.
-5. Проверить актуальный Preview и провести live-тест после настройки секретов — ожидает подтверждения актуального deployment и реального CircleCI доступа. Production не публиковать автоматически.
+Канал считается работающим только после подтверждения всех пунктов:
+- команда из ChatGPT запускает workflow в приватном Forge;
+- workflow получает данные Bridge и сохраняет отчёт;
+- GitHub-интеграция ChatGPT скачивает и читает artifact;
+- в отчёте присутствуют реальные CI статусы, ошибки, логи и результаты тестов;
+- секреты не попадают в артефакты и комментарии;
+- повторный запрос создаёт новый актуальный отчёт;
+- ни один CircleCI pipeline не запускается и Production не затрагивается.
 
-## 7. Ограничения и критерии готовности
-
-- Наличие исходного кода и зелёных unit-тестов само по себе не означает, что публичный Worker развёрнут.
-- Для live-проверки нужны корректные Cloudflare Worker Secrets и доступ к CircleCI проекту.
-- Успешный CI или Wrangler dry-run не подтверждает Production deployment.
-- До успешной проверки в браузере на Worker, соответствующем текущему commit, бесплатный интерфейс будет обозначаться как реализованный/тестируемый, а не как доступный пользователям.
+До этого момента канал обозначается как **подготовлен, но не активирован**.

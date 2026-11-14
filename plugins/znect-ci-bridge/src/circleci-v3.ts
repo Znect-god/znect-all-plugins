@@ -135,8 +135,11 @@ export async function resolveCircleCiProject(
   const project = result.data[0];
   assertUuid(project.id, "project ID");
   const slug = project.attributes?.slug;
-  if (typeof slug !== "string" || slug !== projectSlug) {
-    throw new Error("CircleCI project identity did not match the configured slug.");
+  // The API resolves the project by the exact filter[slug] query. Some
+  // valid project responses omit attributes.slug, so only compare it when
+  // CircleCI actually supplies the field.
+  if (typeof slug === "string" && slug !== projectSlug) {
+    throw new Error(`CircleCI project identity did not match the configured slug (received: ${slug}).`);
   }
   return project;
 }
