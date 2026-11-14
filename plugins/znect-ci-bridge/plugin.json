@@ -60,8 +60,8 @@
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit; dedicated edge WAF hardening remains advisable.",
     "Rate-limit namespace ID must be unique within the user's Cloudflare account",
     "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials",
-    "Webhook ingestion and the durable event inbox passed authenticated synthetic signed-webhook, duplicate-delivery, durable-storage, browser API, and MCP retrieval checks in isolated Preview; registration of a real CircleCI project webhook and real delivery verification remain pending.",
-    "Event inbox is queryable through MCP and browser API but does not push unsolicited messages into an open ChatGPT conversation; a supported notification delivery or polling channel remains to be implemented"
+    "Event inbox is queryable through MCP and browser API but does not push unsolicited messages into an open ChatGPT conversation; a supported notification delivery or polling channel remains to be implemented",
+    "CircleCI project webhook registration and automatic Add Webhook ping/check succeeded; an actual CircleCI workflow-completed delivery and end-to-end inbox retrieval remain unverified."
   ],
   "testing": {
     "performed": [
@@ -95,10 +95,13 @@
       "CircleCI v1 webhook HMAC verification and normalized event parsing tests added",
       "Worker tests added for signed webhook acceptance, invalid signatures, foreign-project filtering, and authenticated event inbox API",
       "GitHub Actions run 43566730976 on commit e15809b passed npm ci, typecheck/unit tests, isolated Cloudflare Preview deployment, Preview-only CIRCLECI_WEBHOOK_SECRET installation, and authenticated read-only smoke checks.",
-      "Authenticated Preview smoke test verified live CircleCI API v3 project access, 13 read-only MCP tools, browser event inbox, synthetic v1 HMAC-signed webhook acceptance, duplicate suppression, durable SQLite event storage, and event retrieval through browser API and MCP."
+      "Authenticated Preview smoke test verified live CircleCI API v3 project access, 13 read-only MCP tools, browser event inbox, synthetic v1 HMAC-signed webhook acceptance, duplicate suppression, durable SQLite event storage, and event retrieval through browser API and MCP.",
+      "GitHub Actions run 43568768594 passed isolated Preview deployment, Preview-only webhook secret installation, secret-name diagnostics, and authenticated read-only smoke test.",
+      "GitHub Actions run 43568774133 passed the same isolated Preview validation on the latest test/documentation revision.",
+      "CircleCI project webhook was registered successfully; CircleCI's automatic Add Webhook ping/check received a 2xx response from the isolated Preview endpoint."
     ],
     "pending": [
-      "Register the real CircleCI project webhook for the Znect Forge project and verify an actual CircleCI-signed workflow-completed delivery, duplicate retry behavior, durable storage, and MCP/browser retrieval.",
+      "Wait for and verify a real CircleCI workflow-completed delivery from an ordinary Znect Forge workflow, correlate CircleCI delivery history with the durable Preview inbox, verify event-ID deduplication, and retrieve the event through MCP/browser API.",
       "Implement and verify a supported polling/delivery path from the event inbox to the assistant workflow before claiming proactive notifications.",
       "Complete broader live CircleCI API v3 run/workflow/job/log/artifact parity checks and an independent security review before any Production deployment.",
       "Consider a dedicated Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects."
