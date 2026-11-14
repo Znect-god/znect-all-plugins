@@ -375,9 +375,13 @@ describe("Worker HTTP boundary", () => {
 
   it("returns CircleCI connection status through the authenticated API", async () => {
     const projectId = "123e4567-e89b-42d3-a456-426614174000";
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
-    }), { status: 200 }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [], page: { next: null }
+      }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const response = await worker.fetch(
       new Request("https://bridge.example/api/v1/status", {
@@ -705,8 +709,11 @@ describe("Worker HTTP boundary", () => {
       : JSON.parse(responseText);
     expect(payload.result?.content?.[0]?.text).toContain('"connected": true');
     expect(payload.result?.content?.[0]?.text).toContain('"permissions": "read-only"');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(payload.result?.content?.[0]?.text).toContain('"recent_runs_available": 0');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "GET", redirect: "manual" });
     expect(String(fetchMock.mock.calls[0][0])).toContain("https://circleci.com/api/v3/projects?");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("https://circleci.com/api/v3/runs?");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("filter%5Bproject_id%5D=" + projectId);
   });
 });
