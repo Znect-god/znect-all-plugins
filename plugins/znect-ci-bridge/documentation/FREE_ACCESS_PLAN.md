@@ -1,7 +1,7 @@
 # Znect CI Bridge — бесплатный способ использования
 
-**Статус:** код API и браузерного интерфейса реализован в рабочей ветке; deployment и live-проверка ожидаются  
-**Цель:** предоставить доступ к диагностике CircleCI без подписки ChatGPT Pro и без обязательного MCP-клиента.
+**Статус:** браузерный API/UI и Preview реализованы; бесплатный канал ChatGPT через приватный GitHub Actions artifact находится в разработке  
+**Цель:** ChatGPT по запросу пользователя получает отчёт о состоянии Forge, CI-запусках, ошибках, логах и тестах через уже доступную GitHub-интеграцию — без обязательного custom MCP и без платного тарифа ChatGPT.
 
 ## 1. Принцип
 
@@ -68,3 +68,4 @@ CircleCI Cloud API v3
 - Для live-проверки нужны корректные Cloudflare Worker Secrets и доступ к CircleCI проекту.
 - Успешный CI или Wrangler dry-run не подтверждает Production deployment.
 - До успешной проверки в браузере на Worker, соответствующем текущему commit, бесплатный интерфейс будет обозначаться как реализованный/тестируемый, а не как доступный пользователям.
+\n\n## 8. Текущее состояние канала ChatGPT\n\n- В Bridge добавляется защищённый read-only endpoint `/api/v1/diagnostics/{run_uuid}` для failed-step stdout/stderr, structured test results и небольшого JUnit/test-results artifact.\n- В приватном Forge создан issue #8 как inbox для запроса.\n- В приватном Forge создан Draft PR #9 с workflow, который собирает данные и загружает их в private artifact с retention 1 день.\n- Для активации требуется review/merge PR #9 и добавление Actions secret `ZNECT_CI_BRIDGE_WEB_TOKEN` в Forge. Эти шаги пока не выполнены.\n- Workflow и Bridge Preview ещё должны пройти end-to-end проверку; до этого канал не считается готовым.\n- Полный журнал не публикуется в публичный `znect-all-plugins`; данные остаются в приватном репозитории Forge.\n
