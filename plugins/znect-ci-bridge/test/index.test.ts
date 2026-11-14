@@ -214,3 +214,119 @@ describe("Worker transport and fail-closed rate limiting", () => {
     });
   });
 });
+
+
+describe("legacy CircleCI v1.1 compatibility tools", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("lists legacy build numbers through the registered project's v1.1 endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify([
+      { build_num: 42, status: "success", branch: "main", subject: "Release", vcs_revision: "abc123", build_url: "https://circleci.com/42", failed: false },
+      { build_num: 41, status: "failed", branch: "work/fix", subject: "Fix", vcs_revision: "def456", failed: true }
+    ]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(rpcRequest(20, "tools/call", {
+      name: "list_recent_builds",
+      arguments: { project_id: "znect-forge", limit: 2 }
+    }), env, ctx);
+    const payload = await parseRpc(response);
+    const result = JSON.parse(payload.result.content[0].text);
+
+    expect(result.builds).toHaveLength(2);
+    expect(result.builds[0]).toMatchObject({ build_num: 42, status: "success", branch: "main" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://circleci.com/api/v1.1/project/github/Znect-god/znect-forge?limit=2");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: "GET",
+      headers: { "Circle-Token": CIRCLE_TOKEN },
+      redirect: "manual"
+    });
+  });
+
+  it("retrieves legacy build details by numeric build number without calling API v3", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      build_num: 42,
+      status: "failed",
+      branch: "work/fix",
+      subject: "Fix",
+      vcs_revision: "abc123",
+      build_url: "https://circleci.com/42",
+      failed: true,
+      steps: [{
+        name: "Run tests",
+        actions: [{ name: "vitest", status: "failed", exit_code: 1, has_output: true }]
+      }]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(rpcRequest(21, "tools/call", {
+      name: "get_build_details",
+      arguments: { project_id: "znect-forge", build_num: 42 }
+    }), env, ctx);
+    const payload = await parseRpc(response);
+    const result = JSON.parse(payload.result.content[0].text);
+
+    expect(result).toMatchObject({
+      build_num: 42,
+      status: "failed",
+      steps: [{ step_index: 0, name: "Run tests", actions: [{ name: "vitest", status: "failed", exit_code: 1, has_output: true }] }]
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://circleci.com/api/v1.1/project/github/Znect-god/znect-forge/42");
+    expect(fetchMock.mock.calls[0][0]).not.toContain("/api/v3/");
+  });
+
+  it("retrieves bounded legacy action logs only from a CircleCI-provided allowlisted URL", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        build_num: 42,
+        steps: [{ name: "Run tests", actions: [{
+          name: "vitest",
+          status: "failed",
+          has_output: true,
+          output_url: "https://s3.amazonaws.com/znect-ci-logs/run-42.txt"
+        }] }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("test failed\n", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(rpcRequest(22, "tools/call", {
+      name: "get_build_logs",
+      arguments: { project_id: "znect-forge", build_num: 42, step_index: 0, max_actions: 1 }
+    }), env, ctx);
+    const payload = await parseRpc(response);
+    const result = JSON.parse(payload.result.content[0].text);
+
+    expect(result).toMatchObject({
+      build_num: 42,
+      actions: [{ step_index: 0, step_name: "Run tests", action_name: "vitest", output: "test failed\\n" }]
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://circleci.com/api/v1.1/project/github/Znect-god/znect-forge/42");
+    expect(fetchMock.mock.calls[1][0]).toBe("https://s3.amazonaws.com/znect-ci-logs/run-42.txt");
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "GET", redirect: "manual" });
+  });
+
+  it("rejects legacy build log URLs outside the artifact allowlist without fetching them", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      build_num: 42,
+      steps: [{ name: "Run tests", actions: [{
+        name: "vitest",
+        has_output: true,
+        output_url: "https://attacker.example/collect"
+      }] }]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(rpcRequest(23, "tools/call", {
+      name: "get_build_logs",
+      arguments: { project_id: "znect-forge", build_num: 42 }
+    }), env, ctx);
+    const payload = await parseRpc(response);
+    const result = JSON.parse(payload.result.content[0].text);
+
+    expect(result.actions).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
