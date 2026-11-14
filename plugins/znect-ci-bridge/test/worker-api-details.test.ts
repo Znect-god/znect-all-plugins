@@ -33,6 +33,7 @@ describe("Read-only browser API run details", () => {
               created_at: "2026-11-15T10:00:00Z"
             },
             references: {
+              project: { id: "123e4567-e89b-42d3-a456-426614174000" },
               event: { attributes: { vcs: {
                 branch: "feature/example",
                 revision: "abc123",
