@@ -706,199 +706,134 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
     }
     if (url.pathname === "/api/v1/status") {
       const projectId = url.searchParams.get("project_id") ?? "znect-forge";
-      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug }, permissions: "read-only" });
+      const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
+      const recentRuns = await adapter.listRuns(scope, 1);
+      return json({
+        service: "znect-ci-bridge",
+        connected: true,
+        provider: adapter.provider,
+        project: { id: project.id, name: project.name },
+        permissions: "read-only",
+        read_probe: { recent_runs_available: recentRuns.length }
+      });
     }
     if (url.pathname === "/api/v1/runs") {
       const rawLimit = url.searchParams.get("limit");
       const limit = rawLimit === null ? 10 : Number(rawLimit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 30) return json({ error: "limit must be an integer between 1 and 30." }, 400);
       const projectId = url.searchParams.get("project_id") ?? "znect-forge";
-      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
-      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug }, runs }), env);
-      return boundedJson(safe, 100_000);
+      const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
+      const runs = await adapter.listRuns(scope, limit);
+      return boundedJson(redactedBoundedJson({ project: { id: project.id, name: project.name, provider: adapter.provider }, runs }, env, 100_000), 100_000);
     }
     const segments = url.pathname.split("/");
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "diagnostics") {
       const parsed = z.string().uuid().safeParse(segments[4]);
-      if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
-      const runId = parsed.data;
+      if (!parsed.success) return json({ error: "A valid CI run UUID is required." }, 400);
       const projectId = url.searchParams.get("project_id") ?? "znect-forge";
-      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, runId, circleProject.id);
-      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId, 2);
+      const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
+      const run = await adapter.getRun(scope, parsed.data);
+      const workflows = await adapter.listWorkflows(scope, run.id);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
-      let failedJobLimitReached = false;
       let logActionsInspected = 0;
-      let logActionLimitReached = false;
-      const workflowsInspected = workflows.slice(0, 5);
+      let incomplete = false;
 
-      for (const workflow of workflowsInspected) {
-        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
-        const failedJobs = jobs.filter((job) => {
-          const attributes = job.attributes as Record<string, unknown> | undefined;
-          return attributes?.outcome === "failed" || attributes?.status === "failed";
-        });
-        const diagnostics: Array<Record<string, unknown>> = [];
-
+      for (const workflow of workflows.slice(0, 5)) {
+        const jobs = await adapter.listJobs(scope, run.id, workflow.id);
+        const failedJobs = jobs.filter((job) => job.status === "failed" || job.status === "failure");
+        const reports: Array<Record<string, unknown>> = [];
         for (const job of failedJobs) {
-          if (failedJobsInspected >= 3) {
-            failedJobLimitReached = true;
-            break;
-          }
+          if (failedJobsInspected >= 3) { incomplete = true; break; }
           failedJobsInspected++;
-          const attributes = job.attributes as Record<string, unknown> | undefined;
-          const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
-          assertCircleCiJobOwnership(details, circleProject.id, workflow.id);
-          const detailAttributes = details.attributes as Record<string, unknown> | undefined;
-          const executions = Array.isArray(detailAttributes?.parallel_executions)
-            ? detailAttributes.parallel_executions as Array<Record<string, unknown>>
-            : [];
-          const failedSteps = executions.flatMap((execution) => {
-            const steps = Array.isArray(execution.steps) ? execution.steps as Array<Record<string, unknown>> : [];
-            return steps.filter((step) => {
-              const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
-              return actions.some((action) => action.status === "failed" || action.outcome === "failed");
-            }).map((step) => ({
-              name: step.name,
-              execution_index: execution.execution ?? 0,
-              actions: (Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [])
-                .filter((action) => action.status === "failed" || action.outcome === "failed")
-                .map((action) => ({
-                  name: action.name,
-                  status: action.status,
-                  exit_code: action.exit_code,
-                  step_num: action.step_num
-                }))
-            }));
+          const details = await adapter.getJob(scope, job.id);
+          if (details.workflowId !== workflow.id) throw new Error("CI job does not belong to the selected run workflow.");
+          const failedSteps = (details.steps ?? []).flatMap((step) => {
+            const actions = step.actions.filter((action) => action.status === "failed" || action.outcome === "failed");
+            return actions.length ? [{ name: step.name, execution: step.execution, actions }] : [];
           });
-
           const failedStepLogs: Array<Record<string, unknown>> = [];
-          for (const step of failedSteps) {
-            const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
-            for (const action of actions) {
-              if (logActionsInspected >= 3) {
-                logActionLimitReached = true;
-                break;
-              }
-              const stepNum = action.step_num;
-              if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) continue;
+          for (const step of details.steps ?? []) {
+            for (const action of step.actions) {
+              if (action.status !== "failed" && action.outcome !== "failed") continue;
+              if (logActionsInspected >= 3) { incomplete = true; break; }
+              if (typeof action.stepNumber !== "number" || !Number.isInteger(action.stepNumber) || action.stepNumber < 0) continue;
               logActionsInspected++;
-              const execution = typeof step.execution_index === "number" && Number.isInteger(step.execution_index)
-                ? step.execution_index
-                : 0;
-              const output: Record<string, unknown> = {};
+              const output: Record<string, string> = {};
               for (const stream of ["stdout", "stderr"] as const) {
                 try {
-                  const result = await getCircleCiJobStepOutput(
-                    env.CIRCLECI_TOKEN, job.id, stepNum, stream, execution, 12_000 * 4
-                  );
+                  const result = await adapter.getJobLogs(scope, job.id, {
+                    step: action.stepNumber, execution: step.execution, stream, maxBytes: 12_000 * 4
+                  });
                   output[stream] = limitText(redactKnownSecrets(result.text, env), 12_000, result.truncated).text;
-                } catch {
-                  output[stream] = "Unable to retrieve this output stream.";
-                }
+                } catch { output[stream] = "Unable to retrieve this output stream."; }
               }
-              failedStepLogs.push({
-                step_num: stepNum,
-                execution,
-                action_name: action.name,
-                stdout: output.stdout,
-                stderr: output.stderr
-              });
+              failedStepLogs.push({ step_num: action.stepNumber, execution: step.execution, action_name: action.name, ...output });
             }
-            if (logActionLimitReached) break;
+            if (logActionsInspected >= 3) break;
           }
-
-          let testResults = "";
+          let testResults: string | undefined;
           let testResultsError: string | undefined;
           try {
-            const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 200_000);
-            testResults = result.text + (result.truncated ? "\n[TRUNCATED]" : "");
-          } catch {
-            testResultsError = "Unable to retrieve structured test results.";
-          }
-
-          let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
+            const report = await adapter.getTestReport(scope, job.id, 200_000);
+            testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
+          } catch { testResultsError = "Unable to retrieve structured test results."; }
+          const reportArtifacts: Array<Record<string, unknown>> = [];
           try {
-            const listed = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job.id);
-            const reports = listed.filter((artifact) => {
-              const artifactPath = artifact.attributes?.path ?? "";
-              const size = artifact.attributes?.size ?? 0;
-              return /(?:junit|test-results).*\.xml$/i.test(artifactPath) && size <= 500_000;
-            }).slice(0, 1);
-            for (const artifact of reports) {
-              const artifactPath = artifact.attributes?.path ?? "";
+            const artifacts = (await adapter.listArtifacts(scope, job.id))
+              .filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path) && (artifact.size ?? 0) <= 500_000)
+              .slice(0, 1);
+            for (const artifact of artifacts) {
               try {
-                const report = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job.id, artifactPath, 500_000);
-                artifacts.push({ path: artifactPath, size: artifact.attributes?.size, content: report.text });
-              } catch {
-                artifacts.push({ path: artifactPath, size: artifact.attributes?.size, error: "Unable to retrieve this report artifact." });
-              }
+                const content = await adapter.getArtifact(scope, job.id, artifact.path, 500_000);
+                reportArtifacts.push({ path: artifact.path, size: artifact.size, content: content.content });
+              } catch { reportArtifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." }); }
             }
-          } catch {
-            artifacts = [{ error: "Unable to list job artifacts." }];
-          }
-
-          diagnostics.push({
-            job_id: job.id,
-            name: attributes?.name ?? detailAttributes?.name,
-            outcome: attributes?.outcome ?? attributes?.status,
+          } catch { reportArtifacts.push({ error: "Unable to list job artifacts." }); }
+          reports.push({
+            job: details,
             failed_steps: failedSteps,
             failed_step_logs: failedStepLogs,
             test_results: testResults,
             test_results_error: testResultsError,
-            report_artifacts: artifacts
+            report_artifacts: reportArtifacts
           });
         }
-
-        workflowReports.push({
-          workflow_id: workflow.id,
-          workflow_name: (workflow.attributes as Record<string, unknown> | undefined)?.name,
-          jobs_total: jobs.length,
-          failed_jobs_total: failedJobs.length,
-          failed_jobs: diagnostics
-        });
+        workflowReports.push({ workflow, jobs_total: jobs.length, failed_jobs_total: failedJobs.length, failed_jobs: reports });
       }
-
-      const safePayload = redactKnownSecrets(JSON.stringify({
-        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
+      if (workflows.length > 5) incomplete = true;
+      const payload = {
+        project: { id: project.id, name: project.name, provider: adapter.provider },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
           workflows_total: workflows.length,
           workflows_inspected: workflowReports.length,
-          workflows_truncated: workflows.length > workflowsInspected.length,
+          workflows_truncated: workflows.length > 5,
           failed_jobs_inspected: failedJobsInspected,
-          failed_job_limit_reached: failedJobLimitReached,
-          incomplete: workflows.length > workflowsInspected.length || failedJobLimitReached || logActionLimitReached,
+          failed_job_limit_reached: failedJobsInspected >= 3 && workflows.some((workflow) => workflowReports.some((report) => report.workflow === workflow)),
+          incomplete,
           log_actions_inspected: logActionsInspected,
-          log_action_limit_reached: logActionLimitReached
+          log_action_limit_reached: logActionsInspected >= 3
         },
         limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
-      }), env);
-      return boundedJson(stringifyBoundedJson(JSON.parse(safePayload), 120_000), 120_000);
+      };
+      return boundedJson(redactedBoundedJson(payload, env, 120_000), 120_000);
     }
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "runs") {
       const parsed = z.string().uuid().safeParse(segments[4]);
-      if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
-      const runId = parsed.data;
+      if (!parsed.success) return json({ error: "A valid CI run UUID is required." }, 400);
       const projectId = url.searchParams.get("project_id") ?? "znect-forge";
-      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, runId, circleProject.id);
-      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId, 2);
+      const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
+      const run = await adapter.getRun(scope, parsed.data);
+      const workflows = await adapter.listWorkflows(scope, run.id);
       const inspected = workflows.slice(0, 10);
       const workflowReports = await Promise.all(inspected.map(async (workflow) => {
-        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        const jobs = await adapter.listJobs(scope, run.id, workflow.id);
         return { workflow, jobs: jobs.slice(0, 40), jobs_total: jobs.length };
       }));
-      const safe = redactKnownSecrets(JSON.stringify({
-        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
+      return boundedJson(redactedBoundedJson({
+        project: { id: project.id, name: project.name, provider: adapter.provider },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
@@ -908,8 +843,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           incomplete: workflows.length > inspected.length
         },
         limits: { max_workflows: 10, max_jobs_per_workflow: 40 }
-      }), env);
-      return boundedJson(safe, 120_000);
+      }, env, 120_000), 120_000);
     }
     return json({ error: "API route not found." }, 404);
   } catch (error) {
