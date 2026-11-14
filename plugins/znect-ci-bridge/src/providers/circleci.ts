@@ -75,11 +75,12 @@ function mapWorkflow(resource: V3Resource, runId: string): CiWorkflow {
   };
 }
 
-function mapJob(resource: V3Resource, projectId: string, workflowId: string): CiJob {
+function mapJob(resource: V3Resource, projectId: string, workflowId: string, runId?: string): CiJob {
   const attrs = attributes(resource);
   return {
     id: resource.id,
     projectId,
+    ...(runId ? { runId } : {}),
     workflowId,
     status: statusOf(resource),
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
@@ -151,7 +152,7 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
       throw new Error("CircleCI workflow does not belong to the selected run and project.");
     }
     const jobs = await listCircleCiJobs(this.token, workflowId);
-    return jobs.map((job) => mapJob(job, scope.projectId, workflowId));
+    return jobs.map((job) => mapJob(job, scope.projectId, workflowId, runId));
   }
 
   async getJob(scope: CiProjectScope, jobId: string): Promise<CiJob> {
