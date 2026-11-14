@@ -49,6 +49,20 @@ describe("CircleCI webhook verification", () => {
     expect(event?.workflow_url).toBe(workflowPayload.workflow.url);
   });
 
+  it("normalizes a non-Forge project only when its registered slug is allowlisted", () => {
+    const payload = {
+      ...workflowPayload,
+      project: { slug: "gh/Znect-god/znect-ai" }
+    };
+    expect(normalizeCircleCiWebhook(payload, "workflow-completed")).toBeNull();
+    const event = normalizeCircleCiWebhook(
+      payload,
+      "workflow-completed",
+      new Set(["gh/Znect-god/znect-ai"])
+    );
+    expect(event?.project_slug).toBe("gh/Znect-god/znect-ai");
+  });
+
   it("acknowledges abbreviated CircleCI ping payloads without storing them", () => {
     expect(normalizeCircleCiWebhook({ type: "ping", webhook: { name: "Preview" } }, "ping")).toBeNull();
     expect(normalizeCircleCiWebhook({ webhook: { name: "Preview" } }, "workflow-completed")).toBeNull();
