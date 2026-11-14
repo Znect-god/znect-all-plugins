@@ -299,11 +299,10 @@ function createServer(env: Env) {
       inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ project_id, limit }) => {
-      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
+      const { project: registryProject, connection, scope, adapter } = getCircleCiAdapter(env, project_id);
+      const runs = await adapter.listRuns(scope, limit);
       const payload = JSON.stringify({
-        project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug },
+        project: { id: registryProject.id, name: registryProject.name, provider: "circleci", slug: connection.projectSlug },
         runs
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
@@ -319,19 +318,15 @@ function createServer(env: Env) {
       inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), run_id: z.string().uuid() }
     },
     async ({ project_id, run_id }) => {
-      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, run_id, circleProject.id);
-      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id, 2);
-      const workflowResults = await Promise.all(workflows.slice(0, 10).map(async (workflow) => {
-        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
-        return {
-          workflow,
-          jobs: jobs.slice(0, 40)
-        };
-      }));
+      const { project: registryProject, scope, adapter } = getCircleCiAdapter(env, project_id);
+      const run = await adapter.getRun(scope, run_id);
+      const workflows = await adapter.listWorkflows(scope, run_id);
+      const workflowResults = await Promise.all(workflows.slice(0, 10).map(async (workflow) => ({
+        workflow,
+        jobs: (await adapter.listJobs(scope, run_id, workflow.id)).slice(0, 40)
+      })));
       const payload = JSON.stringify({
-        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
+        project: { id: registryProject.id, name: registryProject.name, provider: "circleci" },
         run,
         workflows: workflowResults,
         truncated: workflows.length > 10
@@ -349,10 +344,8 @@ function createServer(env: Env) {
       inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), job_id: z.string().uuid() }
     },
     async ({ project_id, job_id }) => {
-      const { connection } = getCircleCiConnection(env, project_id);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
-      assertCircleCiJobOwnership(job, circleProject.id);
+      const { scope, adapter } = getCircleCiAdapter(env, project_id);
+      const job = await adapter.getJob(scope, job_id);
       const payload = JSON.stringify({ job }, null, 2);
       const safe = redactKnownSecrets(payload, env);
       return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(safe), 40_000) }] };
@@ -374,18 +367,10 @@ function createServer(env: Env) {
       }
     },
     async ({ project_id, job_id, step_num, execution, stream, max_chars }) => {
-      const { connection } = getCircleCiConnection(env, project_id);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
-      assertCircleCiJobOwnership(job, circleProject.id);
-      const result = await getCircleCiJobStepOutput(
-        env.CIRCLECI_TOKEN,
-        job_id,
-        step_num,
-        stream,
-        execution,
-        max_chars * 4
-      );
+      const { scope, adapter } = getCircleCiAdapter(env, project_id);
+      const result = await adapter.getJobLogs(scope, job_id, {
+        step: step_num, stream, execution, maxBytes: max_chars * 4
+      });
       const redacted = redactKnownSecrets(result.text, env);
       const limited = limitText(redacted, max_chars, result.truncated);
       return {
@@ -417,11 +402,8 @@ function createServer(env: Env) {
       }
     },
     async ({ project_id, job_id, max_chars }) => {
-      const { connection } = getCircleCiConnection(env, project_id);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
-      assertCircleCiJobOwnership(job, circleProject.id);
-      const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job_id, max_chars * 4);
+      const { scope, adapter } = getCircleCiAdapter(env, project_id);
+      const result = await adapter.getTestReport(scope, job_id, max_chars * 4);
       const redacted = redactKnownSecrets(result.text, env);
       const limited = limitText(redacted, max_chars, result.truncated);
       return {
@@ -429,7 +411,7 @@ function createServer(env: Env) {
           type: "text",
           text: stringifyBoundedJson({
             job_id,
-            format: "jsonl",
+            format: result.format,
             results: limited.text,
             truncated: limited.truncated
           }, 85_000)
@@ -446,16 +428,12 @@ function createServer(env: Env) {
       inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), job_id: z.string().uuid() }
     },
     async ({ project_id, job_id }) => {
-      const { connection } = getCircleCiConnection(env, project_id);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
-      assertCircleCiJobOwnership(job, circleProject.id);
-      const artifacts = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job_id);
+      const { scope, adapter } = getCircleCiAdapter(env, project_id);
+      const artifacts = await adapter.listArtifacts(scope, job_id);
       const safe = artifacts.map((artifact) => ({
         id: artifact.id,
-        path: artifact.attributes?.path,
-        size: artifact.attributes?.size,
-        node_index: artifact.attributes?.node_index
+        path: artifact.path,
+        size: artifact.size
       }));
       const payload = redactKnownSecrets(JSON.stringify({ job_id, artifacts: safe }, null, 2), env);
       return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(payload), 30_000) }] };
@@ -476,11 +454,8 @@ function createServer(env: Env) {
       }
     },
     async ({ project_id, job_id, artifact_path, max_chars }) => {
-      const { connection } = getCircleCiConnection(env, project_id);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
-      assertCircleCiJobOwnership(job, circleProject.id);
-      const result = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job_id, artifact_path, max_chars * 4);
+      const { scope, adapter } = getCircleCiAdapter(env, project_id);
+      const result = await adapter.getArtifact(scope, job_id, artifact_path, max_chars * 4);
       const redacted = redactKnownSecrets(result.text, env);
       const limited = limitText(redacted, max_chars, result.truncated);
       return {
