@@ -144,6 +144,52 @@ export async function resolveCircleCiProject(
   return project;
 }
 
+/** Resolve a run through its pipeline and verify that pipeline belongs to the selected project. */
+export async function getCircleCiRunForProject(
+  token: string,
+  runId: string,
+  projectId: string
+): Promise<V3Resource> {
+  assertUuid(projectId, "project ID");
+  const run = await getCircleCiRun(token, runId);
+  const references = run.references as Record<string, unknown> | undefined;
+  const pipelineReference = references?.pipeline as Record<string, unknown> | undefined;
+  const pipelineId = pipelineReference?.id;
+  if (typeof pipelineId !== "string" || !isCircleCiUuid(pipelineId)) {
+    throw new Error("CircleCI run does not expose a verifiable pipeline reference; refusing cross-project access.");
+  }
+  const query = new URLSearchParams({ "filter[project_id]": projectId });
+  const pipelineResult = await circleV3Get<V3SingleResource>(
+    token,
+    `/api/v3/pipelines/${pipelineId}?${query.toString()}`
+  );
+  const pipeline = pipelineResult?.data;
+  const pipelineReferences = pipeline?.references as Record<string, unknown> | undefined;
+  const projectReference = pipelineReferences?.project as Record<string, unknown> | undefined;
+  if (!pipeline || pipeline.id !== pipelineId || projectReference?.id !== projectId) {
+    throw new Error("CircleCI run does not belong to the selected project.");
+  }
+  return run;
+}
+
+/** Verify the project and workflow references before any job data is returned. */
+export function assertCircleCiJobOwnership(
+  job: V3Resource,
+  projectId: string,
+  workflowId?: string
+): void {
+  assertUuid(projectId, "project ID");
+  const references = job.references as Record<string, unknown> | undefined;
+  const projectReference = references?.project as Record<string, unknown> | undefined;
+  const actualWorkflow = references?.workflow as Record<string, unknown> | undefined;
+  if (projectReference?.id !== projectId) {
+    throw new Error("CircleCI job does not belong to the selected project.");
+  }
+  if (workflowId && actualWorkflow?.id !== workflowId) {
+    throw new Error("CircleCI job does not belong to the selected run workflow.");
+  }
+}
+
 export async function getCircleCiRun(
   token: string,
   runId: string
