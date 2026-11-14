@@ -108,15 +108,12 @@ describe("CircleCI read-only provider adapter", () => {
             name: "unit-tests",
             status: "failed",
             parallel_executions: [{
-              execution: 2,
               steps: [{
                 name: "Run tests",
-                actions: [{
-                  name: "npm test",
-                  status: "failed",
-                  exit_code: 1,
-                  step_num: 4
-                }]
+                num: 4,
+                phase: "completed",
+                outcome: "failed",
+                exit_code: 1
               }]
             }]
           }
@@ -129,15 +126,52 @@ describe("CircleCI read-only provider adapter", () => {
       workflowId: WORKFLOW_ID,
       steps: [{
         name: "Run tests",
-        execution: 2,
+        execution: 0,
         actions: [{
-          name: "npm test",
+          name: "Run tests",
           status: "failed",
+          outcome: "failed",
           exitCode: 1,
           stepNumber: 4
         }]
       }]
     });
+  });
+
+  it("uses the parallel-execution array index and API v3 step num", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: {
+          id: JOB_ID,
+          references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
+          attributes: {
+            name: "parallel-tests",
+            parallel_executions: [
+              { steps: [{ name: "worker zero", num: 0, phase: "completed", outcome: "success" }] },
+              { steps: [{ name: "worker one", num: 7, phase: "completed", outcome: "failed", exit_code: 1 }] }
+            ]
+          }
+        }
+      })));
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+    await expect(adapter.getJob(scope, JOB_ID)).resolves.toMatchObject({
+      steps: [
+        { execution: 0, actions: [{ stepNumber: 0, status: "success" }] },
+        { execution: 1, actions: [{ stepNumber: 7, status: "failed", exitCode: 1 }] }
+      ]
+    });
+  });
+
+  it("rejects job details missing the API-required workflow relationship", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: { id: JOB_ID, references: { project: { id: PROJECT_ID } }, attributes: { name: "unit-tests" } }
+      })));
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+    await expect(adapter.getJob(scope, JOB_ID))
+      .rejects.toThrow("valid workflow ownership reference");
   });
 
   it("rejects a workflow whose explicit run reference differs from the requested run", async () => {
