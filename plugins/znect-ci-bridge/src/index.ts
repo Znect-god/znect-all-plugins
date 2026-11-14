@@ -281,13 +281,14 @@ function createServer(env: Env) {
       inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge") }
     },
     async ({ project_id }) => {
-      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const { project: registryProject, connection, scope, adapter } = getCircleCiAdapter(env, project_id);
+      const recentRuns = await adapter.listRuns(scope, 1);
       return { content: [{ type: "text", text: JSON.stringify({
         connected: true,
-        provider: "CircleCI Cloud API v3",
-        project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug },
-        permissions: "read-only"
+        provider: adapter.provider,
+        project: { id: registryProject.id, name: registryProject.name, slug: connection.projectSlug },
+        permissions: "read-only",
+        read_probe: { recent_runs_available: recentRuns.length }
       }, null, 2) }] };
     }
   );
