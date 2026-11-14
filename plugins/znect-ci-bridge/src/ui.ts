@@ -120,12 +120,11 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       var items=Array.isArray(data.runs)?data.runs:[];
       if(!items.length){runsBox.appendChild(element("p","status","No recent runs were returned."));return;}
       items.forEach(function(run){
-        var attrs=run.attributes||{};
-        var row=element("div","run");
+                var row=element("div","run");
         var main=element("div","run-main");
-        var title=attrs.name||attrs.branch||attrs.vcs_revision||run.id;
+        var title=run.commitMessage||run.branch||run.commitSha||run.id;
         main.appendChild(element("div","run-title",title));
-        main.appendChild(element("div","meta","Run "+run.id+" · "+(attrs.created_at||attrs.start_time||"date unavailable")));
+        main.appendChild(element("div","meta","Run "+run.id+" · "+(run.startedAt||"date unavailable")));
         var button=element("button","","Open");
         button.type="button";
         button.addEventListener("click",function(){loadDetails(run.id);});
@@ -144,17 +143,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     request("/api/v1/runs/"+encodeURIComponent(id)+"?project_id="+encodeURIComponent(currentProject)).then(function(data){
       if(version!==sessionVersion||requestId!==detailsRequestId)return;
       lastDetails=data;detailsPanel.hidden=false;detailsBox.replaceChildren();
-      var run=data.run||{};var attrs=run.attributes||{};
-      detailsBox.appendChild(element("p","meta","Run "+run.id+" · "+(attrs.status||attrs.outcome||"status unavailable")));
+      var run=data.run||{};      detailsBox.appendChild(element("p","meta","Run "+run.id+" · "+(run.status||"status unavailable")));
       (data.workflows||[]).forEach(function(entry){
-        var workflow=entry.workflow||{};var wa=workflow.attributes||{};
+        var workflow=entry.workflow||{};
         var section=element("section","workflow");
-        section.appendChild(element("h3","",wa.name||workflow.id||"Workflow"));
+        section.appendChild(element("h3","",workflow.name||workflow.id||"Workflow"));
         (entry.jobs||[]).forEach(function(job){
-          var ja=job.attributes||{};
-          var line=element("div","job");
-          line.appendChild(element("span","",ja.name||job.id));
-          line.appendChild(element("span","pill",ja.outcome||ja.status||"unknown"));
+                    var line=element("div","job");
+          line.appendChild(element("span","",job.name||job.id));
+          line.appendChild(element("span","pill",job.status||"unknown"));
           section.appendChild(line);
         });
         detailsBox.appendChild(section);
