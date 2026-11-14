@@ -1,6 +1,8 @@
 ## [0.1.0] - 2026-11-15 CircleCI API v3 schema alignment
 ### Security and correctness
 - Require the API-mandated job workflow relationship before returning job details, logs, test reports or artifacts; missing or malformed references now fail closed.
+- Verify `references.project.id` on every project-filtered run and on the fetched run detail; malformed or mismatched upstream relationships fail closed.
+- Validate required CircleCI v3 job-step fields and reject malformed parallel-execution/step structures instead of silently omitting diagnostics.
 - Normalize the documented API v3 step records directly, using each step's `num`, `outcome`, `phase` and `exit_code`; derive parallel execution numbers from the ordered execution array instead of assuming a non-schema `execution` property.
 - Reject missing or malformed pagination metadata rather than silently treating an incomplete upstream collection as complete. Run listing now fails explicitly if its two-page safety window ends before the requested result limit is met.
 - Follow cursors only for CircleCI v3 workflows; read the unpaginated jobs collection with its documented `filter[workflow_id]` parameter and a 200-job safety ceiling.
