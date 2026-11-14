@@ -13,6 +13,8 @@ import {
   getCircleCiJobArtifact,
   listCircleCiJobArtifacts,
   getCircleCiRun,
+  getCircleCiRunForProject,
+  assertCircleCiJobOwnership,
   listCircleCiJobs,
   listCircleCiRuns,
   listCircleCiWorkflows,
@@ -254,16 +256,17 @@ function createServer(env: Env) {
   server.registerTool(
     "check_connection",
     {
-      description: "Verify MCP-to-CircleCI authentication and read access to the fixed Znect Forge project. Returns connection status and project identity only. Read-only.",
+      description: "Verify MCP-to-CircleCI authentication and read access to one registered Znect project. Returns connection status and project identity only. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: z.object({})
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge") }
     },
-    async (_args) => {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
+    async ({ project_id }) => {
+      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
       return { content: [{ type: "text", text: JSON.stringify({
         connected: true,
         provider: "CircleCI Cloud API v3",
-        project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG },
+        project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug },
         permissions: "read-only"
       }, null, 2) }] };
     }
@@ -271,15 +274,16 @@ function createServer(env: Env) {
   server.registerTool(
     "list_recent_runs",
     {
-      description: "Read the latest CircleCI API v3 runs for the fixed Znect Forge project. Returns UUID run IDs and current outcomes. Read-only; limit 1–30.",
+      description: "Read the latest CircleCI API v3 runs for one registered Znect project. Returns UUID run IDs and current outcomes. Read-only; limit 1–30.",
       annotations: { readOnlyHint: true },
-      inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), limit: z.number().int().min(1).max(30).default(10) }
     },
-    async ({ limit }) => {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
+    async ({ project_id, limit }) => {
+      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
       const payload = JSON.stringify({
-        project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG },
+        project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug },
         runs
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
@@ -290,21 +294,25 @@ function createServer(env: Env) {
   server.registerTool(
     "get_run_details",
     {
-      description: "Read one CircleCI API v3 run by UUID, including its workflows and jobs. Read-only; use a run UUID returned by list_recent_runs.",
+      description: "Read one CircleCI API v3 run by UUID for a selected registered project, including its workflows and jobs. Read-only; use a run UUID returned by list_recent_runs for the same project.",
       annotations: { readOnlyHint: true },
-      inputSchema: { run_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), run_id: z.string().uuid() }
     },
-    async ({ run_id }) => {
-      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, run_id);
+    async ({ project_id, run_id }) => {
+      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, run_id, circleProject.id);
       const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id, 2);
       const workflowResults = await Promise.all(workflows.slice(0, 10).map(async (workflow) => {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         return {
           workflow,
           jobs: jobs.slice(0, 40)
         };
       }));
       const payload = JSON.stringify({
+        project: { id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowResults,
         truncated: workflows.length > 10
@@ -317,12 +325,15 @@ function createServer(env: Env) {
   server.registerTool(
     "get_job_details",
     {
-      description: "Read the CircleCI API v3 job resource by UUID, including all attributes exposed by CircleCI. Read-only.",
+      description: "Read a CircleCI API v3 job resource by UUID after verifying its project ownership. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: { job_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), job_id: z.string().uuid() }
     },
-    async ({ job_id }) => {
+    async ({ project_id, job_id }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
       const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
+      assertCircleCiJobOwnership(job, circleProject.id);
       const payload = JSON.stringify({ job }, null, 2);
       const safe = redactKnownSecrets(payload, env);
       return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(safe), 40_000) }] };
