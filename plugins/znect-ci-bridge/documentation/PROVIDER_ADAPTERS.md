@@ -51,4 +51,4 @@ The proposed route/schema contract is documented separately in [ZNECT_BUILD_API_
 
 ## Verification status
 
-The adapter and tests have been committed to the feature branch, but they have not yet been typechecked or executed. No workflow was manually triggered as part of this work.
+The current feature-branch head `e1b5438f96503536fd33fd0b08a3df4d056f1e56` was checked by GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616), triggered by PR #2 with this exact head commit. Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, all 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed. The install emitted a non-fatal npm warning that install scripts for `core-js-pure`, `esbuild` and `workerd` are not covered by `allowScripts`; review this before relying on native install-time tooling. This run did not deploy the Worker. The real CircleCI workflow-completed delivery and Znect Build API integration remain separate pending work.
