@@ -55,26 +55,46 @@ function workflowReference(resource: V3Resource): string | undefined {
 
 function mapRun(resource: V3Resource, projectId: string): CiRun {
   const attrs = attributes(resource);
+  const event = resource.references?.event;
+  const eventAttributes = event !== null && typeof event === "object" && !Array.isArray(event)
+    ? (event as Record<string, unknown>).attributes
+    : undefined;
+  const vcs = eventAttributes !== null && typeof eventAttributes === "object" && !Array.isArray(eventAttributes)
+    ? (eventAttributes as Record<string, unknown>).vcs
+    : undefined;
+  const vcsRecord = vcs !== null && typeof vcs === "object" && !Array.isArray(vcs)
+    ? vcs as Record<string, unknown>
+    : {};
+  const commit = vcsRecord.commit !== null && typeof vcsRecord.commit === "object" && !Array.isArray(vcsRecord.commit)
+    ? vcsRecord.commit as Record<string, unknown>
+    : {};
+  const branch = text(vcsRecord.branch) ?? text(attrs.branch);
+  const commitSha = text(vcsRecord.revision) ?? text(attrs.vcs_revision);
+  const commitMessage = text(commit.subject) ?? text(commit.body) ?? text(attrs.subject);
+  const url = text(commit.url) ?? text(attrs.url) ?? text(attrs.web_url);
+  const createdAt = attrs.created_at ?? attrs.start_time;
+  const completedAt = attrs.ended_at ?? attrs.stop_time ?? attrs.stopped_at;
   return {
     id: resource.id,
     projectId,
     status: statusOf(resource),
-    ...(text(attrs.branch) ? { branch: text(attrs.branch) } : {}),
-    ...(text(attrs.vcs_revision) ? { commitSha: text(attrs.vcs_revision) } : {}),
-    ...(text(attrs.subject) ? { commitMessage: text(attrs.subject) } : {}),
-    ...(iso(attrs.start_time ?? attrs.created_at) ? { startedAt: iso(attrs.start_time ?? attrs.created_at) } : {}),
-    ...(iso(attrs.stop_time ?? attrs.stopped_at) ? { completedAt: iso(attrs.stop_time ?? attrs.stopped_at) } : {}),
-    ...(text(attrs.url ?? attrs.web_url) ? { url: text(attrs.url ?? attrs.web_url) } : {})
+    ...(branch ? { branch } : {}),
+    ...(commitSha ? { commitSha } : {}),
+    ...(commitMessage ? { commitMessage } : {}),
+    ...(iso(createdAt) ? { startedAt: iso(createdAt) } : {}),
+    ...(iso(completedAt) ? { completedAt: iso(completedAt) } : {}),
+    ...(url ? { url } : {})
   };
 }
 
 function mapWorkflow(resource: V3Resource, runId: string): CiWorkflow {
   const attrs = attributes(resource);
+  const status = statusOf(resource);
   return {
     id: resource.id,
     runId,
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
-    ...(text(attrs.outcome) || text(attrs.status) ? { status: text(attrs.outcome) ?? text(attrs.status) } : {})
+    ...(status !== "unknown" ? { status } : {})
   };
 }
 
@@ -124,8 +144,8 @@ function mapJob(resource: V3Resource, projectId: string, workflowId?: string, ru
     ...(workflowId ? { workflowId } : {}),
     status: statusOf(resource),
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
-    ...(iso(attrs.start_time ?? attrs.created_at) ? { startedAt: iso(attrs.start_time ?? attrs.created_at) } : {}),
-    ...(iso(attrs.stop_time ?? attrs.stopped_at) ? { completedAt: iso(attrs.stop_time ?? attrs.stopped_at) } : {}),
+    ...(iso(attrs.started_at ?? attrs.start_time ?? attrs.created_at) ? { startedAt: iso(attrs.started_at ?? attrs.start_time ?? attrs.created_at) } : {}),
+    ...(iso(attrs.ended_at ?? attrs.stop_time ?? attrs.stopped_at) ? { completedAt: iso(attrs.ended_at ?? attrs.stop_time ?? attrs.stopped_at) } : {}),
     ...(steps.length ? { steps } : {})
   };
 }
