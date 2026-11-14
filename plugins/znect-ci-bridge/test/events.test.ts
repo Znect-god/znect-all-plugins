@@ -109,7 +109,16 @@ describe("Durable event inbox storage contract", () => {
         this.rows = this.rows.sort((a, b) => b.seq - a.seq).slice(0, keep);
         return { toArray: () => [] };
       }
-      if (sql.startsWith("SELECT seq, event_json FROM build_events")) {
+      if (sql.startsWith("SELECT seq, event_json FROM build_events ORDER BY seq DESC")) {
+        const limit = Number(values[0]);
+        return {
+          toArray: () => [...this.rows]
+            .sort((a, b) => b.seq - a.seq)
+            .slice(0, limit)
+            .map((entry) => ({ seq: entry.seq, event_json: entry.event_json }))
+        };
+      }
+      if (sql.startsWith("SELECT seq, event_json FROM build_events WHERE seq >")) {
         const after = Number(values[0]);
         const limit = Number(values[1]);
         return {
@@ -124,30 +133,42 @@ describe("Durable event inbox storage contract", () => {
     }
   }
 
-  it("deduplicates CircleCI event IDs and serves cursor-based event reads", async () => {
+  it("returns the newest events on the initial read and only newer events after the cursor", async () => {
     const sql = new FakeSql();
     const store = new BuildEventStore({
       storage: { sql }
     } as unknown as DurableObjectState);
-    const event = normalizeCircleCiWebhook(workflowPayload, "workflow-completed");
-    expect(event).not.toBeNull();
+    const makeEvent = (suffix: string) => normalizeCircleCiWebhook({
+      ...workflowPayload,
+      id: "3888f21b-eaa7-38e3-8f3d-75a63bba889" + suffix
+    }, "workflow-completed");
+    const events = ["1", "2", "3"].map((suffix) => makeEvent(suffix));
+    expect(events.every(Boolean)).toBe(true);
 
-    const append = () => store.fetch(new Request("https://event-store/append", {
+    const append = (event: typeof events[number]) => store.fetch(new Request("https://event-store/append", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(event)
     }));
-    const first = await append();
-    await expect(first.json()).resolves.toMatchObject({ accepted: true, duplicate: false });
-    const duplicate = await append();
-    await expect(duplicate.json()).resolves.toMatchObject({ accepted: true, duplicate: true });
+    for (const event of events) {
+      await expect((await append(event)).json()).resolves.toMatchObject({ accepted: true, duplicate: false });
+    }
+    await expect((await append(events[0])).json()).resolves.toMatchObject({ accepted: true, duplicate: true });
 
-    const page = await store.fetch(new Request("https://event-store/events?after=0&limit=10"));
-    await expect(page.json()).resolves.toMatchObject({
-      events: [{ cursor: 1, id: workflowPayload.id, workflow_status: "failed" }],
-      next_cursor: 1
+    const initial = await store.fetch(new Request("https://event-store/events?after=0&limit=2"));
+    await expect(initial.json()).resolves.toMatchObject({
+      events: [
+        { cursor: 3, id: "3888f21b-eaa7-38e3-8f3d-75a63bba8893", workflow_status: "failed" },
+        { cursor: 2, id: "3888f21b-eaa7-38e3-8f3d-75a63bba8892", workflow_status: "failed" }
+      ],
+      next_cursor: 3
     });
-    const empty = await store.fetch(new Request("https://event-store/events?after=1&limit=10"));
-    await expect(empty.json()).resolves.toMatchObject({ events: [], next_cursor: 1 });
-  });
-});
+
+    const newest = makeEvent("4");
+    await append(newest);
+    const updates = await store.fetch(new Request("https://event-store/events?after=3&limit=10"));
+    await expect(updates.json()).resolves.toMatchObject({
+      events: [{ cursor: 4, id: "3888f21b-eaa7-38e3-8f3d-75a63bba8894" }],
+      next_cursor: 4
+    });
+  });});
