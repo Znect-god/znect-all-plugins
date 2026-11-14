@@ -247,6 +247,8 @@ describe("Read-only browser API run details", () => {
                   name: "Run tests",
                   num: 0,
                   phase: "completed",
+                  type: "run",
+                  is_insignificant: false,
                   outcome: "failed",
                   exit_code: 1
                 }]
