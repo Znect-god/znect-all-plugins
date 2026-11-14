@@ -1,509 +1,255 @@
-# Znect CI Bridge — руководство по установке, подключению и использованию
+# Znect CI Bridge — запуск, настройка и проверка
 
-**Статус проекта:** \`in-development\`  
-**Версия:** \`0.1.0\`  
-**Назначение:** безопасное чтение и диагностика CircleCI для проекта \`Znect-god/znect-forge\`.
+**Статус: `in-development` — разработка, экспериментальный прототип, не готов к Production.**  
+**Версия:** `0.1.0`  
+**Дата актуализации:** 2026-11-14  
+**Целевой проект CircleCI:** `gh/Znect-god/znect-forge`.
 
-Это руководство описывает фактическую архитектуру и текущую процедуру подключения. Оно отдельно отмечает, что уже реализовано, что проверено тестами, а что ещё требует живой проверки. Не считайте наличие плагина в списке ChatGPT доказательством того, что MCP-сервер подключён и отвечает.
+> **Главное правило документации:** наличие реализации, зелёные unit-тесты, mock-тесты, Wrangler dry-run или синтетическое событие не означают, что функция полностью проверена в реальной эксплуатации. Ниже каждый этап разделён на «проверено» и «ещё требуется». Если этап не отмечен как проверенный, считайте его разработкой/непроверенной функцией.
 
-## 1. Что такое Znect CI Bridge
+## 1. Назначение и архитектура
 
-Znect CI Bridge — собственный read-only сервис Znect для чтения и диагностики CircleCI о сборках Forge. Он предоставляет MCP endpoint для совместимых клиентов и отдельный веб-интерфейс с JSON API, который можно использовать без ChatGPT и без платной подписки.
+Znect CI Bridge — read-only сервис Znect для просмотра и диагностики CircleCI Forge. Он состоит из:
+- Cloudflare Worker;
+- Streamable HTTP MCP endpoint `/mcp`;
+- браузерной панели и read-only JSON API;
+- подписанного CircleCI webhook receiver `POST /webhooks/circleci`;
+- SQLite-backed Durable Object inbox для нормализованных событий.
 
-Схема взаимодействия:
+Поток webhook:
 
-1. CircleCI хранит запуски CI, workflow, jobs, логи, результаты тестов и артефакты.
-2. Cloudflare Worker запускает сервер Znect CI Bridge.
-3. MCP-клиент подключается к Worker по HTTPS к пути \`/mcp\`.
-4. Worker проверяет Bearer-токен клиента, применяет ограничения запросов и обращается к разрешённым CircleCI API endpoints.
-5. MCP-инструменты возвращают ограниченные и по возможности очищенные от секретов данные.
+1. Forge workflow завершается в CircleCI.
+2. CircleCI отправляет `workflow-completed` на Preview webhook URL.
+3. Worker проверяет HMAC-подпись и проект, нормализует событие.
+4. Durable Object сохраняет событие с дедупликацией по event ID.
+5. Событие читается через MCP `list_recent_events` или Browser API `GET /api/v1/events`.
 
-**Зафиксированный проект CircleCI:** \`gh/Znect-god/znect-forge\`.
+Webhook inbox не отправляет самопроизвольные сообщения в открытый диалог ChatGPT. Для этого отдельно потребуется поддерживаемый канал polling/delivery.
 
-Bridge не является GitHub-плагином для управления репозиторием и не заменяет CircleCI. Он служит безопасным read-only интерфейсом к CI-данным.
+## 2. Текущее состояние — 2026-11-14
 
-## 2. Текущее состояние и важные ограничения
+| Этап | Состояние |
+|---|---|
+| Исходники, TypeScript и unit/regression tests | Проверены GitHub Actions на текущей feature branch |
+| Isolated Cloudflare Preview | Развёрнут workflow run #43568774133; Production не затрагивался |
+| Preview secrets | Workflow установил `CIRCLECI_WEBHOOK_SECRET`; authenticated smoke test прошёл |
+| CircleCI API v3 project access | Подтверждён smoke test для фиксированного Forge project |
+| MCP discovery и список read-only tools | Подтверждены smoke test |
+| Browser API и synthetic event inbox | Подтверждены smoke test |
+| Synthetic HMAC webhook, deduplication, durable storage и retrieval | Подтверждены в Preview |
+| Реальная регистрация CircleCI webhook | Выполнена пользователем; CircleCI принял автоматическую Add Webhook ping/check с 2xx |
+| Реальное `workflow-completed` событие от CircleCI | **Ожидает проверки** |
+| Полная проверка run/job/log/test/artifact на реальных CI данных | **Частично/не проверено** |
+| Автоматическая доставка событий в открытый ChatGPT диалог | **Не реализована/не проверена** |
+| Production deployment и независимый security review | **Не выполнялись; не разрешены** |
 
-На момент подготовки этого руководства:
+Актуальные ресурсы:
+- Репозиторий: https://github.com/Znect-god/znect-all-plugins
+- Рабочая ветка: `feat/ci-bridge-circleci-webhooks`
+- Draft PR #5: https://github.com/Znect-god/znect-all-plugins/pull/5
+- Последний подтверждённый workflow: https://github.com/Znect-god/znect-all-plugins/actions/runs/43568774133
+- Isolated Preview root: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`
+- MCP: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/mcp`
+- CircleCI webhook: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/webhooks/circleci`
 
-- исходный код, тесты и документация находятся в отдельной ветке \`feature/ci-bridge-test-reports\` репозитория \`Znect-god/znect-all-plugins\`;
-- статус разработки — \`in-development\`, версия — \`0.1.0\`;
-- бесплатный браузерный интерфейс и read-only JSON API добавлены в рабочую ветку; они используют отдельный секрет \`WEB_ACCESS_TOKEN\`;
-- GitHub Actions проверяет каждую ревизию PR: установку зависимостей, npm audit, TypeScript typecheck, unit tests, синтаксис Preview smoke-test и Wrangler Worker bundle dry-run; актуальный результат следует смотреть в [проверках PR №2](https://github.com/Znect-god/znect-all-plugins/pull/2);
-- PR №2 остаётся Draft и не слит в основную ветку;
-- GitHub Actions проверяет установку зависимостей, аудит npm, TypeScript, unit-тесты и Wrangler dry-run;
-- успешный Wrangler dry-run или Cloudflare Workers Build **не означает**, что Worker развёрнут;
-- Production-развёртывание не выполнялось. Последний подтверждённый Cloudflare Preview deployment относится к commit \`51ea707\` (2026-11-12 11:14 UTC), а текущая версия ветки новее и отдельным Preview deployment пока не подтверждена;
-- живой доступ к CircleCI, проверка токена, разрешение project UUID и сквозная диагностика через реальные данные CircleCI ещё не подтверждены;
-- тесты CircleCI API используют mock-ответы, а не реальные данные Forge;
-- Android ARM64 Termux не поддерживает используемую версию Wrangler/workerd для полноценного локального запуска и развёртывания; для проверок сборки предусмотрен Linux GitHub Actions.
+PR #5 остаётся Draft и не объединён. Его base — `feature/ci-bridge-test-reports`, не `main`. Не менять `main`, не объединять PR и не развёртывать Production без отдельного прямого разрешения.
 
-**Не используйте Production endpoint как заведомо рабочий, пока не подтверждено Production-развёртывание именно проверяемой версии.** В конфигурации приложения сейчас указан адрес Production:
-\`https://znect-ci-bridge.znect699.workers.dev/mcp\`.
-Наличие этого адреса в конфигурации не доказывает, что актуальная версия сервера уже опубликована по нему.
-
-Известный адрес Preview ветки:
-\`https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev\`.
-Использовать его можно только после проверки, что Preview развёрнут и соответствует нужному commit SHA. Не считайте адрес Preview подтверждением актуальности его кода.
-
-## 3. Что нужно для полноценного использования
+## 3. Требования и секреты
 
 Потребуются:
+- CircleCI Cloud project `Znect-god/znect-forge`;
+- Cloudflare account и Worker Preview;
+- GitHub Actions secrets и доступ к feature branch;
+- Node.js 24 для локальных проверок на поддерживаемой ОС; Linux GitHub Actions используется для Wrangler;
+- MCP-клиент для MCP-сценария либо современный браузер для dashboard.
 
-1. Проект Forge, уже подключённый к CircleCI Cloud.
-2. CircleCI Personal API Token, который будет храниться только как секрет Cloudflare Worker.
-3. Cloudflare Worker с тремя секретами:
-   - \`CIRCLECI_TOKEN\` — токен CircleCI;
-   - \`MCP_ACCESS_TOKEN\` — отдельный секрет для MCP-клиента;
-   - \`WEB_ACCESS_TOKEN\` — отдельный секрет для браузерного интерфейса.
-4. Рабочий Worker deployment и доступный HTTPS endpoint.
-5. Для бесплатного браузерного сценария — современный браузер; для MCP-сценария — совместимый MCP-клиент и поддерживаемый тариф.
+Секреты:
 
-### 3.1. Ограничения ChatGPT по тарифу и устройству
+| Имя | Назначение | Где хранить |
+|---|---|---|
+| `CIRCLECI_TOKEN` | CircleCI API access | Cloudflare Worker Secret |
+| `MCP_ACCESS_TOKEN` | MCP Bearer auth | Cloudflare Preview Secret |
+| `WEB_ACCESS_TOKEN` | Browser API Bearer auth | Cloudflare Preview Secret |
+| `CIRCLECI_WEBHOOK_SECRET` | HMAC подпись webhook | GitHub Actions Secret и matching Cloudflare Preview Secret; тот же signing secret в CircleCI |
 
-Подключение собственного удалённого MCP-сервера в ChatGPT зависит от плана и интерфейса. **Для личного аккаунта минимальный тариф, на котором можно подключить custom MCP, — ChatGPT Pro. На Free запустить Bridge внутри ChatGPT нельзя.** Это требование относится именно к стороне ChatGPT, а не к CircleCI или Cloudflare:
+Preview и Production secrets не наследуются друг от друга. Не использовать один и тот же секрет для разных назначений. Не вставлять значения в чат, Git, README, workflow logs, URL или shell arguments.
 
-- ChatGPT Business и Enterprise/Edu поддерживают пользовательские MCP-подключения с полным MCP на веб-версии ChatGPT; для рабочих пространств могут действовать права администратора.
-- ChatGPT Pro поддерживает пользовательские MCP-подключения с правами read/fetch; для Pro может требоваться Developer Mode.
-- ChatGPT Free не поддерживает подключение пользовательских MCP-серверов описанным способом.
-- Пользовательские MCP-подключения ChatGPT доступны в веб-версии, не в мобильном приложении.
+**Текущее состояние секретов:** workflow уже использовал `CIRCLECI_WEBHOOK_SECRET` для Preview; ранее настроенные API/MCP/browser credentials прошли authenticated smoke test. Не нужно повторно создавать или пересылать секреты, если они уже сохранены и работают. Workflow диагностирует только имена секретов, не их значения.
 
-Поэтому на Free в мобильном приложении Android можно увидеть или установить отдельный плагин/skill, но это **не даёт** возможности вызвать удалённые MCP-инструменты Bridge. Если в интерфейсе нет пункта добавления custom MCP server, это не обязательно ошибка кода или сервера: сначала проверьте план и платформу.
+Если значение потеряно, его нельзя прочитать обратно из GitHub/Cloudflare. Сгенерируйте новое локально и обновите обе стороны, которым оно принадлежит; никогда не присылайте его в чат.
 
-Перед подключением сверяйтесь с актуальной инструкцией OpenAI:
-- https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt
+## 4. Порядок запуска и проверки
 
-## 4. Как мы создавали и подключали плагин
+### Шаг 1 — проверить branch и CI
 
-В работе участвовали два отдельных компонента. Их важно не путать.
+1. Откройте [Draft PR #5](https://github.com/Znect-god/znect-all-plugins/pull/5) и убедитесь, что он остаётся Draft.
+2. Убедитесь, что рабочая ветка — `feat/ci-bridge-circleci-webhooks`.
+3. Проверяйте workflow run на точном текущем head SHA, а не только зелёный статус старого запуска.
+4. Ожидаемые проверки: dependency install, `npm run check` (typecheck + unit tests), syntax check smoke script, изолированный Preview deploy и authenticated smoke test.
+5. PR-triggered workflow валидирует код; branch-push workflow развёртывает named Preview. Не путать эти два сценария.
 
-### 4.1. Плагин Znect AI в Plugin Creator
+Последний подтверждённый run #43568774133 прошёл. При следующих изменениях требуется новая успешная проверка на новом SHA.
 
-В Plugin Creator был создан приватный пользовательский плагин:
+### Шаг 2 — проверить Cloudflare Preview
 
-- отображаемое назначение: Znect AI workspace;
-- plugin ID: \`plugins_6af57327949081918faf5b31a8d4d7a0\`;
-- имя в каталоге Plugin Creator: \`znect-ai\`;
-- версия: \`0.1.0\`;
-- область: USER;
-- видимость: PRIVATE.
+Использовать только named Preview:
+`feat-ci-bridge-circleci-webhooks`.
 
-В него добавлены:
+Root URL:
+`https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`
 
-- MCP-конфигурация \`mcp.json\`;
-- конфигурация \`.mcp.json\`;
-- skill \`znect-workflows\`, объясняющий ChatGPT, как пользоваться подключёнными Znect-модулями и соблюдать read-only ограничения.
+Перед проверкой:
+- убедиться, что Preview deployment соответствует ожидаемому commit SHA;
+- проверить наличие нужных Preview secrets по именам, не раскрывая значения;
+- убедиться, что Durable Object binding `EVENT_STORE` и SQLite migration применены к Preview;
+- использовать Preview endpoint, не Production.
 
-В MCP-конфигурации указан сервер \`znect-ci-bridge\`, тип транспорта \`streamable-http\`, endpoint с путём \`/mcp\` и Bearer API-key authentication.
+Последний подтверждённый run выполнил Preview deployment и authenticated smoke test. При новой ревизии статус проверять заново.
 
-Установить или открыть этот Plugin Creator плагин можно по ссылке:
-https://chatgpt.com/plugins/plugins_6af57327949081918faf5b31a8d4d7a0
+### Шаг 3 — smoke test
 
-**Важно:** установка \`znect-ai\` не равна успешному подключению удалённого MCP endpoint. Skill — это инструкции для модели; реальные инструменты появятся только тогда, когда MCP-сервер доступен, подключение поддерживается аккаунтом и клиент успешно обнаружил инструменты.
+В автоматическом workflow smoke test проверяет health, browser auth/status, MCP discovery/tool annotations и CircleCI project access; для webhook path используется синтетическое подписанное событие. Успех этого теста подтверждает только перечисленные проверки и не подтверждает реальную доставку CircleCI.
 
-### 4.2. Отдельное подключение MCP-сервера
+Если запускаете скрипт вручную, делайте это только после проверки точного Preview URL и Preview secrets. Скрипт: `plugins/znect-ci-bridge/scripts/preview-smoke-test.mjs`. Он требует `PREVIEW_ORIGIN`, `MCP_ACCESS_TOKEN`, `WEB_ACCESS_TOKEN`; не передавайте секреты аргументами команды и не публикуйте вывод, содержащий заголовки авторизации.
 
-Когда аккаунт и веб-интерфейс ChatGPT поддерживают пользовательские MCP-серверы, сервер добавляется как custom MCP connection/app. В актуальном интерфейсе OpenAI путь может выглядеть так:
+### Шаг 4 — CircleCI webhook (настроен, реальная доставка ещё ожидает)
 
-1. Открыть ChatGPT **в браузере на компьютере** и войти в нужный аккаунт или workspace.
-2. Открыть раздел **Plugins**.
-3. Нажать кнопку добавления \`+\`.
-4. Выбрать **Add custom MCP server**.
-5. Задать понятное имя, например \`Znect CI Bridge\`.
-6. В поле endpoint указать публичный HTTPS MCP URL. Для текущей Production-конфигурации это \`https://znect-ci-bridge.znect699.workers.dev/mcp\`, но использовать его для реальной работы можно только после подтверждения Production deployment.
-7. Выбрать предусмотренную интерфейсом авторизацию API key / Bearer, если она предлагается для этого сервера.
-8. Ввести значение \`MCP_ACCESS_TOKEN\` через защищённое поле авторизации. Не отправлять его сообщением в чат, не добавлять в prompt, README, GitHub или скриншоты.
-9. Прочитать предупреждение о рисках и подтвердить подключение только если endpoint проверен и принадлежит вашему проекту.
-10. Создать подключение и дождаться обнаружения инструментов сервером ChatGPT.
-11. Открыть новый чат, выбрать приложение/плагин через меню инструментов или \`@\`-упоминание, если оно доступно в данном интерфейсе.
-12. Убедиться, что список инструментов действительно содержит методы Znect CI Bridge. Одного появления карточки приложения недостаточно.
+CircleCI project webhook уже добавлен пользователем для проекта `Znect-god/znect-forge`:
+- Name: `Znect CI Bridge Preview`
+- Event: `Workflow Completed` (`workflow-completed`)
+- Certificate Validation: enabled
+- URL: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/webhooks/circleci`
+- Signing secret: то же значение, что хранится в GitHub Actions secret `CIRCLECI_WEBHOOK_SECRET` и в named Preview secret `CIRCLECI_WEBHOOK_SECRET`.
 
-В некоторых вариантах интерфейса настройки Developer Mode и Apps находятся в Settings → Apps → Advanced Settings. Следуйте актуальным подсказкам ChatGPT: названия и расположение элементов могут меняться, а для Pro Developer Mode может быть обязательным.
+При добавлении CircleCI автоматически проверяет URL ping-событием. В используемом интерфейсе отдельной кнопки **Test Ping** нет. Успешное добавление означает, что автоматическая проверка URL получила 2xx. Это подтверждает ping-handshake, но **не** реальную доставку `workflow-completed`.
 
-Не создавайте несколько подключений к одному и тому же endpoint без необходимости. Сначала проверьте уже существующее подключение и его адрес.
+Не удалять и не пересоздавать webhook или signing secret только из-за информационного предупреждения CircleCI о связанном signing secret.
 
-## 5. Настройка секретов на стороне CircleCI и Cloudflare
+### Шаг 5 — дождаться обычной сборки Forge и проверить настоящее событие
 
-Эти действия нужны для полноценного развёртывания сервера. Они **не были выполнены в рамках последней проверки документации** и не должны считаться уже завершёнными.
+Не нужно запускать искусственную сборку специально. После завершения ближайшего обычного workflow в CircleCI:
 
-### 5.1. Создание CircleCI Personal API Token
+1. Зафиксировать workflow URL/ID, проект и время завершения.
+2. Проверить CircleCI Webhooks delivery history для зарегистрированного webhook: статус доставки должен быть успешным (2xx). Если delivery не было, проверить выбранное событие, URL и CircleCI delivery details.
+3. Прочитать Preview inbox через MCP `list_recent_events(after, limit)` либо Browser API:
+   `GET /api/v1/events?after=0&limit=20` с `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
+4. Найти запись с тем же workflow/project и временем. Проверить event ID, тип `workflow-completed`, workflow status, timestamp и cursor.
+5. Повторно прочитать inbox и убедиться, что повторная доставка того же event ID не создала дубликат.
+6. Проверить получение той же записи через MCP `list_recent_events`.
+7. Зафиксировать результат как **real CircleCI delivery verified** только после сопоставления с CircleCI delivery history и содержимым inbox.
 
-Для API v3 используется Bearer Authentication и Personal API Token.
+До выполнения этих пунктов реальная webhook доставка остаётся **pending / not yet verified**. Синтетическое событие из smoke test не засчитывается.
 
-1. Откройте CircleCI Cloud: https://app.circleci.com/
-2. Войдите в аккаунт, который имеет доступ к организации и проекту Forge.
-3. Откройте User Settings.
-4. Выберите Personal API Tokens.
-5. Нажмите Create New Token.
-6. Назовите токен, например \`Znect CI Bridge\`.
-7. Установите срок действия (CircleCI требует выбрать дату не более чем на один год вперёд для токенов, созданных вручную через веб-интерфейс).
-8. Нажмите Add API Token.
-9. Скопируйте токен и сохраните его в надёжном менеджере секретов: CircleCI не показывает значение повторно.
+### Шаг 6 — проверить API диагностики на реальном run
 
-Официальные инструкции:
-- https://circleci.com/docs/guides/toolkit/managing-api-tokens/
-- https://circleci.com/docs/guides/toolkit/api-v3-developers-guide/
+После обычной сборки проверить последовательно:
+1. `check_connection()`;
+2. `list_recent_runs(limit=5)`;
+3. `get_run_details(run_id)` для UUID из ответа;
+4. `get_job_details(job_id)`;
+5. `get_job_logs(job_id, step_num, ...)`;
+6. `get_job_test_results(job_id)`;
+7. `list_job_artifacts(job_id)`;
+8. `get_job_artifact(job_id, artifact_path)` только с точным путём из предыдущего списка;
+9. `diagnose_run(run_id)` для неуспешного run, когда такой появится.
 
-**Примечание о правах:** вручную созданный Personal API Token имеет широкие права CircleCI, а не гарантированно read-only scope. Read-only поведение Bridge обеспечивается кодом: его CircleCI API adapter выполняет только GET-запросы и не предоставляет инструментов изменения pipeline. Поэтому токен нужно особенно тщательно защищать. Не использовать его в браузерных URL, публичных workflow logs или GitHub secrets без отдельной необходимости.
+Не подставлять legacy build number вместо v3 UUID. Отсутствие тестовых результатов или артефактов может означать, что исходная job их не публиковала. Проверка project access не означает, что все перечисленные endpoints уже проверены.
 
-### 5.2. Сохранение секретов в Cloudflare Worker
+## 5. Использование
 
-В Worker должны быть настроены три секрета:
-
-| Имя | Для чего нужен |
-|---|---|
-| \`CIRCLECI_TOKEN\` | Авторизация запросов Worker к CircleCI API |
-| \`MCP_ACCESS_TOKEN\` | Bearer-аутентификация MCP-клиента к Worker |
-| \`WEB_ACCESS_TOKEN\` | Отдельная Bearer-аутентификация браузерного JSON API |
-
-В Cloudflare Dashboard откройте нужный аккаунт и Worker \`znect-ci-bridge\`, затем раздел настроек Variables/Secrets. Добавьте все три значения именно как **Secrets**, а не как обычные открытые Variables. Для бесплатного браузерного сценария особенно важно задать отдельный \`WEB_ACCESS_TOKEN\`; не используйте для этого CircleCI token.
-
-Альтернативный способ через Wrangler из каталога \`plugins/znect-ci-bridge\` на поддерживаемом компьютере:
-
-\`\`\`bash
-npx wrangler login
-npx wrangler secret put CIRCLECI_TOKEN
-npx wrangler secret put MCP_ACCESS_TOKEN
-npx wrangler secret put WEB_ACCESS_TOKEN
-\`\`\`
-
-Wrangler запросит значения интерактивно. Не вставляйте реальные токены в командную строку как аргументы, не коммитьте их и не отправляйте в чат.
-
-Для локальной работы с секретами соблюдайте отдельные правила Cloudflare и не помещайте рабочие значения в отслеживаемые Git файлы.
-
-### 5.3. Отдельные секреты Cloudflare Worker Preview
-
-**Важно: Preview не наследует Production Secrets.** Для Preview необходимо отдельно настроить три значения: `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` и `WEB_ACCESS_TOKEN`. Наличие этих секретов у Production Worker не подтверждает их наличие у Preview.
-
-Cloudflare поддерживает два способа настройки:
-
-**Вариант A — Preview Base configuration для будущих Preview**
-
-Добавьте секреты в Previews Base configuration. Новые Preview будут получать их при создании:
-
-```bash
-npx wrangler preview base-config secret put CIRCLECI_TOKEN
-npx wrangler preview base-config secret put MCP_ACCESS_TOKEN
-npx wrangler preview base-config secret put WEB_ACCESS_TOKEN
-```
-
-Изменения Base configuration применяются к новым Preview, но не обновляют уже существующие Preview автоматически.
-
-**Вариант B — конкретный существующий Preview**
-
-Для уже созданного Preview задайте каждый секрет отдельно:
-
-```bash
-npx wrangler preview secret put CIRCLECI_TOKEN --name feature-ci-bridge-test-reports
-npx wrangler preview secret put MCP_ACCESS_TOKEN --name feature-ci-bridge-test-reports
-npx wrangler preview secret put WEB_ACCESS_TOKEN --name feature-ci-bridge-test-reports
-```
-
-Каждая команда `preview secret put` создаёт новое Preview deployment. Выполняйте их только после проверки правильности имени Preview и явного согласования Preview deployment. Значения вводятся в защищённом интерактивном приглашении Wrangler; не передавайте их в чат, shell arguments, Git, issue или workflow logs.
-
-Не используйте `wrangler secret put` для настройки Preview: эта команда предназначена для обычного Worker environment, а не для изолированного Preview.
-
-После настройки проверьте в Cloudflare Dashboard именно раздел **Previews** и убедитесь, что у нужного Preview присутствуют все три секрета. Не показывайте и не копируйте значения секретов в отчёты.
-
-Официальная документация:
-- https://developers.cloudflare.com/workers/previews/
-- https://developers.cloudflare.com/workers/previews/configuration/
-- https://developers.cloudflare.com/workers/wrangler/commands/workers/
-
-### 5.4. Rate Limiting binding
-
-В \`wrangler.toml\` определён binding \`MCP_RATE_LIMITER\`: ориентировочно 60 аутентифицированных MCP-запросов за 60 секунд на Cloudflare location. Для Preview указан отдельный namespace.
-
-Перед реальным deployment проверьте, что namespace ID уникален в вашем Cloudflare аккаунте. Если он уже занят другим Worker, настройку нужно согласованно изменить до deployment.
-
-Это приблизительный лимит Cloudflare на уровне location, а не единый глобальный счётчик. Неуспешные попытки авторизации не покрываются этим per-token лимитом. Если rate limiter отсутствует или недоступен, Worker должен закрыть доступ с HTTP 503.
-
-## 6. Проверка подключения по порядку
-
-Проверяйте уровни последовательно, не перескакивая через них.
-
-### Уровень A — сборка исходного кода
-
-В GitHub откройте PR №2 и проверьте, что workflow \`Typecheck, unit tests, and Worker dry-run\` завершился со статусом Success на **текущем head commit**.
-
-Workflow выполняет:
-
-1. \`npm ci\`;
-2. \`npm audit --audit-level=high\`;
-3. \`npm run typecheck\`;
-4. \`npm run test\`;
-5. \`npx wrangler deploy --dry-run\`.
-
-Последний пункт только проверяет сборку Worker. Он не выполняет deployment.
-
-### Уровень B — Cloudflare deployment
-
-В Cloudflare проверьте deployment/build details для точного commit SHA. Уточните, является ли результат только Workers Build или фактическим Preview deployment. Не переносите результат Preview на Production.
-
-Production deployment должен выполняться отдельно и только после проверки конфигурации, секретов, rate-limit namespace и готовности к эксплуатации.
-
-### Уровень C — MCP endpoint и авторизация
-
-Проверять нужно MCP-клиентом, который поддерживает Streamable HTTP MCP, а не простым открытием URL в браузере.
-
-Обычный GET-запрос браузера к \`/mcp\` не является полноценным MCP handshake/tool discovery. Ошибка или пустой ответ в браузере сама по себе не доказывает, что MCP endpoint неисправен.
-
-После подключения клиент должен выполнить MCP initialization и обнаружить инструменты. При вызове \`check_connection()\` Bridge должен попытаться выполнить живую read-only проверку CircleCI API v3 и разрешить фиксированный project slug в UUID.
-
-#### Автоматическая Preview smoke-проверка
-
-В репозитории есть opt-in сценарий \`scripts/preview-smoke-test.mjs\`. Он жёстко привязан к Preview alias \`feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev\` и отказывается обращаться к Production или произвольному адресу.
-
-Сценарий последовательно проверяет:
-
-1. \`GET /health\`;
-2. \`GET /api/v1/status\` с отдельным \`WEB_ACCESS_TOKEN\`;
-3. MCP stateless discovery и \`tools/list\` с \`MCP_ACCESS_TOKEN\`;
-4. наличие \`readOnlyHint: true\` у всех 12 инструментов;
-5. read-only вызов \`check_connection\`, который проверяет доступ к фиксированному CircleCI project.
-
-Никакие pipeline actions не вызываются. MCP POST-запросы здесь являются только JSON-RPC транспортом; единственный вызов инструмента — \`check_connection\`.
-
-Требуется Node.js 20+ и два токена, введённые локально в скрытом приглашении терминала. Из каталога \`plugins/znect-ci-bridge\` в Bash:
-
-\`\`\`bash
-read -rsp "MCP_ACCESS_TOKEN: " MCP_ACCESS_TOKEN; echo
-export MCP_ACCESS_TOKEN
-read -rsp "WEB_ACCESS_TOKEN: " WEB_ACCESS_TOKEN; echo
-export WEB_ACCESS_TOKEN
-node scripts/preview-smoke-test.mjs
-unset MCP_ACCESS_TOKEN WEB_ACCESS_TOKEN
-\`\`\`
-
-Скрипт не выводит значения токенов. Не вставляйте их в чат, Git, shell-командную строку или журналы CI. Не запускайте проверку, пока нужный Preview deployment и его три секрета не настроены.
-
-### Уровень D — живая проверка CircleCI
-
-После успешной авторизации и обнаружения инструментов выполните:
-
-1. \`check_connection()\`;
-2. \`list_recent_runs(limit=5)\`;
-3. выберите один существующий run UUID из ответа;
-4. \`get_run_details(run_id)\`;
-5. при наличии job — \`get_job_details(job_id)\`;
-6. при необходимости — \`get_job_logs(job_id, step_num, ...)\`;
-7. \`get_job_test_results(job_id)\`;
-8. \`list_job_artifacts(job_id)\`;
-9. для неуспешного запуска — \`diagnose_run(run_id)\`.
-
-Только успешное выполнение этих действий с реальными ответами CircleCI подтверждает сквозную интеграцию. Mock-тесты и успешная сборка этого не подтверждают.
-
-## 7. Инструменты Bridge и как ими пользоваться
-
-Все инструменты ниже предназначены для чтения данных. Имена параметров приведены для понимания; конкретный MCP-клиент может показывать их в своей форме вызова.
-
-### 7.1. Начальная проверка
-
-| Инструмент | Назначение |
-|---|---|
-| \`check_connection()\` | Проверяет доступ к API v3 и разрешение фиксированного project slug в UUID |
-| \`list_recent_runs(limit)\` | Показывает последние запуски проекта; допустимый limit — 1–30 |
-
-Начинать новую сессию диагностики удобно с \`check_connection\`, затем получить последние запуски через \`list_recent_runs\`.
-
-### 7.2. Подробности запуска и jobs
-
-| Инструмент | Назначение |
-|---|---|
-| \`get_run_details(run_id)\` | Читает run и связанные workflows/jobs по UUID |
-| \`get_job_details(job_id)\` | Читает сведения об одной job по UUID |
-| \`get_job_logs(job_id, step_num, execution?, stream?, max_chars?)\` | Возвращает ограниченные stdout/stderr конкретного шага |
-| \`get_job_test_results(job_id, max_chars?)\` | Возвращает структурированные результаты тестов в ограниченном JSON Lines |
-
-В v3 используются UUID. Не подставляйте номер legacy build вместо run UUID или job UUID.
-
-### 7.3. Артефакты
-
-| Инструмент | Назначение |
-|---|---|
-| \`list_job_artifacts(job_id)\` | Показывает метаданные артефактов, не раскрывая подписанные URL |
-| \`get_job_artifact(job_id, artifact_path, max_chars?)\` | Получает ограниченный текстовый артефакт по точному пути, предварительно полученному из списка |
-
-Не придумывайте \`artifact_path\`. Сначала вызовите \`list_job_artifacts\`, затем используйте точный путь из ответа. Сервер проверяет допустимые HTTPS-хосты и перенаправления.
-
-### 7.4. Автоматическая диагностика
-
-\`diagnose_run(run_id)\` — основной инструмент для первого анализа неудачного запуска.
-
-Он собирает сведения об упавших jobs и шагах, ограниченные логи, структурированные результаты тестов и небольшие JUnit/test-report артефакты, если они доступны.
-
-Чтобы ограничить объём данных и число запросов:
-
-- анализируется не более 20 workflows;
-- обрабатывается не более пяти failed jobs;
-- собирается не более двух подходящих JUnit/test-report артефактов на failed job;
-- вывод логов и артефактов ограничен по размеру;
-- в \`diagnostics_summary\` есть счётчики inspected/total, флаги достижения лимитов и \`incomplete\`.
-
-Если \`incomplete=true\`, отчёт нельзя считать исчерпывающим. Если тестовые отчёты или артефакты не были опубликованы самой CI job, Bridge не сможет их восстановить.
-
-### 7.5. Совместимость с legacy v1.1
-
-Для обратной совместимости сохранены:
-
-- \`list_recent_builds(limit)\`;
-- \`get_build_details(build_num)\`;
-- \`get_build_logs(build_num, step_index?, max_actions?)\`.
-
-Это старые инструменты API v1.1 с build numbers. Они не взаимозаменяемы с v3-инструментами, использующими UUID. Автоматического преобразования build number в run UUID нет. Не пытайтесь угадывать соответствие по одному номеру.
-
-CircleCI рекомендует API v3 для новых интеграций; v1.1 является legacy API. См. https://circleci.com/docs/guides/toolkit/api-intro/
-
-### 7.6. Бесплатный веб-интерфейс без ChatGPT
-
-Браузерный интерфейс — самостоятельный способ использовать Znect CI Bridge на бесплатном тарифе ChatGPT или вообще без ChatGPT. Он работает в обычном браузере на компьютере и Android.
-
-**URL интерфейса:** корневой адрес развернутого Worker, например \`https://<worker-host>/\`. Используйте только Preview или Production URL, для которого подтверждено развёртывание нужной версии. Наличие URL само по себе этого не доказывает.
-
-Перед использованием владелец должен настроить три Cloudflare Worker Secrets:
-
-- \`CIRCLECI_TOKEN\` — Personal API Token CircleCI; остаётся только на сервере;
-- \`MCP_ACCESS_TOKEN\` — отдельный токен MCP-клиента;
-- \`WEB_ACCESS_TOKEN\` — отдельный токен браузерного интерфейса.
-
-Откройте корневой URL Worker, введите \`WEB_ACCESS_TOKEN\` и нажмите Connect. Интерфейс проверит доступ к проекту, покажет последние запуски и позволит открыть сведения о workflows/jobs. Токен хранится только в памяти текущей вкладки; при очистке страницы или закрытии вкладки его нужно ввести заново. Он не сохраняется в localStorage, cookies или URL.
-
-Read-only JSON API, используемый интерфейсом:
-
-| Метод и путь | Назначение |
-|---|---|
-| \`GET /api/v1/status\` | Проверка доступа к фиксированному проекту CircleCI |
-| \`GET /api/v1/runs?limit=10\` | Последние 1–30 запусков |
-| \`GET /api/v1/runs/{run_uuid}\` | Run, workflows и jobs по UUID |
-
-Для всех запросов требуется заголовок \`Authorization: Bearer <WEB_ACCESS_TOKEN>\`. API принимает только GET, применяет rate limiting, проверяет UUID и ограничения количества, скрывает известные секреты и ограничивает размер ответа. Он не предоставляет действий запуска, повтора, отмены, изменения или deployment pipeline.
-
-Бесплатный сценарий не требует подключения custom MCP к ChatGPT. При желании можно скопировать JSON запуска и вручную передать его в ChatGPT Free для объяснения, но это необязательно для просмотра данных в самом Bridge.
-
-## 8. Примеры запросов к ChatGPT
-
-После того как MCP-инструменты реально подключены, можно писать естественным языком.
-
-- «Проверь подключение Znect CI Bridge к CircleCI».
-- «Покажи пять последних запусков Forge в CircleCI».
-- «Найди последний неуспешный запуск и объясни, какая job завершилась с ошибкой».
-- «Выполни diagnose_run для этого запуска и отдели факты из логов от предположений».
-- «Покажи упавшие тесты, assertion и stack trace».
-- «Найди артефакты этой job и проверь, есть ли там JUnit-отчёт».
-- «Сравни сведения о workflow и jobs в этом запуске».
-
-Если ChatGPT не показывает инструменты Bridge, сначала проверьте, подключено ли приложение к текущему чату и доступен ли custom MCP на плане и устройстве. Для бесплатного доступа без ChatGPT используйте веб-интерфейс из раздела 7.6. Не просите модель «вызвать Bridge» в обход отсутствующего подключения: без инструмента она не может получить живые данные.
-
-## 9. Типичные ошибки и их значение
+### MCP
+
+MCP URL для текущего Preview:
+`https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/mcp`
+
+Подключать его можно только из клиента, который поддерживает Streamable HTTP MCP и Bearer/API-key auth. Сначала выполнить MCP initialization/tool discovery, затем `check_connection`. Обычное открытие `/mcp` в браузере не является MCP handshake.
+
+Возможность подключить custom MCP в ChatGPT зависит от текущего плана, workspace и платформы. Проверять нужно актуальную документацию OpenAI: https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt. Не считать установку skill или карточки приложения доказательством подключения инструментов.
+
+### Browser dashboard
+
+Открыть root URL подтверждённого Preview в браузере, ввести `WEB_ACCESS_TOKEN) и нажать Connect. Токен хранится только в памяти вкладки. На Android можно использовать браузер; отдельное подключение MCP к мобильному приложению для этого не требуется.
+
+JSON API:
+- `GET /api/v1/status`
+- `GET /api/v1/runs?limit=10`
+- `GET /api/v1/runs/{run_uuid}`
+- `GET /api/v1/events?after=0&limit=20`
+
+Для всех запросов требуется `Authorization: Bearer <WEB_ACCESS_TOKEN>`. API read-only.
+
+### Инструменты MCP
+
+- `check_connection()` — CircleCI API v3 access/project resolution.
+- `list_recent_runs(limit)` — последние v3 runs.
+- `get_run_details(run_id)` — run/workflows/jobs.
+- `get_job_details(job_id)` — job metadata.
+- `get_job_logs(...)` — ограниченные stdout/stderr.
+- `get_job_test_results(...)` — structured test results.
+- `list_job_artifacts(job_id)` / `get_job_artifact(...)` — метаданные и точный текстовый артефакт.
+- `diagnose_run(run_id)` — ограниченная диагностика failed run.
+- `list_recent_events(after, limit)` — webhook inbox.
+- Legacy v1.1: `list_recent_builds`, `get_build_details`, `get_build_logs`.
+
+Лимиты и неполнота диагностических ответов описаны в README и отражаются в diagnostics metadata. Если указан `incomplete=true`, результат не исчерпывающий.
+
+## 6. Безопасность и эксплуатационные границы
+
+- Только read-only CircleCI GET-запросы и чтение webhook inbox.
+- Не добавлять trigger/retry/cancel/deploy/config-write возможности.
+- Не менять Forge source, CircleCI config, GitHub branches или настройки проекта через Bridge.
+- Не печатать и не запрашивать секреты.
+- Webhook принимает только подписанные запросы, payload ограничен 64 KiB; сохраняется нормализованная allowlist, а не исходное тело.
+- Event inbox ограничен 500 событиями и сроком хранения 30 дней.
+- Дедупликация использует CircleCI event ID.
+- Secret redaction — best effort, не гарантия.
+- Rate limiting Cloudflare приблизительный и location-local.
+- CircleCI Personal API Token может иметь широкие права; защищать его как высокочувствительный секрет.
+- Production и Preview имеют отдельные secret scopes.
+- Не использовать реальные production credentials в Preview без осознанного решения; для текущего тестирования работать с Preview.
+
+## 7. Известные ограничения / незавершённые работы
+
+1. Настоящее CircleCI `workflow-completed` событие и его end-to-end retrieval ещё не подтверждены.
+2. Более широкая live-проверка run/workflow/job/log/test/artifact endpoints требует реальных representative Forge runs.
+3. Входящий event inbox не инициирует сам сообщения ChatGPT; polling/delivery integration не реализована.
+4. Независимый security review не проведён.
+5. Production deployment не выполнялся и не разрешён.
+6. Лицензия проекта пока не определена.
+7. Wrangler/workerd не поддерживается в текущем Android ARM64 Termux окружении; использовать Linux CI/поддерживаемый desktop.
+
+## 8. Типовые ошибки
 
 | Симптом | Что проверить |
 |---|---|
-| Приложение не появляется после \`@\` | Используется ли веб-версия ChatGPT, поддерживает ли план custom MCP, установлено ли приложение, доступно ли оно в этом чате |
-| Плагин Znect AI виден, но инструментов Bridge нет | Skill/карточка плагина не доказывает подключение MCP; проверить custom MCP connection и обнаружение инструментов |
-| HTTP 401 | Не передан или неверен \`MCP_ACCESS_TOKEN\`; проверить Bearer/API-key настройку в клиенте и секрет Worker |
-| HTTP 503 | Rate-limit binding отсутствует или недоступен; проверить \`MCP_RATE_LIMITER\` и Worker deployment configuration |
-| CircleCI возвращает 401 | \`CIRCLECI_TOKEN\) неверен, истёк или не подходит для доступа |
-| CircleCI возвращает 403 | У пользователя, чей токен использован, нет нужного доступа к организации/проекту; проверить членство и SSO, если применимо |
-| CircleCI возвращает 404 или проект не разрешается | Проверить точный проект \`gh/Znect-god/znect-forge\`, доступ к нему и UUID resolution |
-| HTTP 429 | Сработало ограничение запросов; дождаться окна сброса и не повторять запросы циклически |
-| Сборка успешна, но endpoint не отвечает | Build/dry-run не равны deployment; проверить реальный deployment, URL, секреты и MCP handshake |
-| В браузере URL не открывается как страница | MCP Streamable HTTP endpoint не является обычной HTML-страницей; проверять MCP-клиентом |
-| Нет логов, тестов или артефактов | Проверить, публиковала ли job соответствующие данные; Bridge не создаёт отсутствующие отчёты |
+| CircleCI не создаёт webhook, ping получает не-2xx | Точный Preview URL, доступность deployment, path `/webhooks/circleci`, Preview signing secret, TLS/certificate validation |
+| Webhook добавлен, но event inbox пуст | Был ли после регистрации новый workflow completion; выбран ли `workflow-completed`; CircleCI delivery history; соответствуют ли signing secrets |
+| HTTP 401 на MCP | `MCP_ACCESS_TOKEN` в клиенте и Preview |
+| HTTP 401 на browser API | `WEB_ACCESS_TOKEN` и заголовок Bearer |
+| HTTP 503 | Rate-limit binding/deployment |
+| CircleCI API 401/403 | Токен, срок действия, доступ к организации/проекту и SSO |
+| Нет logs/test/artifacts | Опубликовала ли их исходная job |
+| В браузере не открывается /mcp как страница | Это MCP transport endpoint, не HTML UI |
 
-Не публикуйте в issue, логах или скриншотах значения токенов и заголовок Authorization.
+Не раскрывать токены в тикетах, скриншотах, чатах и логах.
 
-## 10. Правила безопасности и границы ответственности
+## 9. Обновление и выпуск
 
-1. Bridge предназначен только для чтения CI-данных.
-2. Не добавлять через Bridge запуск, повтор, отмену, изменение или deployment pipeline.
-3. Не использовать Bridge для изменения исходников Forge, CircleCI config, GitHub branches или настроек проекта.
-4. Не запрашивать и не выводить API-токены в чате.
-5. Не передавать MCP endpoint произвольные URL артефактов: путь артефакта должен сначала прийти из CircleCI.
-6. Считать маскирование секретов best-effort, а не гарантией удаления всех секретов.
-7. Соблюдать ограничения на объём логов, JSON, пагинацию и число артефактов.
-8. Не интерпретировать отсутствие данных как доказательство отсутствия ошибки.
-9. Сохранять существующие ограничения проекта Forge и заморозку Forge 0.8.0.
-10. Не использовать успешные unit/mock-тесты как доказательство live CircleCI integration.
+- Изменения вносить в `feat/ci-bridge-circleci-webhooks` или отдельную согласованную feature branch.
+- PR #5 остаётся Draft и unmerged.
+- После каждого изменения проверять новый SHA: CI → isolated Preview → smoke test → live read-only checks.
+- Не сливать PR и не менять `main` без прямого разрешения.
+- Не выполнять Production deployment без отдельного прямого разрешения, независимого security review и закрытия критичных live verification пунктов.
+- Тестирование Forge продолжать обычным рабочим процессом; не менять Forge 0.8.0 freeze и не запускать ненужные сборки специально для Bridge.
 
-## 11. Обновление и сопровождение
+## 10. Официальные ссылки
 
-- Изменения исходников Bridge вносятся в ветку \`feature/ci-bridge-test-reports\`, пока разработка не будет проверена и отдельно одобрена.
-- PR №2 остаётся Draft; его не следует сливать автоматически.
-- После изменения MCP tool definitions клиенту может потребоваться обновить/пересканировать инструменты приложения. В некоторых режимах ChatGPT использует сохранённый снимок доступных действий и не применяет изменения автоматически.
-- После обновления сначала проверяются GitHub Actions, затем соответствующий Cloudflare Preview, затем MCP discovery и живые read-only вызовы.
-- Production deployment выполняется отдельно после review; он не является частью обычного тестового цикла.
-- Не менять Forge ради проверки Bridge и не запускать исторические сборки повторно.
-
-## 12. Источники и официальная документация
-
-- OpenAI — подключение пользовательских MCP-серверов в ChatGPT: https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt
-- CircleCI — управление API tokens: https://circleci.com/docs/guides/toolkit/managing-api-tokens/
-- CircleCI — API v3 developer guide: https://circleci.com/docs/guides/toolkit/api-v3-developers-guide/
-- CircleCI — обзор API и статусы версий: https://circleci.com/docs/guides/toolkit/api-intro/
-- Документация по миграции адаптера Bridge: [CIRCLECI_API_MIGRATION.md](CIRCLECI_API_MIGRATION.md)
-- Общая документация проекта: [README.md](../README.md)
-
----
-
-**Коротко:** сначала подтвердить подходящий MCP-клиент и план, затем подготовить CircleCI и Cloudflare secrets, развернуть и проверить Worker, подключить его как custom MCP server, выполнить \`check_connection\`, затем читать runs/jobs/logs и использовать \`diagnose_run\` для анализа ошибок. Production пока не развёрнут; webhook требует отдельной настройки в CircleCI и проверки в Preview.
-
-
-## 13. События и уведомления CircleCI
-
-В Bridge добавлен отдельный входящий webhook endpoint:
-
-`POST /webhooks/circleci`
-
-Он предназначен для исходящих уведомлений CircleCI по проекту `Znect-god/znect-forge`. Запрос принимается только при корректной подписи `circleci-signature` (HMAC-SHA256, версия `v1`). Worker проверяет тип события и проект, сохраняет только нормализованные поля и не сохраняет исходное тело webhook. Повторные доставки с одинаковым CircleCI event ID не создают дубликаты.
-
-### 13.1. Секрет подписи
-
-Создайте отдельный случайный секрет длиной не менее 32 байт. На Linux/Termux его можно сгенерировать командой:
-
-```bash
-openssl rand -hex 32
-```
-
-Не отправляйте это значение в чат и не помещайте в Git.
-
-Один и тот же секрет нужно сохранить:
-- в Cloudflare Worker Preview Secrets как `CIRCLECI_WEBHOOK_SECRET`;
-- в Cloudflare Production Worker Secrets как `CIRCLECI_WEBHOOK_SECRET` — только перед отдельным Production deployment;
-- в форме CircleCI Webhook как Secret token;
-- в GitHub repository Actions Secrets как `CIRCLECI_WEBHOOK_SECRET` — для автоматического синтетического webhook smoke-теста. Workflow использует значение только для подписи тестового события и не выводит его в логи.
-
-Preview и Production хранят свои секреты независимо. Не используйте `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` или `WEB_ACCESS_TOKEN` в качестве webhook signing secret.
-
-### 13.2. Регистрация webhook в CircleCI
-
-Регистрация выполняется в CircleCI, а не через Bridge: сам Bridge сохраняет строго read-only поведение и не создаёт/не меняет настройки CircleCI.
-
-1. Откройте проект `Znect-god/znect-forge` в CircleCI.
-2. Перейдите в Project Settings → Webhooks → Add Webhook.
-3. Укажите имя, например `Znect CI Bridge`.
-4. В URL укажите проверенный HTTPS адрес Worker с путём `/webhooks/circleci`. Для Preview используйте только URL, который был подтверждён успешным Preview deployment; Production URL до отдельного разрешённого deployment не использовать.
-5. Включите Certificate Validation.
-6. Вставьте созданный выше секрет в поле Secret token.
-7. Выберите событие `workflow-completed`. Это рекомендуемый режим: одно событие на завершение workflow, без потока уведомлений по каждой job. `job-completed` можно добавить отдельно, если позже понадобится детальная лента завершения каждой job.
-8. Сохраните webhook и проверьте его доставку в CircleCI Webhooks.
-
-Для добавления и изменения project webhooks CircleCI требует права администратора организации. На проекте действует лимит в пять outbound webhooks.
-
-Официальные документы:
-- https://circleci.com/docs/guides/integration/outbound-webhooks/
-- https://circleci.com/docs/reference/outbound-webhooks-reference/
-
-### 13.3. Чтение накопленных событий
-
-После успешного webhook delivery события доступны через:
-
-- MCP: `list_recent_events(after, limit)`;
-- Browser API: `GET /api/v1/events?after=0&limit=20` с `WEB_ACCESS_TOKEN`.
-
-Ответ содержит события и `next_cursor`. Для следующего запроса передавайте полученный курсор как `after`, чтобы читать только новые записи. Хранилище дедуплицирует CircleCI event ID, хранит не более 500 записей и удаляет записи старше 30 дней.
-
-### 13.4. Что означает «уведомления ассистенту»
-
-Webhook создаёт входящий канал CircleCI → Worker и сохраняет события в доступной Bridge ленте. Однако это ещё не означает, что ChatGPT сам получает unsolicited-сообщение в открытый диалог: MCP-инструменты вызываются клиентом по запросу, а обычный MCP endpoint не умеет сам инициировать реплику в чате.
-
-Для полноценного автоматического оповещения ассистента потребуется поддерживаемый канал доставки или расписание, которое периодически читает event inbox и сообщает о новых событиях. До реализации и проверки такого канала нельзя считать автоматические уведомления в ChatGPT завершёнными.
+- CircleCI outbound webhooks: https://circleci.com/docs/guides/integration/outbound-webhooks/
+- CircleCI webhook reference: https://circleci.com/docs/reference/outbound-webhooks-reference/
+- CircleCI API v3: https://circleci.com/docs/guides/toolkit/api-v3-developers-guide/
+- CircleCI API tokens: https://circleci.com/docs/guides/toolkit/managing-api-tokens/
+- Cloudflare Workers Previews: https://developers.cloudflare.com/workers/previews/
+- OpenAI custom MCP: https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt/
+- [CircleCI API migration notes](CIRCLECI_API_MIGRATION.md)
+- [Security review](SECURITY_REVIEW.md)
+- [Project README](../README.md)
