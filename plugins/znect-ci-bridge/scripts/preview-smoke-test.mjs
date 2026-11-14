@@ -19,8 +19,9 @@ import { createHmac, randomUUID } from "node:crypto";
  * tool is invoked or exposed by this script.
  */
 
-const PREVIEW_ORIGIN =
-  "https://feature-ci-bridge-test-reports-v2-znect-ci-bridge.znect699.workers.dev";
+const PREVIEW_ORIGIN = process.env.PREVIEW_ORIGIN ?? "";
+const APPROVED_PREVIEW_HOST =
+  "feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev";
 const PROTOCOL_VERSION = "2026-07-28";
 const TIMEOUT_MS = 15_000;
 
@@ -120,8 +121,12 @@ async function main() {
   const target = new URL(PREVIEW_ORIGIN);
   if (
     target.protocol !== "https:" ||
-    target.hostname === "znect-ci-bridge.znect699.workers.dev" ||
-    target.hostname !== "feature-ci-bridge-test-reports-v2-znect-ci-bridge.znect699.workers.dev"
+    target.hostname !== APPROVED_PREVIEW_HOST ||
+    target.pathname !== "/" ||
+    target.search !== "" ||
+    target.hash !== "" ||
+    target.username !== "" ||
+    target.password !== ""
   ) {
     throw new Error("Refusing to run: target is not the approved Preview alias.");
   }
