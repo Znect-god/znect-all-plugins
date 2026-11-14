@@ -6,6 +6,7 @@ import {
   getCircleCiRun,
   getCircleCiRunForProject,
   assertCircleCiJobOwnership,
+  assertCircleCiRunOwnership,
   getCircleCiJobStepOutput,
   getCircleCiJobTests,
   getCircleCiJobArtifact,
@@ -145,10 +146,10 @@ describe("CircleCI API v3 client", () => {
   it("verifies run ownership through the documented project-scoped runs collection", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: RUN_ID }], page: { next: null }
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }], page: { next: null }
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: { id: RUN_ID, attributes: { phase: "ended" } }
+        data: { id: RUN_ID, attributes: { phase: "ended" }, references: { project: { id: PROJECT_ID } } }
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -160,7 +161,7 @@ describe("CircleCI API v3 client", () => {
 
   it("rejects runs absent from the selected project-scoped collection", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      data: [{ id: WORKFLOW_ID }], page: { next: null }
+      data: [{ id: WORKFLOW_ID, references: { project: { id: PROJECT_ID } } }], page: { next: null }
     }), { status: 200 })));
 
     await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
@@ -169,7 +170,10 @@ describe("CircleCI API v3 client", () => {
 
   it("fails closed when run ownership cannot be established within the scan window", async () => {
     const pages = Array.from({ length: 20 }, (_, index) => new Response(JSON.stringify({
-      data: [{ id: `00000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}` }],
+      data: [{
+        id: `00000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}`,
+        references: { project: { id: PROJECT_ID } }
+      }],
       page: { next: `cursor-${index + 1}` }
     }), { status: 200 }));
     vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(pages.shift())));
@@ -177,6 +181,17 @@ describe("CircleCI API v3 client", () => {
     await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
       .rejects.toThrow("400-run safety window");
   });
+  it("rejects a run whose explicit project reference is missing or mismatched", () => {
+    expect(() => assertCircleCiRunOwnership({
+      id: RUN_ID, references: { project: { id: PROJECT_ID } }
+    }, PROJECT_ID)).not.toThrow();
+    expect(() => assertCircleCiRunOwnership({ id: RUN_ID }, PROJECT_ID))
+      .toThrow("does not belong to the selected project");
+    expect(() => assertCircleCiRunOwnership({
+      id: RUN_ID, references: { project: { id: WORKFLOW_ID } }
+    }, PROJECT_ID)).toThrow("does not belong to the selected project");
+  });
+
   it("checks job project and workflow references before exposing job data", () => {
     const job = {
       id: JOB_ID,
@@ -196,10 +211,12 @@ describe("CircleCI API v3 client", () => {
 
   it("paginates runs using opaque cursors and caps the result at 30", async () => {
     const first = Array.from({ length: 20 }, (_, i) => ({
-      id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`
+      id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+      references: { project: { id: PROJECT_ID } }
     }));
     const second = Array.from({ length: 20 }, (_, i) => ({
-      id: `00000000-0000-4000-8001-${String(i + 1).padStart(12, "0")}`
+      id: `00000000-0000-4000-8001-${String(i + 1).padStart(12, "0")}`,
+      references: { project: { id: PROJECT_ID } }
     }));
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -218,7 +235,7 @@ describe("CircleCI API v3 client", () => {
 
   it("rejects collection pages with missing pagination metadata", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      data: [{ id: RUN_ID }]
+      data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }]
     }), { status: 200 })));
     await expect(listCircleCiRuns("token", PROJECT_ID, 10))
       .rejects.toThrow("invalid runs pagination metadata");
@@ -237,7 +254,7 @@ describe("CircleCI API v3 client", () => {
   it("rejects repeated cursors and invalid page sizes", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: RUN_ID }], page: { next: "same" }
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }], page: { next: "same" }
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: [{ id: RUN_ID }], page: { next: "same" }
