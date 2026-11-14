@@ -177,8 +177,8 @@ export async function getCircleCiRunForProject(
     if (page.data.some((run) => run.id === runId)) {
       return getCircleCiRun(token, runId);
     }
-    const next = page.page?.next;
-    if (typeof next !== "string" || next.length === 0) {
+    const next = readNextCursor(page, "project-scoped runs");
+    if (next === null) {
       throw new Error("CircleCI run does not belong to the selected project.");
     }
     if (seenCursors.has(next)) {
