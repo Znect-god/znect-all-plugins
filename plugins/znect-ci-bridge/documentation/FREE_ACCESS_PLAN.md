@@ -56,7 +56,8 @@ MCP остаётся дополнительным интерфейсом для 
 - Private Forge inbox issue #8.
 - Draft PR #9 с on-demand workflow для закрытого отчёта.
 - Preview deployment и authenticated smoke test: diagnostics API вернул корректный отчёт по доступному CircleCI run; failed-step logs, structured tests и secret redaction отдельно покрыты регрессионным тестом.
-- Typecheck и 103 unit tests прошли в GitHub Actions.\n- GitHub Actions report collector прошёл `bash -n` и локальный mocked fixture test для repo metadata, failed jobs, log download, test artifact extraction и secret redaction.
+- Typecheck и 103 unit tests прошли в GitHub Actions.
+- GitHub Actions report collector прошёл `bash -n` и локальный mocked fixture test для repo metadata, failed jobs, log download, test artifact extraction и secret redaction.
 
 ## 4. Безопасность и стоимость
 
