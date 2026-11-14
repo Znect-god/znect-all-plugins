@@ -37,7 +37,7 @@ function text(value: unknown): string | undefined {
 
 function statusOf(resource: V3Resource): string {
   const attrs = attributes(resource);
-  return text(attrs.status) ?? text(attrs.current_outcome) ?? text(attrs.phase) ?? "unknown";
+  return text(attrs.outcome) ?? text(attrs.current_outcome) ?? text(attrs.status) ?? text(attrs.phase) ?? "unknown";
 }
 
 function iso(value: unknown): string | undefined {
@@ -182,7 +182,7 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
 
   async listWorkflows(scope: CiProjectScope, runId: string): Promise<CiWorkflow[]> {
     await this.getRun(scope, runId);
-    const workflows = await listCircleCiWorkflows(this.token, runId);
+    const workflows = await listCircleCiWorkflows(this.token, runId, 2);
     return workflows.map((workflow) => mapWorkflow(workflow, runId));
   }
 
@@ -191,7 +191,7 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
     if (!workflows.some((workflow) => workflow.id === workflowId)) {
       throw new Error("CircleCI workflow does not belong to the selected run and project.");
     }
-    const jobs = await listCircleCiJobs(this.token, workflowId);
+    const jobs = await listCircleCiJobs(this.token, workflowId, 2);
     return jobs.map((job) => mapJob(job, scope.projectId, workflowId, runId));
   }
 
