@@ -114,12 +114,13 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
   constructor(
     private readonly token: string,
     private readonly projectSlug: string,
+    private readonly projectId: string,
     private readonly connectionId: string
   ) {}
 
   private assertScope(scope: CiProjectScope): void {
-    if (!scope.projectId || scope.connectionId !== this.connectionId) {
-      throw new Error("CI provider scope does not match the configured CircleCI connection.");
+    if (scope.projectId !== this.projectId || scope.connectionId !== this.connectionId) {
+      throw new Error("CI provider scope does not match the configured CircleCI project connection.");
     }
   }
 
@@ -202,7 +203,8 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
 export function createCircleCiReadOnlyAdapter(
   token: string,
   projectSlug: string,
+  projectId: string,
   connectionId: string
 ): ReadOnlyCiProviderAdapter {
-  return new CircleCiReadOnlyAdapter(token, projectSlug, connectionId);
+  return new CircleCiReadOnlyAdapter(token, projectSlug, projectId, connectionId);
 }
