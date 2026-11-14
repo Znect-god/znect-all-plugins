@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 2,
+  "catalogId": "znect.forge.modules",
+  "version": "0.1.0",
+  "issuedAtEpochSeconds": 0,
+  "expiresAtEpochSeconds": 0,
+  "modules": [],
+  "signatureBase64": "GENERATE_WITH_OFFLINE_SIGNING_KEY"
+}
