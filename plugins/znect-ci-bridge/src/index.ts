@@ -346,6 +346,7 @@ function createServer(env: Env) {
       description: "Read bounded stdout or stderr for a CircleCI API v3 job step. Requires a job UUID and step number. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
+        project_id: z.string().min(2).max(63).default("znect-forge"),
         job_id: z.string().uuid(),
         step_num: z.number().int().min(0),
         execution: z.number().int().min(0).default(0),
@@ -353,7 +354,11 @@ function createServer(env: Env) {
         max_chars: z.number().int().min(1).max(80_000).default(30_000)
       }
     },
-    async ({ job_id, step_num, execution, stream, max_chars }) => {
+    async ({ project_id, job_id, step_num, execution, stream, max_chars }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
+      assertCircleCiJobOwnership(job, circleProject.id);
       const result = await getCircleCiJobStepOutput(
         env.CIRCLECI_TOKEN,
         job_id,
@@ -387,11 +392,16 @@ function createServer(env: Env) {
       description: "Read structured CircleCI test results for a job as bounded JSON Lines. Read-only; requires a job UUID from get_run_details.",
       annotations: { readOnlyHint: true },
       inputSchema: {
+        project_id: z.string().min(2).max(63).default("znect-forge"),
         job_id: z.string().uuid(),
         max_chars: z.number().int().min(1).max(80_000).default(40_000)
       }
     },
-    async ({ job_id, max_chars }) => {
+    async ({ project_id, job_id, max_chars }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
+      assertCircleCiJobOwnership(job, circleProject.id);
       const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job_id, max_chars * 4);
       const redacted = redactKnownSecrets(result.text, env);
       const limited = limitText(redacted, max_chars, result.truncated);
@@ -414,9 +424,13 @@ function createServer(env: Env) {
     {
       description: "List metadata for artifacts uploaded by a CircleCI job. Presigned download URLs are deliberately not exposed. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: { job_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), job_id: z.string().uuid() }
     },
-    async ({ job_id }) => {
+    async ({ project_id, job_id }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
+      assertCircleCiJobOwnership(job, circleProject.id);
       const artifacts = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job_id);
       const safe = artifacts.map((artifact) => ({
         id: artifact.id,
@@ -436,12 +450,17 @@ function createServer(env: Env) {
       description: "Download one CircleCI job artifact by its exact path from list_job_artifacts. The URL is resolved internally, host-validated, and the text response is bounded. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
+        project_id: z.string().min(2).max(63).default("znect-forge"),
         job_id: z.string().uuid(),
         artifact_path: z.string().min(1).max(512),
         max_chars: z.number().int().min(1).max(80_000).default(40_000)
       }
     },
-    async ({ job_id, artifact_path, max_chars }) => {
+    async ({ project_id, job_id, artifact_path, max_chars }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const job = await getCircleCiJob(env.CIRCLECI_TOKEN, job_id);
+      assertCircleCiJobOwnership(job, circleProject.id);
       const result = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job_id, artifact_path, max_chars * 4);
       const redacted = redactKnownSecrets(result.text, env);
       const limited = limitText(redacted, max_chars, result.truncated);
@@ -464,12 +483,14 @@ function createServer(env: Env) {
   server.registerTool(
     "diagnose_run",
     {
-      description: "Automatically inspect one CircleCI run: traverse workflows and jobs, collect failed job steps, structured test results, and small JUnit/test-report artifacts. Read-only; does not rerun or modify pipelines.",
+      description: "Automatically inspect one CircleCI run belonging to a selected registered project. Verifies project/run/job ownership before reading logs, tests, or artifacts. Read-only; does not rerun or modify pipelines.",
       annotations: { readOnlyHint: true },
-      inputSchema: { run_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), run_id: z.string().uuid() }
     },
-    async ({ run_id }) => {
-      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, run_id);
+    async ({ project_id, run_id }) => {
+      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, run_id, circleProject.id);
       const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id, 2);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
@@ -480,6 +501,7 @@ function createServer(env: Env) {
 
       for (const workflow of workflowsInspected) {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         const failedJobs = jobs.filter((job) => {
           const attributes = job.attributes as Record<string, unknown> | undefined;
           return attributes?.outcome === "failed" || attributes?.status === "failed";
@@ -494,6 +516,7 @@ function createServer(env: Env) {
           failedJobsInspected++;
           const attributes = job.attributes as Record<string, unknown> | undefined;
           const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
+          assertCircleCiJobOwnership(details, circleProject.id, workflow.id);
           const detailAttributes = details.attributes as Record<string, unknown> | undefined;
           const executions = Array.isArray(detailAttributes?.parallel_executions)
             ? detailAttributes.parallel_executions as Array<Record<string, unknown>>
@@ -619,6 +642,7 @@ function createServer(env: Env) {
 
       const workflowLimitReached = workflows.length > workflowsInspected.length;
       const safePayload = redactKnownSecrets(JSON.stringify({
+        project: { id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
