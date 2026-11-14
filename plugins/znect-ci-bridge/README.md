@@ -9,15 +9,16 @@ Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and in
 
 > **Development notice:** Treat every feature as unverified unless this repository explicitly marks the exact check as passed. Unit tests, mocked API tests, Wrangler dry-runs and synthetic webhook tests do not prove full live integration. Do not use this prototype for production decisions or as the only CI monitoring channel.
 
-## Current state — 2026-11-14
+## Current state — 2026-11-15
 
-- Work is isolated on branch `feat/ci-bridge-circleci-webhooks` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins).
-- [Draft PR #5](https://github.com/Znect-god/znect-all-plugins/pull/5) remains open and unmerged. Its base is `feature/ci-bridge-test-reports`; it is not `main`.
+- Active engineering branch: `feature/ci-bridge-test-reports` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins).
+- PR #5 was merged into this feature branch; it was not merged into `main`. PR #2, #4 and #6 remain separate draft workstreams and must not be merged without approval.
 - Isolated Cloudflare Preview: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`.
 - MCP endpoint: append `/mcp`. CircleCI webhook endpoint: append `/webhooks/circleci`.
 - GitHub Actions Preview run [#43581014497](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581014497) passed on commit `aae93a027626c978a049dd95f7e2254e97f78c7e`: typecheck, all 103 tests, isolated Preview deployment, Preview webhook-secret installation, authenticated browser API, live diagnostics endpoint, event inbox and MCP read-only smoke checks.
 - On 2026-11-12, after replacing a CircleCI API token that v3 rejected, live `list_recent_runs` returned three Forge runs and `get_job_details` returned the real `build-0-7-0` job (115 tests, 2 failed). This is verified live API read coverage.
 - The later Preview smoke test verified authenticated MCP discovery/read-only connection and browser API access, plus a **synthetic** signed webhook path, deduplication, durable storage and retrieval. Synthetic delivery is not a real CircleCI workflow delivery.
+- On 2026-11-15, the feature branch gained a version-1 project registry, validation tests, allowlisted multi-project CircleCI webhook normalization, project-specific event inbox routing, and registry documentation. These source changes have **not** been typechecked or test-run in this revision; no CI check run is currently recorded for the latest commit. The existing CircleCI diagnostic tools remain Forge-default.
 - The CircleCI project webhook has since been registered successfully. CircleCI's automatic Add Webhook ping/check was accepted with a 2xx response.
 - **Still pending:** a real CircleCI `workflow-completed` delivery from an ordinary Forge workflow, verification of that event in the durable inbox and retrieval through MCP. The actual event has not yet been confirmed.
 - Companion private Forge Draft PR [#9](https://github.com/Znect-god/znect-forge/pull/9) adds the free on-demand ChatGPT channel and collects repository branches, commits, open PRs/issues, GitHub Actions statuses and bounded failed-job logs alongside this Bridge's CircleCI report. The report collector is not yet activated; it still needs review/merge and the private `ZNECT_CI_BRIDGE_WEB_TOKEN` Actions secret.
