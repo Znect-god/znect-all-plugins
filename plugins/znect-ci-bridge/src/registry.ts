@@ -74,7 +74,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
 
   for (const [projectIndex, candidate] of parsed.projects.entries()) {
     if (!isRecord(candidate)) throw new Error(`Invalid project at index ${projectIndex}.`);
-    const id = requiredString(candidate.id, `projects[${projectIndex}].id", 63);
+    const id = requiredString(candidate.id, `projects[${projectIndex}].id`, 63);
     if (!ID_PATTERN.test(id) || projectIds.has(id)) throw new Error(`Invalid or duplicate project ID: ${id}.`);
     projectIds.add(id);
     const name = requiredString(candidate.name, `projects[${projectIndex}].name`);
@@ -92,13 +92,13 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
       if (!REPOSITORY_PATTERN.test(fullName)) throw new Error(`Invalid repository name: ${fullName}.`);
       const componentId = item.componentId === undefined
         ? undefined
-        : requiredString(item.componentId, `projects[${projectIndex}].repositories[${index}].componentId", 63);
+        : requiredString(item.componentId, `projects[${projectIndex}].repositories[${index}].componentId`, 63);
       return { fullName, ...(componentId ? { componentId } : {}) };
     });
 
     const components: ProjectComponent[] = componentsRaw.map((item, index) => {
       if (!isRecord(item)) throw new Error(`Invalid component at projects[${projectIndex}].components[${index}].`);
-      const componentId = requiredString(item.id, `projects[${projectIndex}].components[${index}].id", 63);
+      const componentId = requiredString(item.id, `projects[${projectIndex}].components[${index}].id`, 63);
       if (!ID_PATTERN.test(componentId)) throw new Error(`Invalid component ID: ${componentId}.`);
       const componentName = requiredString(item.name, `projects[${projectIndex}].components[${index}].name`);
       const repository = item.repository === undefined ? undefined : requiredString(item.repository, "component.repository", 200);
@@ -122,7 +122,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
 
     const connections: ProjectConnection[] = connectionsRaw.map((item, index) => {
       if (!isRecord(item)) throw new Error(`Invalid connection at projects[${projectIndex}].connections[${index}].`);
-      const connectionId = requiredString(item.id, `projects[${projectIndex}].connections[${index}].id", 63);
+      const connectionId = requiredString(item.id, `projects[${projectIndex}].connections[${index}].id`, 63);
       if (!ID_PATTERN.test(connectionId)) throw new Error(`Invalid connection ID: ${connectionId}.`);
       const provider = item.provider;
       if (provider !== "circleci" && provider !== "znect-build") throw new Error(`Unsupported CI provider: ${String(provider)}.`);
