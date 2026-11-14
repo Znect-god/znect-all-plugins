@@ -70,6 +70,9 @@ describe("MCP tool schemas and error boundary", () => {
     expect(tools.map((tool) => tool.name)).toContain("list_recent_events");
 
     const byName = Object.fromEntries(tools.map((tool) => [tool.name, tool]));
+    for (const name of ["check_connection", "list_recent_builds", "get_build_details", "get_build_logs", "list_recent_runs", "get_run_details", "get_job_details", "get_job_logs", "get_job_test_results", "list_job_artifacts", "get_job_artifact", "diagnose_run"]) {
+      expect(byName[name].inputSchema?.properties?.project_id).toMatchObject({ type: "string" });
+    }
     expect(byName.get_job_logs.inputSchema).toMatchObject({
       type: "object",
       properties: {
