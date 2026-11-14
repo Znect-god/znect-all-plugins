@@ -189,6 +189,9 @@ describe("CircleCI API v3 client", () => {
       .toThrow("does not belong to the selected run workflow");
     expect(() => assertCircleCiJobOwnership({ id: JOB_ID }, PROJECT_ID))
       .toThrow("does not belong to the selected project");
+    expect(() => assertCircleCiJobOwnership({
+      id: JOB_ID, references: { project: { id: PROJECT_ID } }
+    }, PROJECT_ID)).toThrow("valid workflow ownership reference");
   });
 
   it("paginates runs using opaque cursors and caps the result at 30", async () => {
@@ -211,6 +214,16 @@ describe("CircleCI API v3 client", () => {
     expect(runs).toHaveLength(30);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][0]).toContain("page%5Bcursor%5D=opaque%2Fcursor%2Bvalue");
+  });
+
+  it("rejects collection pages with missing pagination metadata", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: RUN_ID }]
+    }), { status: 200 })));
+    await expect(listCircleCiRuns("token", PROJECT_ID, 10))
+      .rejects.toThrow("invalid runs pagination metadata");
+    await expect(listCircleCiWorkflows("token", RUN_ID))
+      .rejects.toThrow("invalid workflow pagination metadata");
   });
 
   it("rejects malformed run resource IDs returned by the API", async () => {
@@ -238,8 +251,8 @@ describe("CircleCI API v3 client", () => {
   it("traverses run to workflow to jobs with UUID validation", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: RUN_ID, attributes: { phase: "ended", current_outcome: "succeeded" } } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: WORKFLOW_ID }] }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: JOB_ID }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: WORKFLOW_ID }], page: { next: null, prev: null } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: JOB_ID }], page: { next: null, prev: null } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: JOB_ID, attributes: { name: "typecheck" } } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
