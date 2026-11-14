@@ -409,7 +409,7 @@ describe("Worker HTTP boundary", () => {
         data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: runId, attributes: { status: "success" } }],
+        data: [{ id: runId, attributes: { status: "success" }, references: { project: { id: projectId } } }],
         page: { next: null }
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -428,7 +428,7 @@ describe("Worker HTTP boundary", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("bounds browser run details to ten workflows and two job pages per workflow", async () => {
+  it("bounds browser run details to ten workflows and forty jobs per workflow", async () => {
     const runId = "123e4567-e89b-42d3-a456-426614174001";
     const workflowIds = Array.from({ length: 11 }, (_, index) =>
       "123e4567-e89b-42d3-a456-" + String(index + 100).padStart(12, "0")
@@ -439,14 +439,14 @@ describe("Worker HTTP boundary", () => {
         return new Response(JSON.stringify({ data: [{ id: "123e4567-e89b-42d3-a456-426614174000", attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
       }
       if (url.pathname === "/api/v3/runs") {
-        return new Response(JSON.stringify({ data: [{ id: runId }], page: { next: null } }), { status: 200 });
+        return new Response(JSON.stringify({ data: [{ id: runId, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" } } }], page: { next: null } }), { status: 200 });
       }
       if (url.pathname === `/api/v3/runs/${runId}`) {
-        return new Response(JSON.stringify({ data: { id: runId, attributes: { status: "success" } } }), { status: 200 });
+        return new Response(JSON.stringify({ data: { id: runId, attributes: { phase: "ended", current_outcome: "succeeded" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" } } } }), { status: 200 });
       }
       if (url.pathname === "/api/v3/workflows") {
         return new Response(JSON.stringify({
-          data: workflowIds.map((id) => ({ id, attributes: { name: "workflow" } })),
+          data: workflowIds.map((id) => ({ id, references: { run: { id: runId } }, attributes: { name: "workflow", phase: "ended", outcome: "success" } })),
           page: { next: null }
         }), { status: 200 });
       }
