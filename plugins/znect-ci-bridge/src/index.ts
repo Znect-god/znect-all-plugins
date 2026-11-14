@@ -839,7 +839,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         },
         limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
       }), env);
-      return boundedJson(safePayload, 120_000);
+      return boundedJson(stringifyBoundedJson(JSON.parse(safePayload), 120_000), 120_000);
     }
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "runs") {
       const parsed = z.string().uuid().safeParse(segments[4]);
