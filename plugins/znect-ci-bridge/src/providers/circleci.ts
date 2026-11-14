@@ -81,32 +81,33 @@ function mapWorkflow(resource: V3Resource, runId: string): CiWorkflow {
 function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
   if (!Array.isArray(attrs.parallel_executions)) return [];
   const result: CiJobStep[] = [];
-  for (const execution of attrs.parallel_executions) {
+  // API v3 returns parallel executions as an ordered array; the array position
+  // is the execution number. Each entry contains step records directly (not
+  // nested action arrays).
+  for (let executionIndex = 0; executionIndex < attrs.parallel_executions.length; executionIndex++) {
+    const execution = attrs.parallel_executions[executionIndex];
     if (execution === null || typeof execution !== "object" || Array.isArray(execution)) continue;
     const executionRecord = execution as Record<string, unknown>;
-    const executionIndex = typeof executionRecord.execution === "number" && Number.isInteger(executionRecord.execution)
-      ? executionRecord.execution
-      : 0;
     if (!Array.isArray(executionRecord.steps)) continue;
     for (const step of executionRecord.steps) {
       if (step === null || typeof step !== "object" || Array.isArray(step)) continue;
       const stepRecord = step as Record<string, unknown>;
-      const actions = Array.isArray(stepRecord.actions) ? stepRecord.actions : [];
+      const name = text(stepRecord.name);
+      const outcome = text(stepRecord.outcome);
+      const phase = text(stepRecord.phase);
+      const stepNumber = typeof stepRecord.num === "number" && Number.isInteger(stepRecord.num) && stepRecord.num >= 0
+        ? stepRecord.num
+        : undefined;
       result.push({
         execution: executionIndex,
-        ...(text(stepRecord.name) ? { name: text(stepRecord.name) } : {}),
-        actions: actions.flatMap((candidate) => {
-          if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate)) return [];
-          const action = candidate as Record<string, unknown>;
-          return [{
-            ...(text(action.name) ? { name: text(action.name) } : {}),
-            ...(text(action.status) ? { status: text(action.status) } : {}),
-            ...(text(action.outcome) ? { outcome: text(action.outcome) } : {}),
-            ...(typeof action.exit_code === "number" ? { exitCode: action.exit_code } : {}),
-            ...(typeof action.step_num === "number" && Number.isInteger(action.step_num)
-              ? { stepNumber: action.step_num } : {})
-          }];
-        })
+        ...(name ? { name } : {}),
+        actions: [{
+          ...(name ? { name } : {}),
+          ...(outcome ?? phase ? { status: outcome ?? phase } : {}),
+          ...(outcome ? { outcome } : {}),
+          ...(typeof stepRecord.exit_code === "number" ? { exitCode: stepRecord.exit_code } : {}),
+          ...(stepNumber !== undefined ? { stepNumber } : {})
+        }]
       });
     }
   }
