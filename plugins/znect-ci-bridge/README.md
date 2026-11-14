@@ -18,7 +18,7 @@ Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and in
 - GitHub Actions Preview run [#43581014497](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581014497) passed on commit `aae93a027626c978a049dd95f7e2254e97f78c7e`: typecheck, all 103 tests, isolated Preview deployment, Preview webhook-secret installation, authenticated browser API, live diagnostics endpoint, event inbox and MCP read-only smoke checks.
 - On 2026-11-12, after replacing a CircleCI API token that v3 rejected, live `list_recent_runs` returned three Forge runs and `get_job_details` returned the real `build-0-7-0` job (115 tests, 2 failed). This is verified live API read coverage.
 - The later Preview smoke test verified authenticated MCP discovery/read-only connection and browser API access, plus a **synthetic** signed webhook path, deduplication, durable storage and retrieval. Synthetic delivery is not a real CircleCI workflow delivery.
-- On 2026-11-15, the feature branch gained a version-1 project registry, validation tests, allowlisted multi-project CircleCI webhook normalization, project-specific event inbox routing, and registry documentation. These source changes have **not** been typechecked or test-run in this revision; no CI check run is currently recorded for the latest commit. The existing CircleCI diagnostic tools remain Forge-default.
+- On 2026-11-15, the feature branch gained a version-1 project registry, validation tests, allowlisted multi-project CircleCI webhook normalization, and project-specific event inbox routing. The next source revision generalized the legacy v1.1 build tools, v3 run/job/log/test/artifact/diagnostic tools, and read-only browser API to accept a registered `project_id`. It added fail-closed ownership checks: a run is resolved through its referenced pipeline under the selected project, and jobs must expose matching project/workflow references before logs, tests or artifacts are returned. These latest source changes have **not** been typechecked or test-run; no CI check run is recorded for the current head.
 - The CircleCI project webhook has since been registered successfully. CircleCI's automatic Add Webhook ping/check was accepted with a 2xx response.
 - **Still pending:** a real CircleCI `workflow-completed` delivery from an ordinary Forge workflow, verification of that event in the durable inbox and retrieval through MCP. The actual event has not yet been confirmed.
 - Companion private Forge Draft PR [#9](https://github.com/Znect-god/znect-forge/pull/9) adds the free on-demand ChatGPT channel and collects repository branches, commits, open PRs/issues, GitHub Actions statuses and bounded failed-job logs alongside this Bridge's CircleCI report. The report collector is not yet activated; it still needs review/merge and the private `ZNECT_CI_BRIDGE_WEB_TOKEN` Actions secret.
@@ -34,16 +34,16 @@ See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the ch
 - API v3: `check_connection`, `list_recent_runs`, `get_run_details`, `get_job_details`, `get_job_logs`, `get_job_test_results`, `list_job_artifacts`, `get_job_artifact`, `diagnose_run`.
 - Event inbox: `list_recent_events`.
 
-All tools are intended for reading only. There are no pipeline trigger, retry, cancel, configuration-write or deployment tools.
+All project-scoped CircleCI tools accept `project_id` and default to `znect-forge` for backward compatibility. Run lookups verify the run's pipeline belongs to the selected CircleCI project; job operations verify the job's project reference, and run traversal also checks its workflow reference. Missing or mismatched ownership metadata fails closed. All tools are read-only; there are no pipeline trigger, retry, cancel, configuration-write or deployment tools.
 
 ### Browser dashboard and JSON API
 
 Open the root URL of a confirmed Worker deployment in a modern browser. The dashboard uses the separate `WEB_ACCESS_TOKEN`, held in tab memory only.
 
-- `GET /api/v1/status`
-- `GET /api/v1/runs?limit=10`
-- `GET /api/v1/runs/{run_uuid}`
-- `GET /api/v1/diagnostics/{run_uuid}` — bounded failed-step logs, structured tests, and a small JUnit/test-results artifact for failed jobs.
+- `GET /api/v1/status?project_id=znect-forge`
+- `GET /api/v1/runs?project_id=znect-forge&limit=10`
+- `GET /api/v1/runs/{run_uuid}?project_id=znect-forge`
+- `GET /api/v1/diagnostics/{run_uuid}?project_id=znect-forge` — bounded failed-step logs, structured tests, and a small JUnit/test-results artifact for failed jobs.
 - `GET /api/v1/events?after=0&limit=20`
 
 All JSON API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
