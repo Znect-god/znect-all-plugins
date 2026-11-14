@@ -112,14 +112,14 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
   return result;
 }
 
-function mapJob(resource: V3Resource, projectId: string, workflowId: string, runId?: string): CiJob {
+function mapJob(resource: V3Resource, projectId: string, workflowId?: string, runId?: string): CiJob {
   const attrs = attributes(resource);
   const steps = mapJobSteps(attrs);
   return {
     id: resource.id,
     projectId,
     ...(runId ? { runId } : {}),
-    workflowId,
+    ...(workflowId ? { workflowId } : {}),
     status: statusOf(resource),
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
     ...(iso(attrs.start_time) ? { startedAt: iso(attrs.start_time) } : {}),
@@ -200,8 +200,8 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
     const job = await getCircleCiJob(this.token, jobId);
     assertCircleCiJobOwnership(job, project.id);
     const workflowId = workflowReference(job);
-    if (!workflowId || !isCircleCiUuid(workflowId)) {
-      throw new Error("CircleCI job is missing a valid workflow ownership reference.");
+    if (workflowId && !isCircleCiUuid(workflowId)) {
+      throw new Error("CircleCI job contains an invalid workflow ownership reference.");
     }
     return mapJob(job, scope.projectId, workflowId);
   }
