@@ -116,6 +116,24 @@ describe("Worker HTTP boundary", () => {
     expect(storeFetch).not.toHaveBeenCalled();
   });
 
+  it("serves only non-secret registered project metadata to the dashboard", async () => {
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/projects", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(200);
+    const payload = await response.json() as { projects: Array<Record<string, unknown>> };
+    expect(payload.projects).toEqual([{
+      id: "znect-forge",
+      name: "Znect Forge",
+      providers: ["circleci"]
+    }]);
+    expect(JSON.stringify(payload)).not.toContain("token");
+  });
+
   it("serves the authenticated event inbox through the browser API", async () => {
     const event = { id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895", type: "workflow-completed", workflow_status: "failed" };
     const storeFetch = vi.fn().mockResolvedValue(Response.json({ events: [{ cursor: 7, ...event }], next_cursor: 7 }));
