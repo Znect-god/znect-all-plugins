@@ -6,6 +6,7 @@ import { BuildEventStore, normalizeCircleCiWebhook, verifyCircleCiSignature } fr
 import { findCircleCiProject, findProject, loadProjectRegistry } from "./registry";
 export { BuildEventStore };
 import { circleGet } from "./circleci";
+import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
 import {
   getCircleCiJob,
   getCircleCiJobStepOutput,
@@ -51,6 +52,16 @@ function getCircleCiConnection(env: Env, projectId: string) {
   const connection = project.connections.find((item) => item.provider === "circleci");
   if (!connection?.projectSlug) throw new Error(`Project ${projectId} has no CircleCI connection.`);
   return { project, connection };
+}
+
+function getCircleCiAdapter(env: Env, projectId: string) {
+  const { project, connection } = getCircleCiConnection(env, projectId);
+  return {
+    project,
+    connection,
+    scope: { projectId: project.id, connectionId: connection.id },
+    adapter: createCircleCiReadOnlyAdapter(env.CIRCLECI_TOKEN, connection.projectSlug!, connection.id)
+  };
 }
 
 function circleCiV1ProjectPath(projectSlug: string): string {
