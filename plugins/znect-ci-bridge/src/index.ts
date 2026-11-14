@@ -476,13 +476,17 @@ function createServer(env: Env) {
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
       let failedJobLimitReached = false;
+      let jobLimitReached = false;
       let logActionsInspected = 0;
       let logActionLimitReached = false;
       const workflowsInspected = workflows.slice(0, 5);
 
       for (const workflow of workflowsInspected) {
         const jobs = await adapter.listJobs(scope, run_id, workflow.id);
-        const failedJobs = jobs.filter((job) => job.status === "failed" || job.status === "failure");
+        const inspectedJobs = jobs.slice(0, 40);
+        const jobsTruncated = jobs.length > inspectedJobs.length;
+        if (jobsTruncated) jobLimitReached = true;
+        const failedJobs = inspectedJobs.filter((job) => job.status === "failed" || job.status === "failure");
         const diagnostics: Array<Record<string, unknown>> = [];
 
         for (const job of failedJobs) {
@@ -593,6 +597,8 @@ function createServer(env: Env) {
           workflow_id: workflow.id,
           workflow_name: workflow.name,
           jobs_total: jobs.length,
+          jobs_inspected: inspectedJobs.length,
+          jobs_truncated: jobsTruncated,
           failed_jobs_total: failedJobs.length,
           failed_jobs: diagnostics
         });
@@ -609,7 +615,8 @@ function createServer(env: Env) {
           workflows_truncated: workflowLimitReached,
           failed_jobs_inspected: failedJobsInspected,
           failed_job_limit_reached: failedJobLimitReached,
-          incomplete: workflowLimitReached || failedJobLimitReached || logActionLimitReached,
+          jobs_truncated: jobLimitReached,
+          incomplete: workflowLimitReached || jobLimitReached || failedJobLimitReached || logActionLimitReached,
           log_actions_inspected: logActionsInspected,
           log_action_limit_reached: logActionLimitReached
         },
@@ -726,11 +733,15 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       let failedJobLimitReached = false;
       let logActionsInspected = 0;
       let logActionLimitReached = false;
+      let jobLimitReached = false;
       let incomplete = false;
 
       for (const workflow of workflows.slice(0, 5)) {
         const jobs = await adapter.listJobs(scope, run.id, workflow.id);
-        const failedJobs = jobs.filter((job) => job.status === "failed" || job.status === "failure");
+        const inspectedJobs = jobs.slice(0, 40);
+        const jobsTruncated = jobs.length > inspectedJobs.length;
+        if (jobsTruncated) { jobLimitReached = true; incomplete = true; }
+        const failedJobs = inspectedJobs.filter((job) => job.status === "failed" || job.status === "failure");
         const reports: Array<Record<string, unknown>> = [];
         for (const job of failedJobs) {
           if (failedJobsInspected >= 3) { failedJobLimitReached = true; incomplete = true; break; }
@@ -788,7 +799,14 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             report_artifacts: reportArtifacts
           });
         }
-        workflowReports.push({ workflow, jobs_total: jobs.length, failed_jobs_total: failedJobs.length, failed_jobs: reports });
+        workflowReports.push({
+          workflow,
+          jobs_total: jobs.length,
+          jobs_inspected: inspectedJobs.length,
+          jobs_truncated: jobsTruncated,
+          failed_jobs_total: failedJobs.length,
+          failed_jobs: reports
+        });
       }
       if (workflows.length > 5) incomplete = true;
       const payload = {
@@ -801,6 +819,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           workflows_truncated: workflows.length > 5,
           failed_jobs_inspected: failedJobsInspected,
           failed_job_limit_reached: failedJobLimitReached,
+          jobs_truncated: jobLimitReached,
           incomplete,
           log_actions_inspected: logActionsInspected,
           log_action_limit_reached: logActionLimitReached
@@ -819,8 +838,14 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const inspected = workflows.slice(0, 10);
       const workflowReports = await Promise.all(inspected.map(async (workflow) => {
         const jobs = await adapter.listJobs(scope, run.id, workflow.id);
-        return { workflow, jobs: jobs.slice(0, 40), jobs_total: jobs.length };
+        return {
+          workflow,
+          jobs: jobs.slice(0, 40),
+          jobs_total: jobs.length,
+          jobs_truncated: jobs.length > 40
+        };
       }));
+      const jobsTruncated = workflowReports.some((report) => report.jobs_truncated);
       return boundedJson(redactedBoundedJson({
         project: { id: project.id, name: project.name, provider: adapter.provider },
         run,
@@ -829,7 +854,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           workflows_total: workflows.length,
           workflows_inspected: workflowReports.length,
           workflows_truncated: workflows.length > inspected.length,
-          incomplete: workflows.length > inspected.length
+          jobs_truncated: jobsTruncated,
+          incomplete: workflows.length > inspected.length || jobsTruncated
         },
         limits: { max_workflows: 10, max_jobs_per_workflow: 40 }
       }, env, 120_000), 120_000);
