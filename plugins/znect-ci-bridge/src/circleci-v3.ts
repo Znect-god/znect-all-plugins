@@ -189,6 +189,16 @@ export async function getCircleCiRunForProject(
   }
   throw new Error("CircleCI run ownership could not be verified within the 400-run safety window.");
 }
+/** Verify a workflow's explicit run relationship; API filters alone are not an ownership proof. */
+export function assertCircleCiWorkflowOwnership(workflow: V3Resource, runId: string): void {
+  assertUuid(runId, "run ID");
+  const references = workflow.references as Record<string, unknown> | undefined;
+  const runReference = references?.run as Record<string, unknown> | undefined;
+  if (runReference?.id !== runId) {
+    throw new Error("CircleCI workflow does not belong to the selected run.");
+  }
+}
+
 /** Verify the project and workflow references before any job data is returned. */
 export function assertCircleCiJobOwnership(
   job: V3Resource,
