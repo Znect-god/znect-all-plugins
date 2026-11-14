@@ -54,6 +54,58 @@ Webhook inbox не отправляет самопроизвольные соо�
 
 PR #5 остаётся Draft и не объединён. Его base — `feature/ci-bridge-test-reports`, не `main`. Не менять `main`, не объединять PR и не развёртывать Production без отдельного прямого разрешения.
 
+## 2A. Журнал фактически выполненных действий
+
+Ниже записаны только этапы, для которых в истории разработки есть наблюдаемый результат. Это журнал процесса, а не утверждение, что вся система готова.
+
+### 11 ноября 2026 — локальная проверка и ограничение Android
+
+- Репозиторий развивается в общем `znect-plugins` monorepo, а не в отдельном репозитории для Bridge.
+- В Termux на Android ARM64 выполнена установка зависимостей; `npm run typecheck` завершился без ошибок.
+- `npm rebuild esbuild workerd` и `npx wrangler login` не сработали: `workerd` сообщил `Unsupported platform: android arm64 LE`. Это ограничение локального окружения, а не ошибка TypeScript-кода.
+- В результате deployment был перенесён в Linux GitHub Actions/Cloudflare workflow. Не следует описывать локальный Termux как успешную среду Wrangler deployment.
+
+### 12 ноября 2026 — CircleCI credentials и первые реальные API-ответы
+
+- Первоначальный CircleCI token был заменён после отказа CircleCI API v3: `API CircleCI v3 отклонил настроенный токен только для чтения`.
+- После замены токена live-вызов `list_recent_runs(limit=10)` успешно получил проект `gh/Znect-god/znect-forge` и три запуска.
+- Затем `get_job_details` успешно вернул job `build-0-7-0`. В прочитанных шагах был `Run unit tests` со статусом failed (exit 1): всего 115 тестов, 2 failed. Это подтверждает не только соединение, но и чтение реальных CircleCI job details.
+- Ранее `/health` возвращал `status: ok`, проект `Znect-god/znect-forge`, режим `read-only`. Обычный GET к `/mcp` в браузере не был MCP handshake и не считался проверкой MCP.
+
+### 13 ноября 2026 — настройка Preview secrets и исправление доступа
+
+- Для GitHub repository Actions были заведены/подтверждены secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `MCP_ACCESS_TOKEN`, `WEB_ACCESS_TOKEN`. Значения не документируются.
+- `CIRCLECI_TOKEN` настраивался отдельно как Cloudflare Worker Secret, а не как пятый GitHub Actions secret.
+- Cloudflare environment переключался на Preview. Сначала workflow успешно выполнял typecheck/tests и Preview deployment, но `/api/v1/status` возвращал HTTP 503; MCP/CircleCI checks тогда не достигались. Этот запуск нельзя записывать как успешный end-to-end test.
+- После настройки Preview secrets и пересоздания named Preview deployment secrets стали доступны соответствующему Worker; 503 исчезла, проверка дошла до разрешения project slug.
+- На следующем этапе исправлялась обработка `attributes.slug`. После этого были подтверждены живой Worker, авторизованный CircleCI API, MCP discovery и обнаружение 12 read-only tools. Однако `check_connection`/MCP `tools/call` в тот момент ещё возвращал HTTP 400, поэтому этот этап не доказывал успешный live tool call.
+- Более ранний MCP Inspector вызов также возвращал сообщение о ненастроенных handler secrets; отдельный `MCP_ACCESS_TOKEN` сохранялся и не заменял CircleCI API token.
+
+### 14 ноября 2026 — отдельная webhook feature branch и Preview validation
+
+- Работа велась в `feat/ci-bridge-circleci-webhooks`; локальный checkout уже существовал, поэтому повторный clone не выполнялся.
+- `npm ci` установил 143 пакета (144 audited, 0 vulnerabilities). Локальный Wrangler по-прежнему не запускался из-за Android ARM64 `workerd`; cloud workflow использовался вместо локального deploy.
+- В workflow добавлена установка `CIRCLECI_WEBHOOK_SECRET` именно в named Preview. Этот секрет — отдельный от `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` и `WEB_ACCESS_TOKEN`.
+- CircleCI signing secret создан как отдельный случайный ключ; пользователь добавил соответствующий GitHub Actions secret и использовал то же значение в CircleCI webhook. Само значение нигде не записывается.
+- В коде webhook добавлены проверка HMAC-SHA256, фильтрация проекта, нормализация полей, durable event storage и дедупликация по event ID. Для сокращённых CircleCI ping payload добавлено tolerant acknowledgement после проверки подписи; регрессионные тесты покрывают такие варианты.
+- GitHub Actions run #43568768594 прошёл typecheck/unit tests, named Preview deployment, Preview-only webhook secret installation, secret-scope diagnostics и authenticated read-only smoke test.
+- Run #43568774133 также завершился success на следующем test revision. Smoke validation включала MCP discovery/read-only connection check и synthetic signed webhook path; синтетическая доставка не заменяет настоящее событие CircleCI.
+- Пользователь зарегистрировал CircleCI project webhook `Znect CI Bridge Preview` для `workflow-completed`. CircleCI принял Add Webhook после автоматической ping-проверки с 2xx. В интерфейсе пользователя отдельной кнопки Test Ping нет.
+- После регистрации настоящая доставка `workflow-completed` от обычного Forge workflow ещё не подтверждена. Этот пункт остаётся открытым.
+
+### Реестр секретов — что именно настраивалось
+
+| Secret name | Подтверждённое назначение/место | Статус в истории |
+|---|---|---|
+| `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions repository secret для deploy workflow | Был среди четырёх настроенных GitHub secrets |
+| `CLOUDFLARE_API_TOKEN` | GitHub Actions repository secret для deploy workflow | Был среди четырёх настроенных GitHub secrets |
+| `MCP_ACCESS_TOKEN` | Отдельная Bearer-аутентификация MCP; GitHub Actions secret и соответствующий Worker Preview secret | Наличие в GitHub secrets подтверждено; authenticated MCP smoke впоследствии прошёл |
+| `WEB_ACCESS_TOKEN` | Отдельная Bearer-аутентификация browser API; GitHub Actions secret и соответствующий Worker Preview secret | Наличие в GitHub secrets подтверждено; authenticated browser smoke впоследствии прошёл |
+| `CIRCLECI_TOKEN` | CircleCI Personal API token, Cloudflare Worker Preview secret | Настраивался в Cloudflare отдельно; старый token отвергался, после замены CircleCI API v3 вернул реальные runs и job details |
+| `CIRCLECI_WEBHOOK_SECRET` | HMAC signing secret: GitHub Actions repository secret, named Cloudflare Preview secret и Secret Token зарегистрированного CircleCI webhook | Preview workflow установил secret; CircleCI принял webhook ping. Не является API token |
+
+Секреты Production в рамках описанных действий не настраивались и не должны считаться готовыми. Значения секретов намеренно не фиксируются в документации.
+
 ## 3. Требования и секреты
 
 Потребуются:
