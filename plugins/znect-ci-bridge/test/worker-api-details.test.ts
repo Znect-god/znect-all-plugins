@@ -15,6 +15,59 @@ const jobId = "123e4567-e89b-42d3-a456-426614174003";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Read-only browser API run details", () => {
+  it("returns provider-neutral run summaries from the selected project's adapter", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174000";
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      expect(init?.method).toBe("GET");
+      if (url.pathname === "/api/v3/projects") {
+        return new Response(JSON.stringify({ data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/runs") {
+        return new Response(JSON.stringify({
+          data: [{
+            id: runId,
+            attributes: {
+              phase: "completed",
+              current_outcome: "failed",
+              branch: "feature/example",
+              vcs_revision: "abc123",
+              subject: "Fix CI diagnostics",
+              start_time: "2026-11-15T10:00:00Z",
+              stop_time: "2026-11-15T10:05:00Z"
+            }
+          }],
+          page: { next: null }
+        }), { status: 200 });
+      }
+      throw new Error("Unexpected upstream request: " + url.pathname);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/runs?limit=5&project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      project: { id: "znect-forge", provider: "circleci" },
+      runs: [{
+        id: runId,
+        projectId: "znect-forge",
+        status: "failed",
+        branch: "feature/example",
+        commitSha: "abc123",
+        commitMessage: "Fix CI diagnostics",
+        startedAt: "2026-11-15T10:00:00.000Z",
+        completedAt: "2026-11-15T10:05:00.000Z"
+      }]
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it("returns a run with workflow and job resources using GET-only upstream requests", async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
