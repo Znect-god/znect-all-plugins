@@ -21,13 +21,13 @@ A job's `runId` may be absent when the provider's direct job resource does not e
 Currently routed through the adapter:
 - MCP `check_connection`;
 - `list_recent_runs` and `get_run_details`;
-- `get_job_details`;
-- job logs and structured test reports;
+- `get_job_details` and automatic `diagnose_run`;
+- normalized job step/action diagnostics, job logs and structured test reports;
 - artifact metadata and bounded artifact content.
 
 The adapter is constructed from a server-side CircleCI token, a registered CircleCI project slug, the stable Bridge project ID and the registered connection ID. Both project ID and connection ID must match the caller's scope; checking only the connection ID would be unsafe because connection IDs are unique only within a project. Run access is verified against the selected project's paginated run collection. Workflow access is verified against the selected run. Job details must expose the expected project and a valid workflow reference before sensitive job data is read.
 
-The automatic `diagnose_run` MCP tool and browser diagnostics routes still use the existing CircleCI v3 functions directly because their diagnostic report currently depends on CircleCI-specific job step/execution structures. They remain project-scoped and retain their ownership checks, but are not yet fully normalized through the adapter. The legacy v1.1 `list_recent_builds`, `get_build_details` and `get_build_logs` tools also remain direct compatibility paths.
+The browser JSON API still uses the existing CircleCI v3 functions directly and remains to be migrated. The legacy v1.1 `list_recent_builds`, `get_build_details` and `get_build_logs` tools also remain direct compatibility paths. Automatic `diagnose_run` now uses normalized `CiJobStep`/`CiJobAction` structures rather than exposing provider response objects.
 
 ## Znect Build adapter
 
