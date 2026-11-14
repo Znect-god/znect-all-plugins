@@ -155,6 +155,22 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
   return { version: 1, projects };
 }
 
+
+const DEFAULT_PROJECT_REGISTRY = JSON.stringify({
+  version: 1,
+  projects: [{
+    id: "znect-forge",
+    name: "Znect Forge",
+    repositories: [{ fullName: "Znect-god/znect-forge", componentId: "android-app" }],
+    components: [{ id: "android-app", name: "Android application", repository: "Znect-god/znect-forge" }],
+    connections: [{ id: "circleci-main", provider: "circleci", projectSlug: "gh/Znect-god/znect-forge" }]
+  }]
+});
+
+export function loadProjectRegistry(raw?: string): ProjectRegistry {
+  return parseProjectRegistry(raw ?? DEFAULT_PROJECT_REGISTRY);
+}
+
 export function findProject(registry: ProjectRegistry, projectId: string): ProjectRegistryEntry | undefined {
   return registry.projects.find((project) => project.id === projectId);
 }
