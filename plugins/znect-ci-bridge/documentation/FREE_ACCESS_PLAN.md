@@ -10,7 +10,7 @@ MCP остаётся дополнительным интерфейсом для 
 
 1. ChatGPT по запросу пользователя инициирует команду в приватном inbox Forge.
 2. GitHub Actions обращается к защищённому read-only API Znect CI Bridge.
-3. Bridge получает сведения из CircleCI, не изменяя pipelines.
+3. Workflow отдельно читает GitHub API Forge (ветки, коммиты, PR/issues, Actions runs/jobs/logs и выбранные test artifacts), а Bridge получает CircleCI сведения; оба источника используются только для чтения.
 4. Workflow сохраняет полный JSON-отчёт в приватном Actions artifact с коротким сроком хранения.
 5. ChatGPT находит workflow run, скачивает artifact через GitHub-интеграцию и анализирует его.
 
@@ -26,16 +26,17 @@ MCP остаётся дополнительным интерфейсом для 
                          |
                          v
               GitHub Actions workflow
-                         |
-                  HTTPS + WEB token
-                         v
-              Cloudflare Worker Preview
-                         |
-                  CircleCI API (GET)
-                         v
-              CI status, runs, jobs,
-              failed-step logs, tests,
-              report artifacts, events
+                 /                       \\
+                v                         v
+      GitHub API (GET)           HTTPS + WEB token
+      repository + Actions              |
+      runs/jobs/logs/artifacts           v
+                               Cloudflare Worker Preview
+                                          |
+                                   CircleCI API (GET)
+                                          v
+                               CircleCI runs, failed-step
+                               logs, tests, artifacts, events
                          |
                          v
               Private Actions artifact
@@ -54,15 +55,15 @@ MCP остаётся дополнительным интерфейсом для 
 - Регрессионный тест диагностики, включая проверку редактирования токена.
 - Private Forge inbox issue #8.
 - Draft PR #9 с on-demand workflow для закрытого отчёта.
-- Preview deployment и authenticated smoke test: diagnostics API успешно проверен на реальном доступном CircleCI run.
-- Typecheck и 103 unit tests прошли в GitHub Actions.
+- Preview deployment и authenticated smoke test: diagnostics API вернул корректный отчёт по доступному CircleCI run; failed-step logs, structured tests и secret redaction отдельно покрыты регрессионным тестом.
+- Typecheck и 103 unit tests прошли в GitHub Actions.\n- GitHub Actions report collector прошёл `bash -n` и локальный mocked fixture test для repo metadata, failed jobs, log download, test artifact extraction и secret redaction.
 
 ## 4. Безопасность и стоимость
 
 - CircleCI token хранится только в Cloudflare Worker Secrets.
 - GitHub Actions получает отдельный `ZNECT_CI_BRIDGE_WEB_TOKEN`; секрет не помещается в репозиторий, issue или комментарии.
 - Workflow разрешает только точную команду владельца репозитория в issue #8.
-- В CircleCI выполняются только GET-запросы. Запуск, повтор, отмена и изменение pipelines не предусмотрены.
+- GitHub API и CircleCI используются только для чтения. В CircleCI выполняются только GET-запросы; запуск, повтор, отмена и изменение pipelines не предусмотрены.
 - Полный отчёт хранится в приватном Forge artifact один день. Комментарий содержит только ссылку на workflow run и краткое сообщение.
 - Данные диагностики и CI-логи не копируются в публичный `znect-all-plugins`.
 - CircleCI build minutes не расходуются. GitHub Actions usage учитывается в квотах GitHub.
