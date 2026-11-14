@@ -87,7 +87,7 @@ describe("Read-only browser API run details", () => {
       }
       if (url.pathname === "/api/v3/workflows") {
         return new Response(JSON.stringify({
-          data: [{ id: workflowId, attributes: { name: "build-and-test", status: "success" } }],
+          data: [{ id: workflowId, references: { run: { id: runId } }, attributes: { name: "build-and-test", status: "success" } }],
           page: { next: null }
         }), { status: 200 });
       }
@@ -172,7 +172,7 @@ describe("Read-only browser API run details", () => {
       }
       if (url.pathname === "/api/v3/workflows") {
         return new Response(JSON.stringify({
-          data: [{ id: workflowId, attributes: { name: "build-and-test", status: "failed" } }],
+          data: [{ id: workflowId, references: { run: { id: runId } }, attributes: { name: "build-and-test", status: "failed" } }],
           page: { next: null }
         }), { status: 200 });
       }
