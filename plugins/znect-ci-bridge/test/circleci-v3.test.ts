@@ -4,6 +4,8 @@ import {
   circleV3GetText,
   getCircleCiJob,
   getCircleCiRun,
+  getCircleCiRunForProject,
+  assertCircleCiJobOwnership,
   getCircleCiJobStepOutput,
   getCircleCiJobTests,
   getCircleCiJobArtifact,
@@ -138,6 +140,55 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("did not match the configured slug");
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
       .resolves.toMatchObject({ id: PROJECT_ID });
+  });
+
+  it("verifies run ownership through the referenced project-scoped pipeline", async () => {
+    const pipelineId = "123e4567-e89b-42d3-a456-426614174007";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: RUN_ID, references: { pipeline: { id: pipelineId } } }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: pipelineId, references: { project: { id: PROJECT_ID } } }
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
+      .resolves.toMatchObject({ id: RUN_ID });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toContain("filter%5Bproject_id%5D=" + PROJECT_ID);
+  });
+
+  it("fails closed when a run has no verifiable pipeline or belongs to another project", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: RUN_ID, references: {} }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: RUN_ID, references: { pipeline: { id: WORKFLOW_ID } } }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: WORKFLOW_ID, references: { project: { id: RUN_ID } } }
+      }), { status: 200 })));
+
+    await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
+      .rejects.toThrow("does not expose a verifiable pipeline reference");
+    await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
+      .rejects.toThrow("does not belong to the selected project");
+  });
+
+  it("checks job project and workflow references before exposing job data", () => {
+    const job = {
+      id: JOB_ID,
+      references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } }
+    };
+    expect(() => assertCircleCiJobOwnership(job, PROJECT_ID, WORKFLOW_ID)).not.toThrow();
+    expect(() => assertCircleCiJobOwnership(job, RUN_ID, WORKFLOW_ID))
+      .toThrow("does not belong to the selected project");
+    expect(() => assertCircleCiJobOwnership(job, PROJECT_ID, RUN_ID))
+      .toThrow("does not belong to the selected run workflow");
+    expect(() => assertCircleCiJobOwnership({ id: JOB_ID }, PROJECT_ID))
+      .toThrow("does not belong to the selected project");
   });
 
   it("paginates runs using opaque cursors and caps the result at 30", async () => {
