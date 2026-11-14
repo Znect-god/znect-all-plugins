@@ -212,7 +212,10 @@ export function assertCircleCiJobOwnership(
   if (projectReference?.id !== projectId) {
     throw new Error("CircleCI job does not belong to the selected project.");
   }
-  if (workflowId && actualWorkflow?.id !== workflowId) {
+  if (typeof actualWorkflow?.id !== "string" || !isCircleCiUuid(actualWorkflow.id)) {
+    throw new Error("CircleCI job does not include a valid workflow ownership reference.");
+  }
+  if (workflowId && actualWorkflow.id !== workflowId) {
     throw new Error("CircleCI job does not belong to the selected run workflow.");
   }
 }
@@ -258,13 +261,28 @@ export async function listCircleCiRuns(
     if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid runs collection.");
     for (const run of page.data) assertUuid(run.id, "run ID");
     runs.push(...page.data);
-    const next: string | null | undefined = page.page?.next;
-    if (typeof next !== "string" || next.length === 0) break;
+    const next = readNextCursor(page, "runs");
+    if (next === null) break;
     if (seenCursors.has(next)) throw new Error("CircleCI API v3 repeated a pagination cursor.");
     seenCursors.add(next);
     cursor = next;
+    if (pageIndex === 1 && runs.length < limit) {
+      throw new Error("CircleCI API v3 runs collection exceeded the two-page safety window before the requested limit was reached.");
+    }
   }
   return runs.slice(0, limit);
+}
+
+function readNextCursor(page: V3Collection, label: string): string | null {
+  if (!page.page || typeof page.page !== "object" || !Object.prototype.hasOwnProperty.call(page.page, "next")) {
+    throw new Error(`CircleCI API v3 returned invalid ${label} pagination metadata.`);
+  }
+  const next = page.page.next;
+  if (next === null) return null;
+  if (typeof next !== "string" || next.length === 0) {
+    throw new Error(`CircleCI API v3 returned an invalid ${label} pagination cursor.`);
+  }
+  return next;
 }
 
 const COLLECTION_PAGE_SIZE = 20;
@@ -295,8 +313,8 @@ async function listCircleCiCollection(
     for (const resource of page.data) assertUuid(resource.id, `${resourceLabel} ID`);
     resources.push(...page.data);
 
-    const next = page.page?.next;
-    if (typeof next !== "string" || next.length === 0) return resources;
+    const next = readNextCursor(page, resourceLabel);
+    if (next === null) return resources;
     if (seenCursors.has(next)) {
       throw new Error(`CircleCI API v3 repeated a pagination cursor while listing ${resourceLabel}s.`);
     }
