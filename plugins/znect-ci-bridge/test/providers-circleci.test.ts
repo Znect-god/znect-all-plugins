@@ -108,7 +108,10 @@ describe("CircleCI read-only provider adapter", () => {
           references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
           attributes: {
             name: "unit-tests",
-            status: "failed",
+            phase: "completed",
+            outcome: "failed",
+            started_at: "2026-11-15T10:01:00Z",
+            ended_at: "2026-11-15T10:04:00Z",
             parallel_executions: [{
               steps: [{
                 name: "Run tests",
@@ -126,6 +129,8 @@ describe("CircleCI read-only provider adapter", () => {
     await expect(adapter.getJob(scope, JOB_ID)).resolves.toMatchObject({
       id: JOB_ID,
       workflowId: WORKFLOW_ID,
+      startedAt: "2026-11-15T10:01:00.000Z",
+      completedAt: "2026-11-15T10:04:00.000Z",
       steps: [{
         name: "Run tests",
         execution: 0,
