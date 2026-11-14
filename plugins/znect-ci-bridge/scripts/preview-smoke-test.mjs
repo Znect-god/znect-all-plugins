@@ -165,6 +165,34 @@ async function main() {
   }
   console.log("PASS: authenticated browser API and CircleCI project access");
 
+  const recentRunsResponse = await request(PREVIEW_ORIGIN + "/api/v1/runs?limit=1", {
+    headers: { authorization: "Bearer " + webToken }
+  });
+  if (!recentRunsResponse.ok) {
+    throw new Error("/api/v1/runs returned HTTP " + recentRunsResponse.status + ".");
+  }
+  const recentRunsData = await recentRunsResponse.json();
+  const latestRunId = recentRunsData.runs?.[0]?.id;
+  if (typeof latestRunId === "string" && /^[0-9a-f-]{36}$/i.test(latestRunId)) {
+    const diagnosticsResponse = await request(PREVIEW_ORIGIN + "/api/v1/diagnostics/" + latestRunId, {
+      headers: { authorization: "Bearer " + webToken }
+    });
+    if (!diagnosticsResponse.ok) {
+      throw new Error("/api/v1/diagnostics returned HTTP " + diagnosticsResponse.status + ".");
+    }
+    const diagnostics = await diagnosticsResponse.json();
+    if (
+      diagnostics.run?.id !== latestRunId ||
+      !Array.isArray(diagnostics.workflows) ||
+      !diagnostics.diagnostics_summary
+    ) {
+      throw new Error("Diagnostics API returned an incomplete or mismatched run report.");
+    }
+    console.log("PASS: authenticated read-only failed-step diagnostics API");
+  } else {
+    console.log("NOT RUN: no valid recent CircleCI run ID was available for diagnostics verification.");
+  }
+
   const eventsResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?limit=50", {
     headers: { authorization: "Bearer " + webToken }
   });
