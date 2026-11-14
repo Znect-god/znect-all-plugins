@@ -3,6 +3,7 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { DASHBOARD_HTML } from "./ui";
 import { BuildEventStore, normalizeCircleCiWebhook, verifyCircleCiSignature } from "./events";
+import { findCircleCiProject, findProject, loadProjectRegistry } from "./registry";
 export { BuildEventStore };
 import { circleGet } from "./circleci";
 import {
@@ -32,6 +33,7 @@ interface Env {
   MCP_ACCESS_TOKEN: string;
   WEB_ACCESS_TOKEN: string;
   CIRCLECI_WEBHOOK_SECRET: string;
+  ZNECT_PROJECT_REGISTRY?: string;
   EVENT_STORE: DurableObjectNamespace;
   MCP_RATE_LIMITER: {
     limit(options: { key: string }): Promise<{ success: boolean }>;
@@ -40,6 +42,18 @@ interface Env {
 
 const PROJECT_SLUG = "gh/Znect-god/znect-forge";
 const PROJECT_PATH = "/project/github/Znect-god/znect-forge";
+
+function getProjectRegistry(env: Env) {
+  return loadProjectRegistry(env.ZNECT_PROJECT_REGISTRY);
+}
+
+function getCircleCiConnection(env: Env, projectId: string) {
+  const project = findProject(getProjectRegistry(env), projectId);
+  if (!project) throw new Error(`Unknown Znect project: ${projectId}.`);
+  const connection = project.connections.find((item) => item.provider === "circleci");
+  if (!connection?.projectSlug) throw new Error(`Project ${projectId} has no CircleCI connection.`);
+  return { project, connection };
+}
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
 const MAX_TOTAL_LOG_CHARS = 160_000;
@@ -619,13 +633,15 @@ function createServer(env: Env) {
       description: "Read signed CircleCI workflow/job completion events for the fixed Znect Forge project. The initial after=0 read returns the newest events first; pass next_cursor as after on subsequent reads to receive only newer events. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
+        project_id: z.string().min(2).max(63).default("znect-forge"),
         after: z.number().int().min(0).default(0),
         limit: z.number().int().min(1).max(50).default(20)
       }
     },
-    async ({ after, limit }) => {
+    async ({ project_id, after, limit }) => {
       if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
-      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+      const { project } = getCircleCiConnection(env, project_id);
+      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
         .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
       if (!response.ok) throw new Error(`CircleCI event storage is unavailable (HTTP ${response.status}).`);
       const result = await response.json() as Record<string, unknown>;
@@ -665,7 +681,10 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(limit) || limit < 1 || limit > 50) {
         return json({ error: "after must be a non-negative integer and limit must be 1–50." }, 400);
       }
-      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const project = findProject(getProjectRegistry(env), projectId);
+      if (!project) return json({ error: "Unknown Znect project." }, 404);
+      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
         .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
       if (!response.ok) return json({ error: "Event storage is unavailable.", event_store_status: response.status }, 503);
       const result = await response.json();
@@ -899,14 +918,22 @@ async function handleCircleCiWebhook(request: Request, env: Env): Promise<Respon
     return json({ error: "Invalid webhook JSON." }, 400);
   }
   let event;
+  let targetProject: ReturnType<typeof findCircleCiProject>;
   try {
-    event = normalizeCircleCiWebhook(payload, request.headers.get("circleci-event-type"));
+    const registry = getProjectRegistry(env);
+    const acceptedSlugs = new Set(registry.projects.flatMap((project) =>
+      project.connections.filter((connection) => connection.provider === "circleci" && connection.projectSlug)
+        .map((connection) => connection.projectSlug!)
+    ));
+    event = normalizeCircleCiWebhook(payload, request.headers.get("circleci-event-type"), acceptedSlugs);
+    if (event) targetProject = findCircleCiProject(registry, event.project_slug);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid CircleCI webhook event.";
     return json({ error: limitText(message, 300).text }, 400);
   }
   if (!event) return json({ accepted: true, ignored: true, reason: "Unsupported event type or project." }, 202);
-  const stored = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName("znect-forge"))
+  if (!targetProject) return json({ error: "Registered CircleCI project mapping was not found." }, 400);
+  const stored = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(targetProject.project.id))
     .fetch("https://event-store/append", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -921,7 +948,9 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health" && request.method === "GET") {
-      return json({ service: "znect-ci-bridge", status: "ok", project: "Znect-god/znect-forge", mode: "read-only" });
+      let projectCount = 0;
+      try { projectCount = getProjectRegistry(env).projects.length; } catch { /* health remains non-sensitive */ }
+      return json({ service: "znect-ci-bridge", status: "ok", project_count: projectCount, mode: "read-only" });
     }
     if (url.pathname === "/" && request.method === "GET") {
       return new Response(DASHBOARD_HTML, {
