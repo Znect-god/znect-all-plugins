@@ -2,9 +2,10 @@
 
 **Status: `in-development` — experimental; not production-ready.**  
 **Version:** `0.1.0`  
-**Target:** CircleCI Cloud project `gh/Znect-god/znect-forge`.
+**Current provider:** CircleCI Cloud (Forge remains the default registered project).  
+**Architecture:** one Bridge instance with a validated multi-project registry; native Znect Build provider integration is not yet implemented.
 
-Znect CI Bridge is a read-only Cloudflare Worker for inspecting CircleCI runs, workflows, jobs, logs, test results and artifacts. It exposes a Streamable HTTP MCP endpoint, a browser dashboard/JSON API, and a signed CircleCI webhook inbox.
+Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and inspecting provider runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. It exposes a Streamable HTTP MCP endpoint, a browser dashboard/JSON API, and a signed CircleCI webhook inbox.
 
 > **Development notice:** Treat every feature as unverified unless this repository explicitly marks the exact check as passed. Unit tests, mocked API tests, Wrangler dry-runs and synthetic webhook tests do not prove full live integration. Do not use this prototype for production decisions or as the only CI monitoring channel.
 
@@ -48,9 +49,13 @@ All JSON API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
 
 ### Signed CircleCI webhook inbox
 
-CircleCI sends signed events to `POST /webhooks/circleci`. The Worker verifies the HMAC-SHA256 signature, filters the fixed Forge project, normalizes a small field allowlist, deduplicates event IDs and stores events in a SQLite-backed Durable Object. The inbox is readable through `list_recent_events` and `GET /api/v1/events`. Its initial `after=0` read returns the newest events first; the returned cursor then lets clients request only later arrivals.
+CircleCI sends signed events to `POST /webhooks/circleci`. The Worker verifies the HMAC-SHA256 signature, accepts only CircleCI project slugs registered in `ZNECT_PROJECT_REGISTRY` (Forge is the safe default), normalizes a small field allowlist, deduplicates event IDs and stores events in a project-specific SQLite-backed Durable Object. MCP event reads accept `project_id`; the browser API accepts `project_id` as a query parameter. The inbox is readable through `list_recent_events` and `GET /api/v1/events`. Its initial `after=0` read returns the newest events first; the returned cursor then lets clients request only later arrivals.
 
 The inbox does **not** push unsolicited messages into an open ChatGPT conversation. A separate supported polling/delivery mechanism would be needed for proactive assistant notifications.
+
+## Project registry
+
+`ZNECT_PROJECT_REGISTRY` is optional non-secret JSON configuration. When absent, the Bridge loads the backward-compatible Forge-only default. The version-1 schema supports multiple projects, repositories, components, and provider connections (`circleci` and the reserved `znect-build` provider identifier). See [PROJECT_REGISTRY.md](documentation/PROJECT_REGISTRY.md). Registering a `znect-build` connection does not yet make Build API calls; its provider adapter and authentication contract are still pending.
 
 ## Secrets and configuration
 
@@ -89,4 +94,4 @@ Android ARM64 Termux is not a supported Wrangler/workerd deployment environment 
 
 ## Relationship to Znect Forge
 
-The Bridge reads CI data for `Znect-god/znect-forge`. It must not modify Forge source/configuration, trigger or retry builds, or alter Forge release/freeze decisions. Testing should use the next ordinary Forge workflow; do not create unnecessary builds solely to generate an event.
+The Bridge is being generalized to serve multiple Znect projects. The current CircleCI diagnostic tools still use Forge as their default project; project-scoped webhook ingestion and event inbox routing now use the registry. The Bridge must not modify project source/configuration, trigger or retry builds, or alter release/freeze decisions. Testing should use the next ordinary Forge workflow; do not create unnecessary builds solely to generate an event.
