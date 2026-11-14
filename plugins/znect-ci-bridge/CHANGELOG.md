@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.0] - 2026-11-15 npm install-script policy
+### Security
+- Added version-pinned npm `allowScripts` decisions: approved the native-binary validation scripts for `esbuild@0.28.2` and `workerd@1.20261110.1`; explicitly denied the optional support-message script for `core-js-pure@3.51.0`.
+- This is a reviewed least-privilege policy, not blanket permission for dependency lifecycle scripts. Fresh CI validation is pending.
+
+
 ## [0.1.0] - 2026-11-15 CI verification
 ### Validation
 - GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) passed on PR #2 commit `2840dc49c0165b220b69344ff779624a83c03268`, not on the later feature-branch head.
