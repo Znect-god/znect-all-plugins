@@ -34,7 +34,7 @@ See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the ch
 - API v3: `check_connection`, `list_recent_runs`, `get_run_details`, `get_job_details`, `get_job_logs`, `get_job_test_results`, `list_job_artifacts`, `get_job_artifact`, `diagnose_run`.
 - Event inbox: `list_recent_events`.
 
-All project-scoped CircleCI tools accept `project_id` and default to `znect-forge` for backward compatibility. Run lookups verify the run's pipeline belongs to the selected CircleCI project; job operations verify the job's project reference, and run traversal also checks its workflow reference. Missing or mismatched ownership metadata fails closed. All tools are read-only; there are no pipeline trigger, retry, cancel, configuration-write or deployment tools.
+All project-scoped CircleCI tools accept `project_id` and default to `znect-forge` for backward compatibility. Run lookups verify membership in the selected project's paginated runs collection (bounded to 400 recent runs); job operations verify the job detail's project reference, and run traversal also checks its workflow reference. Missing or mismatched ownership metadata fails closed. All tools are read-only; there are no pipeline trigger, retry, cancel, configuration-write or deployment tools.
 
 ### Browser dashboard and JSON API
 
