@@ -12,7 +12,6 @@ import {
   getCircleCiJobTests,
   getCircleCiJobArtifact,
   listCircleCiJobArtifacts,
-  getCircleCiRun,
   getCircleCiRunForProject,
   assertCircleCiJobOwnership,
   listCircleCiJobs,
@@ -261,7 +260,7 @@ function createServer(env: Env) {
 
   // CircleCI API v3 tools are exposed alongside the legacy v1.1 tools.
   // They use UUIDs and never infer a v3 run ID from a legacy build number.
-  // Minimal live connectivity check for the fixed Forge project.
+  // Project-scoped live connectivity check for a registered CircleCI project.
   // Read-only: this tool never starts or changes a pipeline.
   server.registerTool(
     "check_connection",
