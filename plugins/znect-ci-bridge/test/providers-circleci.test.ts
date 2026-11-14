@@ -26,6 +26,7 @@ describe("CircleCI read-only provider adapter", () => {
       .mockResolvedValueOnce(response({
         data: [{
           id: RUN_ID,
+          references: { project: { id: PROJECT_ID } },
           attributes: {
             phase: "ended",
             current_outcome: "failed",
@@ -185,11 +186,11 @@ describe("CircleCI read-only provider adapter", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(projectResponse())
       .mockResolvedValueOnce(response({
-        data: [{ id: RUN_ID }],
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }],
         page: { next: null }
       }))
       .mockResolvedValueOnce(response({
-        data: { id: RUN_ID, attributes: { status: "success" } }
+        data: { id: RUN_ID, attributes: { status: "success" }, references: { project: { id: PROJECT_ID } } }
       }))
       .mockResolvedValueOnce(response({
         data: [{
