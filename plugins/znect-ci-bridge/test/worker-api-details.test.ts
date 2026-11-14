@@ -132,6 +132,57 @@ describe("Read-only browser API run details", () => {
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
+  it("marks run details incomplete when a workflow has more than 40 jobs", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174000";
+    const jobs = Array.from({ length: 41 }, (_, index) => ({
+      id: `123e4567-e89b-42d3-a456-${String(index + 100).padStart(12, "0")}`,
+      attributes: { name: `job-${index + 1}`, phase: "completed", outcome: "success" },
+      references: { project: { id: projectId }, workflow: { id: workflowId } }
+    }));
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/api/v3/projects") {
+        return new Response(JSON.stringify({ data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/runs") {
+        return new Response(JSON.stringify({ data: [{ id: runId }], page: { next: null } }), { status: 200 });
+      }
+      if (url.pathname === `/api/v3/runs/${runId}`) {
+        return new Response(JSON.stringify({ data: { id: runId, attributes: { phase: "ended", current_outcome: "succeeded" } } }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/workflows") {
+        return new Response(JSON.stringify({
+          data: [{ id: workflowId, references: { run: { id: runId } }, attributes: { name: "build", phase: "ended", outcome: "success" } }],
+          page: { next: null }
+        }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/jobs") {
+        return new Response(JSON.stringify({ data: jobs }), { status: 200 });
+      }
+      throw new Error("Unexpected upstream request: " + url.pathname);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request(`https://bridge.example/api/v1/runs/${runId}`, {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      env,
+      ctx
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      workflows: Array<{ jobs: unknown[]; jobs_total: number; jobs_truncated: boolean }>;
+      diagnostics_summary: { jobs_truncated: boolean; incomplete: boolean };
+    };
+    expect(body.workflows[0].jobs).toHaveLength(40);
+    expect(body.workflows[0].jobs_total).toBe(41);
+    expect(body.workflows[0].jobs_truncated).toBe(true);
+    expect(body.diagnostics_summary.jobs_truncated).toBe(true);
+    expect(body.diagnostics_summary.incomplete).toBe(true);
+  });
+
   it("returns a sanitized upstream error when CircleCI rejects run-detail access", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ message: "private upstream detail" }), { status: 401 })
