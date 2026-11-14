@@ -226,7 +226,6 @@ describe("CircleCI read-only provider adapter", () => {
           },
           attributes: { phase: "ended", outcome: "failed" }
         }],
-        page: { next: null }
       }));
     vi.stubGlobal("fetch", fetchMock);
     const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
