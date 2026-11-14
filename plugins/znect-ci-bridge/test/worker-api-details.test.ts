@@ -59,10 +59,11 @@ describe("Read-only browser API run details", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     await expect(response.json()).resolves.toMatchObject({
-      run: { id: runId, attributes: { status: "success" } },
+      project: { id: "znect-forge", provider: "circleci" },
+      run: { id: runId, projectId: "znect-forge", status: "success" },
       workflows: [{
-        workflow: { id: workflowId, attributes: { name: "build-and-test" } },
-        jobs: [{ id: jobId, attributes: { name: "unit-tests" } }],
+        workflow: { id: workflowId, runId, name: "build-and-test", status: "success" },
+        jobs: [{ id: jobId, projectId: "znect-forge", runId, workflowId, name: "unit-tests", status: "success" }],
         jobs_total: 1
       }],
       diagnostics_summary: {
@@ -175,6 +176,8 @@ describe("Read-only browser API run details", () => {
     expect(body).toContain("AssertionError");
     expect(body).toContain("Test suite failed");
     expect(body).toContain("sample test");
+    expect(body).toContain('"provider":"circleci"');
+    expect(body).toContain('"failed_steps"');
     expect(body).toContain("[REDACTED]");
     expect(body).not.toContain("web-test-token");
     expect(JSON.parse(body).diagnostics_summary.incomplete).toBe(false);
