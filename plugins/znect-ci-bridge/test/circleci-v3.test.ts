@@ -159,6 +159,28 @@ describe("CircleCI API v3 client", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("filter%5Bproject_id%5D=" + PROJECT_ID);
   });
 
+  it("rejects project-scoped run collection entries with a mismatched project reference", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: RUN_ID, references: { project: { id: WORKFLOW_ID } } }],
+      page: { next: null }
+    }), { status: 200 })));
+    await expect(listCircleCiRuns("token", PROJECT_ID, 10))
+      .rejects.toThrow("does not belong to the selected project");
+  });
+
+  it("rejects a run detail whose project reference differs from the verified collection", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }],
+        page: { next: null }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: RUN_ID, references: { project: { id: WORKFLOW_ID } } }
+      }), { status: 200 })));
+    await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
+      .rejects.toThrow("does not belong to the selected project");
+  });
+
   it("rejects runs absent from the selected project-scoped collection", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       data: [{ id: WORKFLOW_ID, references: { project: { id: PROJECT_ID } } }], page: { next: null }
