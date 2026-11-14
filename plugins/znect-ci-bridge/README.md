@@ -71,6 +71,11 @@ Never commit or disclose secret values. Configure secrets in the correct environ
 
 Preview and Production secrets are independent. The current Preview workflow installs `CIRCLECI_WEBHOOK_SECRET` from the GitHub Actions secret into the named Preview. Do not infer that Production has any of these secrets.
 
+
+### Dependency install-script policy
+
+The npm `allowScripts` policy is intentionally version-pinned: `esbuild@0.28.2` and `workerd@1.20261110.1` are approved because their install scripts validate/select the platform binaries used by the Wrangler toolchain. `core-js-pure@3.51.0` is explicitly denied because its postinstall is only an optional project-support message. Review and update these pins when dependency versions change; do not approve all dependency scripts globally. The policy change still requires a fresh CI run on the updated branch head.
+
 ## Development
 
 Use Node.js 24 on a supported desktop/Linux environment:
