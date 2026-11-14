@@ -275,7 +275,7 @@ function createServer(env: Env) {
       return { content: [{ type: "text", text: JSON.stringify({
         connected: true,
         provider: "CircleCI Cloud API v3",
-        project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug },
+        project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug },
         permissions: "read-only"
       }, null, 2) }] };
     }
@@ -292,7 +292,7 @@ function createServer(env: Env) {
       const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
       const payload = JSON.stringify({
-        project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug },
+        project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug },
         runs
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
@@ -321,7 +321,7 @@ function createServer(env: Env) {
         };
       }));
       const payload = JSON.stringify({
-        project: { id: registryProject.id, name: registryProject.name },
+        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowResults,
         truncated: workflows.length > 10
@@ -651,9 +651,7 @@ function createServer(env: Env) {
 
       const workflowLimitReached = workflows.length > workflowsInspected.length;
       const safePayload = redactKnownSecrets(JSON.stringify({
-        project: { id: registryProject.id, name: registryProject.name },
-        project: { id: registryProject.id, name: registryProject.name },
-        project: { id: registryProject.id, name: registryProject.name },
+        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
@@ -748,7 +746,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const projectId = url.searchParams.get("project_id") ?? "znect-forge";
       const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
       const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug }, permissions: "read-only" });
+      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug }, permissions: "read-only" });
     }
     if (url.pathname === "/api/v1/runs") {
       const rawLimit = url.searchParams.get("limit");
@@ -758,7 +756,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
       const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
-      const safe = redactKnownSecrets(JSON.stringify({ project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug }, runs }), env);
+      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, registry_project_id: registryProject.id, name: registryProject.name, slug: project.attributes?.slug ?? connection.projectSlug }, runs }), env);
       return boundedJson(safe, 100_000);
     }
     const segments = url.pathname.split("/");
@@ -907,7 +905,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       }
 
       const safePayload = redactKnownSecrets(JSON.stringify({
-        project: { id: registryProject.id, name: registryProject.name },
+        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
@@ -940,7 +938,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         return { workflow, jobs: jobs.slice(0, 40), jobs_total: jobs.length };
       }));
       const safe = redactKnownSecrets(JSON.stringify({
-        project: { id: registryProject.id, name: registryProject.name },
+        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
