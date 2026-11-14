@@ -62,11 +62,15 @@ The registry is non-secret routing metadata. Never place API tokens, webhook sig
 - Project IDs and component IDs are stable lowercase identifiers.
 - A project may own multiple repositories and components.
 - A repository may be mapped to a component; multiple components may refer to the same repository for monorepo layouts.
-- CircleCI connections require a unique provider-native `projectSlug`.
+- CircleCI connections require a unique provider-native `projectSlug` (`gh/owner/repository`). The v1.1 and v3 read-only tools resolve the selected project's registered slug rather than using a global Forge constant.
 - `znect-build` is a reserved provider type for the planned native Build adapter. Registry support alone does not implement its API client, event signature, credentials, or diagnostics mapping.
 - Unknown providers, duplicate project IDs, duplicate CircleCI slugs, invalid component references, unsafe path prefixes, malformed JSON, and oversized configuration are rejected.
 - If the variable is absent, a single Forge project registry is loaded to preserve existing behavior.
 
 ## Current integration boundary
 
-The registry currently drives CircleCI webhook allowlisting and project-isolated event inbox routing. The existing CircleCI run, job, logs, test and artifact tools remain Forge-default until project selection and resource-ownership validation are implemented across those operations. Do not infer that a project has live Build connectivity merely because it appears in this registry.
+The registry drives CircleCI webhook allowlisting, project-isolated event inbox routing, and project selection for CircleCI build/run/job/log/test/artifact/diagnostic tools and the read-only browser API. MCP tools accept `project_id`; omitting it retains the `znect-forge` default for compatibility. Browser API endpoints accept `project_id` as a query parameter.
+
+Before returning run diagnostics, the Bridge resolves the run's referenced pipeline with the selected `filter[project_id]` and verifies the pipeline's project reference. Before returning job data, it verifies the job's `references.project.id`; when traversing a run, it also verifies `references.workflow.id`. Missing or mismatched ownership metadata is rejected rather than guessed. This protects against callers supplying a valid UUID belonging to another registered project.
+
+The `znect-build` provider remains a reserved registry identifier only. Do not infer that a project has live Build connectivity merely because it appears in this registry.
