@@ -15,12 +15,13 @@ Znect CI Bridge is a read-only Cloudflare Worker for inspecting CircleCI runs, w
 - Isolated Cloudflare Preview: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`.
 - MCP endpoint: append `/mcp`. CircleCI webhook endpoint: append `/webhooks/circleci`.
 - GitHub Actions run [#43568774133](https://github.com/Znect-god/znect-all-plugins/actions/runs/43568774133) passed the branch validation and isolated Preview workflow, including typecheck/unit tests, Preview deployment, Preview webhook-secret installation, secret-name diagnostics and authenticated read-only smoke test.
-- The smoke test verified live CircleCI API v3 project access, MCP discovery, browser API, synthetic signed webhook acceptance, duplicate suppression, durable storage and retrieval through MCP/browser API.
+- On 2026-11-12, after replacing a CircleCI API token that v3 rejected, live `list_recent_runs` returned three Forge runs and `get_job_details` returned the real `build-0-7-0` job (115 tests, 2 failed). This is verified live API read coverage.
+- The later Preview smoke test verified authenticated MCP discovery/read-only connection and browser API access, plus a **synthetic** signed webhook path, deduplication, durable storage and retrieval. Synthetic delivery is not a real CircleCI workflow delivery.
 - The CircleCI project webhook has since been registered successfully. CircleCI's automatic Add Webhook ping/check was accepted with a 2xx response.
 - **Still pending:** a real CircleCI `workflow-completed` delivery from an ordinary Forge workflow, verification of that event in the durable inbox and retrieval through MCP. The actual event has not yet been confirmed.
 - Production is not deployed or authorized. Do not change Production, `main`, or merge PR #5 without explicit approval.
 
-See [the launch and verification guide](documentation/USAGE_GUIDE.md) for exact steps and current limitations.
+See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks.
 
 ## Capabilities
 
