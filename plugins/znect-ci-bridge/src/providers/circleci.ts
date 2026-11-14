@@ -148,6 +148,8 @@ function mapArtifact(artifact: CircleCiArtifact, jobId: string): CiArtifact | un
 export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
   readonly provider = "circleci" as const;
   private projectPromise?: ReturnType<typeof resolveCircleCiProject>;
+  private readonly runCache = new Map<string, Promise<CiRun>>();
+  private readonly workflowCache = new Map<string, Promise<CiWorkflow[]>>();
 
   constructor(
     private readonly token: string,
@@ -175,15 +177,28 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
   }
 
   async getRun(scope: CiProjectScope, runId: string): Promise<CiRun> {
-    const project = await this.project(scope);
-    const run = await getCircleCiRunForProject(this.token, runId, project.id);
-    return mapRun(run, scope.projectId);
+    this.assertScope(scope);
+    let pending = this.runCache.get(runId);
+    if (!pending) {
+      pending = (async () => {
+        const project = await this.project(scope);
+        const run = await getCircleCiRunForProject(this.token, runId, project.id);
+        return mapRun(run, scope.projectId);
+      })();
+      this.runCache.set(runId, pending);
+    }
+    return pending;
   }
 
   async listWorkflows(scope: CiProjectScope, runId: string): Promise<CiWorkflow[]> {
     await this.getRun(scope, runId);
-    const workflows = await listCircleCiWorkflows(this.token, runId, 2);
-    return workflows.map((workflow) => mapWorkflow(workflow, runId));
+    let pending = this.workflowCache.get(runId);
+    if (!pending) {
+      pending = listCircleCiWorkflows(this.token, runId, 2)
+        .then((workflows) => workflows.map((workflow) => mapWorkflow(workflow, runId)));
+      this.workflowCache.set(runId, pending);
+    }
+    return pending;
   }
 
   async listJobs(scope: CiProjectScope, runId: string, workflowId: string): Promise<CiJob[]> {
