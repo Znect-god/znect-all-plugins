@@ -478,15 +478,14 @@ function createServer(env: Env) {
   server.registerTool(
     "diagnose_run",
     {
-      description: "Automatically inspect one CircleCI run belonging to a selected registered project. Verifies project/run/job ownership before reading logs, tests, or artifacts. Read-only; does not rerun or modify pipelines.",
+      description: "Automatically inspect one run through the selected read-only CI provider adapter. Verifies project, run, workflow and job ownership before reading logs, tests, or artifacts. Read-only; does not rerun or modify pipelines.",
       annotations: { readOnlyHint: true },
       inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), run_id: z.string().uuid() }
     },
     async ({ project_id, run_id }) => {
-      const { project: registryProject, connection } = getCircleCiConnection(env, project_id);
-      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
-      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, run_id, circleProject.id);
-      const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, run_id, 2);
+      const { project: registryProject, scope, adapter } = getCircleCiAdapter(env, project_id);
+      const run = await adapter.getRun(scope, run_id);
+      const workflows = await adapter.listWorkflows(scope, run_id);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
       let failedJobLimitReached = false;
@@ -495,11 +494,8 @@ function createServer(env: Env) {
       const workflowsInspected = workflows.slice(0, 5);
 
       for (const workflow of workflowsInspected) {
-        const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
-        const failedJobs = jobs.filter((job) => {
-          const attributes = job.attributes as Record<string, unknown> | undefined;
-          return attributes?.outcome === "failed" || attributes?.status === "failed";
-        });
+        const jobs = await adapter.listJobs(scope, run_id, workflow.id);
+        const failedJobs = jobs.filter((job) => job.status === "failed" || job.status === "failure");
         const diagnostics: Array<Record<string, unknown>> = [];
 
         for (const job of failedJobs) {
@@ -508,70 +504,56 @@ function createServer(env: Env) {
             break;
           }
           failedJobsInspected++;
-          const attributes = job.attributes as Record<string, unknown> | undefined;
-          const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
-          assertCircleCiJobOwnership(details, circleProject.id, workflow.id);
-          const detailAttributes = details.attributes as Record<string, unknown> | undefined;
-          const executions = Array.isArray(detailAttributes?.parallel_executions)
-            ? detailAttributes.parallel_executions as Array<Record<string, unknown>>
-            : [];
-          const failedSteps = executions.flatMap((execution) => {
-            const steps = Array.isArray(execution.steps) ? execution.steps as Array<Record<string, unknown>> : [];
-            return steps.filter((step) => {
-              const actions = Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [];
-              return actions.some((action) => action.status === "failed" || action.outcome === "failed");
-            }).map((step) => ({
+          const details = await adapter.getJob(scope, job.id);
+          if (details.workflowId !== workflow.id) {
+            throw new Error("CI job does not belong to the selected run workflow.");
+          }
+          const failedSteps = (details.steps ?? [])
+            .filter((step) => step.actions.some((action) =>
+              action.status === "failed" || action.outcome === "failed"
+            ))
+            .map((step) => ({
               name: step.name,
-              execution_index: execution.execution ?? 0,
-              actions: (Array.isArray(step.actions) ? step.actions as Array<Record<string, unknown>> : [])
+              execution_index: step.execution,
+              actions: step.actions
                 .filter((action) => action.status === "failed" || action.outcome === "failed")
                 .map((action) => ({
                   name: action.name,
                   status: action.status,
-                  exit_code: action.exit_code,
-                  step_num: action.step_num
+                  exit_code: action.exitCode,
+                  step_num: action.stepNumber
                 }))
             }));
-          });
 
-          // Include the actual stdout/stderr from failed actions so a single
-          // diagnose_run call contains evidence, not only failure metadata.
           const failedStepLogs: Array<Record<string, unknown>> = [];
           for (const step of failedSteps) {
-            const actions = Array.isArray(step.actions)
-              ? step.actions as Array<Record<string, unknown>>
-              : [];
-            for (const action of actions) {
+            for (const action of step.actions) {
               if (logActionsInspected >= 3) {
                 logActionLimitReached = true;
                 break;
               }
-              const stepNum = action.step_num;
+              const stepNum = action.stepNumber;
               if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) continue;
               logActionsInspected++;
-              const execution = typeof step.execution_index === "number" && Number.isInteger(step.execution_index)
-                ? step.execution_index
-                : 0;
               const output: Record<string, unknown> = {};
               for (const stream of ["stdout", "stderr"] as const) {
                 try {
-                  const result = await getCircleCiJobStepOutput(
-                    env.CIRCLECI_TOKEN,
-                    job.id,
-                    stepNum,
+                  const result = await adapter.getJobLogs(scope, job.id, {
+                    step: stepNum,
+                    execution: step.execution,
                     stream,
-                    execution,
-                    12_000 * 4
-                  );
-                  const redacted = redactKnownSecrets(result.text, env);
-                  output[stream] = limitText(redacted, 12_000, result.truncated).text;
+                    maxBytes: 12_000 * 4
+                  });
+                  output[stream] = limitText(
+                    redactKnownSecrets(result.text, env), 12_000, result.truncated
+                  ).text;
                 } catch {
                   output[stream] = "Unable to retrieve this output stream.";
                 }
               }
               failedStepLogs.push({
                 step_num: stepNum,
-                execution,
+                execution: step.execution,
                 action_name: action.name,
                 stdout: output.stdout,
                 stderr: output.stderr
@@ -583,28 +565,25 @@ function createServer(env: Env) {
           let testResults = "";
           let testResultsError: string | undefined;
           try {
-            const result = await getCircleCiJobTests(env.CIRCLECI_TOKEN, job.id, 200_000);
-            testResults = result.text;
-            if (result.truncated) testResults += "\n[TRUNCATED]";
+            const report = await adapter.getTestReport(scope, job.id, 200_000);
+            testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
           } catch {
             testResultsError = "Unable to retrieve structured test results.";
           }
 
           let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
           try {
-            const listed = await listCircleCiJobArtifacts(env.CIRCLECI_TOKEN, job.id);
-            const reports = listed.filter((artifact) => {
-              const path = artifact.attributes?.path ?? "";
-              const size = artifact.attributes?.size ?? 0;
-              return /(?:junit|test-results).*\.xml$/i.test(path) && size <= 500_000;
-            }).slice(0, 1);
+            const listed = await adapter.listArtifacts(scope, job.id);
+            const reports = listed.filter((artifact) =>
+              /(?:junit|test-results).*\.xml$/i.test(artifact.path) &&
+              (artifact.size ?? 0) <= 500_000
+            ).slice(0, 1);
             for (const artifact of reports) {
-              const path = artifact.attributes?.path ?? "";
               try {
-                const report = await getCircleCiJobArtifact(env.CIRCLECI_TOKEN, job.id, path, 500_000);
-                artifacts.push({ path, size: artifact.attributes?.size, content: report.text });
+                const report = await adapter.getArtifact(scope, job.id, artifact.path, 500_000);
+                artifacts.push({ path: artifact.path, size: artifact.size, content: report.content });
               } catch {
-                artifacts.push({ path, size: artifact.attributes?.size, error: "Unable to retrieve this report artifact." });
+                artifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." });
               }
             }
           } catch {
@@ -613,8 +592,8 @@ function createServer(env: Env) {
 
           diagnostics.push({
             job_id: job.id,
-            name: attributes?.name ?? detailAttributes?.name,
-            outcome: attributes?.outcome ?? attributes?.status,
+            name: job.name ?? details.name,
+            outcome: job.status,
             failed_steps: failedSteps,
             failed_step_logs: failedStepLogs,
             test_results: testResults,
@@ -625,18 +604,16 @@ function createServer(env: Env) {
 
         workflowReports.push({
           workflow_id: workflow.id,
-          workflow_name: (workflow.attributes as Record<string, unknown> | undefined)?.name,
+          workflow_name: workflow.name,
           jobs_total: jobs.length,
           failed_jobs_total: failedJobs.length,
           failed_jobs: diagnostics
         });
-        // Continue scanning the remaining inspected workflows after the third failure.
-        // Only mark the report incomplete when another failed job is actually found.
       }
 
       const workflowLimitReached = workflows.length > workflowsInspected.length;
       const safePayload = redactKnownSecrets(JSON.stringify({
-        project: { id: circleProject.id, registry_project_id: registryProject.id, name: registryProject.name },
+        project: { id: registryProject.id, name: registryProject.name, provider: adapter.provider },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
