@@ -69,7 +69,7 @@ The registry is non-secret routing metadata. Never place API tokens, webhook sig
 
 ## Current integration boundary
 
-The registry drives CircleCI webhook allowlisting, project-isolated event inbox routing, and project selection for CircleCI build/run/job/log/test/artifact/diagnostic tools and the read-only browser API. MCP tools accept `project_id`; omitting it retains the `znect-forge` default for compatibility. Browser API endpoints accept `project_id` as a query parameter.
+The registry drives CircleCI webhook allowlisting, project-isolated event inbox routing, and project selection for CircleCI build/run/job/log/test/artifact/diagnostic tools and the read-only browser API. MCP tools accept `project_id`; omitting it retains the `znect-forge` default for compatibility. Browser API endpoints accept `project_id` as a query parameter. Each inbox retains at most 500 event records, while a separate replay-key table keeps event IDs for up to 30 days so duplicate deliveries remain detectable after an event leaves the visible history.
 
 Before returning run diagnostics, the Bridge verifies run membership by searching the selected project's documented `filter[project_id]` runs collection, bounded to 400 recent runs. Runs older than this verification window fail closed rather than being fetched by an unscoped UUID alone. Before returning job data, it verifies the detail resource's `references.project.id`; when a job is inspected as part of a run, it also verifies `references.workflow.id`. Missing or mismatched ownership metadata is rejected rather than guessed. This protects against callers supplying a valid UUID belonging to another registered project.
 
