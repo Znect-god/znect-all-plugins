@@ -30,11 +30,14 @@ describe("Read-only browser API run details", () => {
             attributes: {
               phase: "completed",
               current_outcome: "failed",
-              branch: "feature/example",
-              vcs_revision: "abc123",
-              subject: "Fix CI diagnostics",
-              start_time: "2026-11-15T10:00:00Z",
-              stop_time: "2026-11-15T10:05:00Z"
+              created_at: "2026-11-15T10:00:00Z"
+            },
+            references: {
+              event: { attributes: { vcs: {
+                branch: "feature/example",
+                revision: "abc123",
+                commit: { subject: "Fix CI diagnostics" }
+              } } }
             }
           }],
           page: { next: null }
@@ -82,18 +85,18 @@ describe("Read-only browser API run details", () => {
       }
       if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({
-          data: { id: runId, attributes: { status: "success", pipeline_number: 42 } }
+          data: { id: runId, attributes: { phase: "ended", current_outcome: "succeeded", number: 42 } }
         }), { status: 200 });
       }
       if (url.pathname === "/api/v3/workflows") {
         return new Response(JSON.stringify({
-          data: [{ id: workflowId, references: { run: { id: runId } }, attributes: { name: "build-and-test", status: "success" } }],
+          data: [{ id: workflowId, references: { run: { id: runId } }, attributes: { name: "build-and-test", phase: "ended", outcome: "success" } }],
           page: { next: null }
         }), { status: 200 });
       }
       if (url.pathname === "/api/v3/jobs") {
         return new Response(JSON.stringify({
-          data: [{ id: jobId, attributes: { name: "unit-tests", status: "success" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
+          data: [{ id: jobId, attributes: { name: "unit-tests", phase: "completed", outcome: "success" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
           page: { next: null }
         }), { status: 200 });
       }
@@ -167,18 +170,18 @@ describe("Read-only browser API run details", () => {
       }
       if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({
-          data: { id: runId, attributes: { status: "failed", pipeline_number: 43 } }
+          data: { id: runId, attributes: { phase: "ended", current_outcome: "failed", number: 43 } }
         }), { status: 200 });
       }
       if (url.pathname === "/api/v3/workflows") {
         return new Response(JSON.stringify({
-          data: [{ id: workflowId, references: { run: { id: runId } }, attributes: { name: "build-and-test", status: "failed" } }],
+          data: [{ id: workflowId, references: { run: { id: runId } }, attributes: { name: "build-and-test", phase: "ended", outcome: "failed" } }],
           page: { next: null }
         }), { status: 200 });
       }
       if (url.pathname === "/api/v3/jobs") {
         return new Response(JSON.stringify({
-          data: [{ id: jobId, attributes: { name: "unit-tests", outcome: "failed" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
+          data: [{ id: jobId, attributes: { name: "unit-tests", phase: "completed", outcome: "failed" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
           page: { next: null }
         }), { status: 200 });
       }
