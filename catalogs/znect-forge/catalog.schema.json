@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Znect-god/znect-all-plugins/blob/catalog/znect-forge/catalogs/znect-forge/catalog.schema.json",
+  "title": "Znect Forge Module Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "catalog_id", "catalog_version", "modules"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "catalog_id": { "const": "znect-forge" },
+    "catalog_version": { "type": "integer", "minimum": 1 },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "version", "status", "description", "platforms", "dependencies", "permissions", "package", "sha256"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["prototype", "in-development", "testing", "stable", "deprecated"] },
+          "description": { "type": "string" },
+          "platforms": { "type": "array", "items": { "type": "string" } },
+          "dependencies": { "type": "array", "items": { "type": "string" } },
+          "permissions": { "type": "array", "items": { "type": "string" } },
+          "package": { "type": "string", "format": "uri" },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "min_forge_version": { "type": ["string", "null"] },
+          "changelog": { "type": ["string", "null"], "format": "uri" }
+        }
+      }
+    }
+  }
+}
