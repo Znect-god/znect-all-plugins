@@ -393,10 +393,12 @@ describe("Worker HTTP boundary", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       connected: true,
+      provider: "circleci",
       permissions: "read-only",
-      project: { id: projectId, slug: "gh/Znect-god/znect-forge" }
+      project: { id: "znect-forge", name: "Znect Forge" },
+      read_probe: { recent_runs_available: 0 }
     });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("returns recent CircleCI runs through the authenticated API", async () => {
@@ -420,8 +422,8 @@ describe("Worker HTTP boundary", () => {
     );
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      project: { id: projectId },
-      runs: [{ id: runId, attributes: { status: "success" } }]
+      project: { id: "znect-forge", provider: "circleci" },
+      runs: [{ id: runId, projectId: "znect-forge", status: "success" }]
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
