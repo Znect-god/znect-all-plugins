@@ -56,6 +56,12 @@ function getCircleCiConnection(env: Env, projectId: string) {
   if (!connection?.projectSlug) throw new Error(`Project ${projectId} has no CircleCI connection.`);
   return { project, connection };
 }
+
+function circleCiV1ProjectPath(projectSlug: string): string {
+  const match = /^(?:gh|github)\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/.exec(projectSlug);
+  if (!match) throw new Error("Invalid registered CircleCI project slug.");
+  return `/project/github/${match[1]}/${match[2]}`;
+}
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
 const MAX_TOTAL_LOG_CHARS = 160_000;
@@ -125,12 +131,14 @@ function createServer(env: Env) {
   server.registerTool(
     "list_recent_builds",
     {
-      description: "Read the latest CircleCI job runs for the fixed GitHub project Znect-god/znect-forge. Read-only; returns branch, status, build number, commit and build URL. Limit 1–30.",
+      description: "Read the latest CircleCI v1.1 job runs for one registered Znect project. Read-only; returns branch, status, build number, commit and build URL. Limit 1–30.",
       annotations: { readOnlyHint: true },
-      inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), limit: z.number().int().min(1).max(30).default(10) }
     },
-    async ({ limit }) => {
-      const builds = await circleGet<unknown[]>(env.CIRCLECI_TOKEN, `${PROJECT_PATH}?limit=${limit}`);
+    async ({ project_id, limit }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const projectPath = circleCiV1ProjectPath(connection.projectSlug!);
+      const builds = await circleGet<unknown[]>(env.CIRCLECI_TOKEN, `${projectPath}?limit=${limit}`);
       const result = builds.slice(0, limit).map((item: any) => ({
         build_num: item.build_num,
         status: item.status,
@@ -149,12 +157,14 @@ function createServer(env: Env) {
   server.registerTool(
     "get_build_details",
     {
-      description: "Read detailed metadata and step/action statuses for one CircleCI build of Znect-god/Znect-forge. Does not retrieve console output.",
+      description: "Read detailed metadata and step/action statuses for one build in a selected registered Znect project. Does not retrieve console output.",
       annotations: { readOnlyHint: true },
-      inputSchema: { build_num: z.number().int().min(1) }
+      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), build_num: z.number().int().min(1) }
     },
-    async ({ build_num }) => {
-      const build = await circleGet<any>(env.CIRCLECI_TOKEN, `${PROJECT_PATH}/${buildNumber(build_num)}`);
+    async ({ project_id, build_num }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const projectPath = circleCiV1ProjectPath(connection.projectSlug!);
+      const build = await circleGet<any>(env.CIRCLECI_TOKEN, `${projectPath}/${buildNumber(build_num)}`);
       const steps = (build.steps ?? []).map((step: any, index: number) => ({
         step_index: index,
         name: step.name,
@@ -190,13 +200,16 @@ function createServer(env: Env) {
       description: "Read console output for a CircleCI build step/action. Fetches the presigned output URL returned by CircleCI; never accepts arbitrary URLs. Output is bounded to 80,000 characters per action and 160,000 characters total per response; at most 10 actions are fetched to remain within Worker subrequest limits.",
       annotations: { readOnlyHint: true },
       inputSchema: {
+        project_id: z.string().min(2).max(63).default("znect-forge"),
         build_num: z.number().int().min(1),
         step_index: z.number().int().min(0).optional(),
         max_actions: z.number().int().min(1).max(10).default(10)
       }
     },
-    async ({ build_num, step_index, max_actions }) => {
-      const build = await circleGet<any>(env.CIRCLECI_TOKEN, `${PROJECT_PATH}/${buildNumber(build_num)}`);
+    async ({ project_id, build_num, step_index, max_actions }) => {
+      const { connection } = getCircleCiConnection(env, project_id);
+      const projectPath = circleCiV1ProjectPath(connection.projectSlug!);
+      const build = await circleGet<any>(env.CIRCLECI_TOKEN, `${projectPath}/${buildNumber(build_num)}`);
       const selected = (build.steps ?? [])
         .map((step: any, index: number) => ({ step, index }))
         .filter(({ index }: { index: number }) => step_index === undefined || index === step_index);
