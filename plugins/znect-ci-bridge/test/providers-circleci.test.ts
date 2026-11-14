@@ -142,7 +142,8 @@ describe("CircleCI read-only provider adapter", () => {
           status: "failed",
           outcome: "failed",
           exitCode: 1,
-          stepNumber: 4
+          stepNumber: 4,
+          isInsignificant: false
         }]
       }]
     });
@@ -159,7 +160,10 @@ describe("CircleCI read-only provider adapter", () => {
             name: "parallel-tests",
             parallel_executions: [
               { steps: [{ name: "worker zero", num: 0, phase: "completed", type: "run", is_insignificant: false, outcome: "success" }] },
-              { steps: [{ name: "worker one", num: 7, phase: "completed", type: "run", is_insignificant: false, outcome: "failed", exit_code: 1 }] }
+              { steps: [
+                { name: "worker one", num: 7, phase: "completed", type: "run", is_insignificant: false, outcome: "failed", exit_code: 1 },
+                { name: "allowed cleanup", num: 8, phase: "completed", type: "run", is_insignificant: true, outcome: "failed", exit_code: 1 }
+              ] }
             ]
           }
         }
@@ -168,7 +172,10 @@ describe("CircleCI read-only provider adapter", () => {
     await expect(adapter.getJob(scope, JOB_ID)).resolves.toMatchObject({
       steps: [
         { execution: 0, actions: [{ stepNumber: 0, status: "success" }] },
-        { execution: 1, actions: [{ stepNumber: 7, status: "failed", exitCode: 1 }] }
+        { execution: 1, actions: [
+          { stepNumber: 7, status: "failed", exitCode: 1, isInsignificant: false },
+          { stepNumber: 8, status: "failed", exitCode: 1, isInsignificant: true }
+        ] }
       ]
     });
   });
