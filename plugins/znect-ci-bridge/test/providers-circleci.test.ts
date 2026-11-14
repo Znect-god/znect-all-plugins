@@ -44,7 +44,7 @@ describe("CircleCI read-only provider adapter", () => {
     await expect(adapter.listRuns(scope, 10)).resolves.toEqual([{
       id: RUN_ID,
       projectId: "znect-forge",
-      status: "completed",
+      status: "failed",
       branch: "main",
       commitSha: "abc123",
       commitMessage: "Fix tests",
