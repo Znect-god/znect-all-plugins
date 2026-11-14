@@ -18,7 +18,8 @@
 - Added `GET /api/v1/diagnostics/{run_uuid}` to expose bounded failed-step stdout/stderr, structured test results, and one small JUnit/test-results XML artifact per failed job. It uses the same fixed CircleCI project, GET-only API adapter, secret redaction, and inspection limits as the MCP diagnostic tool.
 - Added a regression test covering a failed run, log retrieval, structured test results, and redaction of the configured browser token.
 - Added the private Forge inbox issue #8.
-- Added a private Forge report collector script for repository state and GitHub Actions run/job diagnostics, including bounded failed-job log downloads and secret redaction.\n- Added a Draft PR #9 with an on-demand workflow that gathers GitHub Actions and CircleCI reports and stores them only as private artifacts.
+- Added a private Forge report collector script for repository state and GitHub Actions run/job diagnostics, including bounded failed-job log downloads and secret redaction.
+- Added a Draft PR #9 with an on-demand workflow that gathers GitHub Actions and CircleCI reports and stores them only as private artifacts.
 
 ## One-time setup and activation
 
@@ -47,4 +48,4 @@
 
 ## Known limitations
 
-The first on-demand workflow report currently contains run summaries, workflow/job metadata, event inbox data, and diagnostics. It does not trigger builds or alter repository state. The current implementation is Preview-only and cannot be called directly by ChatGPT; the private GitHub artifact is the intended bridge between the Worker and ChatGPT's existing GitHub integration.
+The on-demand report is designed to contain repository metadata, branches, recent commits, open PRs/issues, recent GitHub Actions runs and failed-job logs, CircleCI run summaries and bounded failed-step diagnostics, plus webhook events. It does not trigger builds or alter repository state. The current implementation is Preview-only and cannot be called directly by ChatGPT; the private GitHub artifact is the intended bridge between the Worker and ChatGPT's existing GitHub integration.
