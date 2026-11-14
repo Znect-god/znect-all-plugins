@@ -24,7 +24,7 @@ Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and in
 - Companion private Forge Draft PR [#9](https://github.com/Znect-god/znect-forge/pull/9) adds the free on-demand ChatGPT channel and collects repository branches, commits, open PRs/issues, GitHub Actions statuses and bounded failed-job logs alongside this Bridge's CircleCI report. The report collector is not yet activated; it still needs review/merge and the private `ZNECT_CI_BRIDGE_WEB_TOKEN` Actions secret.
 - Production is not deployed or authorized. Do not change Production, `main`, or merge PR #5 without explicit approval.
 
-See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks. The proposed [Znect Build API contract](documentation/ZNECT_BUILD_API_CONTRACT.md) defines the future read-only integration boundary; it is a proposal, not an existing endpoint specification. The intended free ChatGPT access path is documented in [ASSISTANT_CHANNEL.md](documentation/ASSISTANT_CHANNEL.md).
+See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks. The [provider adapter architecture](documentation/PROVIDER_ADAPTERS.md) describes the implemented CircleCI adapter and remaining migration. The proposed [Znect Build API contract](documentation/ZNECT_BUILD_API_CONTRACT.md) defines the future read-only integration boundary; it is a proposal, not an existing endpoint specification. The intended free ChatGPT access path is documented in [ASSISTANT_CHANNEL.md](documentation/ASSISTANT_CHANNEL.md).
 
 ## Capabilities
 
