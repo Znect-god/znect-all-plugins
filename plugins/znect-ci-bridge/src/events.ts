@@ -174,6 +174,18 @@ export class BuildEventStore {
       )
     `);
     this.sql.exec("CREATE INDEX IF NOT EXISTS build_events_happened_at ON build_events(happened_at)");
+    // Keep replay keys independently of the bounded event-history window.
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS seen_event_ids (
+        event_id TEXT PRIMARY KEY,
+        happened_at TEXT NOT NULL
+      )
+    `);
+    this.sql.exec("CREATE INDEX IF NOT EXISTS seen_event_ids_happened_at ON seen_event_ids(happened_at)");
+    // Preserve deduplication for events that were retained before this schema was introduced.
+    this.sql.exec(
+      "INSERT OR IGNORE INTO seen_event_ids (event_id, happened_at) SELECT event_id, happened_at FROM build_events"
+    );
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -190,7 +202,11 @@ export class BuildEventStore {
           typeof event.project_slug !== "string" || !PROJECT_SLUG_RE.test(event.project_slug) || !Number.isFinite(Date.parse(event.happened_at))) {
         return Response.json({ error: "Invalid normalized event." }, { status: 400 });
       }
-      const existing = this.sql.exec("SELECT seq FROM build_events WHERE event_id = ?", event.id).toArray();
+      const existing = this.sql.exec(
+        "SELECT event_id FROM seen_event_ids WHERE event_id = ? UNION SELECT event_id FROM build_events WHERE event_id = ?",
+        event.id,
+        event.id
+      ).toArray();
       if (existing.length > 0) return Response.json({ accepted: true, duplicate: true });
       this.sql.exec(
         "INSERT INTO build_events (event_id, happened_at, event_json) VALUES (?, ?, ?)",
@@ -198,8 +214,14 @@ export class BuildEventStore {
         event.happened_at,
         JSON.stringify(event)
       );
+      this.sql.exec(
+        "INSERT OR IGNORE INTO seen_event_ids (event_id, happened_at) VALUES (?, ?)",
+        event.id,
+        event.happened_at
+      );
       const cutoff = new Date(Date.now() - MAX_EVENT_AGE_MS).toISOString();
       this.sql.exec("DELETE FROM build_events WHERE happened_at < ?", cutoff);
+      this.sql.exec("DELETE FROM seen_event_ids WHERE happened_at < ?", cutoff);
       this.sql.exec(
         "DELETE FROM build_events WHERE seq NOT IN (SELECT seq FROM build_events ORDER BY seq DESC LIMIT ?)",
         MAX_EVENTS
