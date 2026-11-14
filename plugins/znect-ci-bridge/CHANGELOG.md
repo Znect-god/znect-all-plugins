@@ -2,9 +2,9 @@
 
 ## [0.1.0] - 2026-11-15 CI verification
 ### Validation
-- GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) validated feature-branch HEAD `e1b5438f96503536fd33fd0b08a3df4d056f1e56` through PR #2.
-- Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, all 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed.
-- Recorded the non-fatal npm `allowScripts` warning for `core-js-pure`, `esbuild` and `workerd` for follow-up review. No Worker deployment occurred.
+- GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) passed on PR #2 commit `2840dc49c0165b220b69344ff779624a83c03268`, not on the later feature-branch head.
+- Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed for that earlier commit.
+- The install emitted a non-fatal npm `allowScripts` warning for `core-js-pure`, `esbuild` and `workerd`. The subsequent compatibility-test changes and current branch head remain unverified by this run. No Worker deployment occurred.
 
 
 ## [0.1.0] - 2026-11-15 compatibility follow-up
