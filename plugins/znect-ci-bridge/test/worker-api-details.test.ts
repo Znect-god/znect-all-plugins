@@ -99,7 +99,7 @@ describe("Read-only browser API run details", () => {
       expect(init?.method).toBe("GET");
       expect(new Headers(init?.headers).get("authorization")).toBe("Bearer circle-test-token");
 
-      if (url.pathname === \`/api/v3/runs/\${runId}\`) {
+      if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({
           data: { id: runId, attributes: { status: "failed", pipeline_number: 43 } }
         }), { status: 200 });
@@ -116,7 +116,7 @@ describe("Read-only browser API run details", () => {
           page: { next: null }
         }), { status: 200 });
       }
-      if (url.pathname === \`/api/v3/jobs/\${jobId}\`) {
+      if (url.pathname === `/api/v3/jobs/${jobId}`) {
         return new Response(JSON.stringify({
           data: {
             id: jobId,
@@ -133,16 +133,16 @@ describe("Read-only browser API run details", () => {
           }
         }), { status: 200 });
       }
-      if (url.pathname === \`/api/v3/jobs/\${jobId}/stdout\`) {
+      if (url.pathname === `/api/v3/jobs/${jobId}/stdout`) {
         return new Response("Authorization: Bearer web-test-token\nAssertionError: expected 1 to equal 2", { status: 200 });
       }
-      if (url.pathname === \`/api/v3/jobs/\${jobId}/stderr\`) {
+      if (url.pathname === `/api/v3/jobs/${jobId}/stderr`) {
         return new Response("Test suite failed", { status: 200 });
       }
-      if (url.pathname === \`/api/v3/jobs/\${jobId}/tests\`) {
+      if (url.pathname === `/api/v3/jobs/${jobId}/tests`) {
         return new Response('{"name":"sample test","result":"failure"}\n', { status: 200 });
       }
-      if (url.pathname === \`/api/v3/jobs/\${jobId}/artifacts\`) {
+      if (url.pathname === `/api/v3/jobs/${jobId}/artifacts`) {
         return new Response(JSON.stringify({ data: [] }), { status: 200 });
       }
       throw new Error("Unexpected upstream request: " + url.pathname);
@@ -150,7 +150,7 @@ describe("Read-only browser API run details", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await worker.fetch(
-      new Request(\`https://bridge.example/api/v1/diagnostics/\${runId}\`, {
+      new Request(`https://bridge.example/api/v1/diagnostics/${runId}`, {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
