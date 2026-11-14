@@ -300,7 +300,7 @@ describe("legacy CircleCI v1.1 compatibility tools", () => {
 
     expect(result).toMatchObject({
       build_num: 42,
-      actions: [{ step_index: 0, step_name: "Run tests", action_name: "vitest", output: "test failed\\n" }]
+      actions: [{ step_index: 0, step_name: "Run tests", action_name: "vitest", output: "test failed\n" }]
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toBe("https://circleci.com/api/v1.1/project/github/Znect-god/znect-forge/42");
