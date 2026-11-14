@@ -169,7 +169,7 @@ describe("CircleCI read-only provider adapter", () => {
     const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
 
     await expect(adapter.listJobs(scope, RUN_ID, WORKFLOW_ID))
-      .rejects.toThrow("does not belong to the selected project and workflow");
+      .rejects.toThrow("does not belong to the selected run workflow");
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
