@@ -34,6 +34,7 @@ interface Env {
   };
 }
 
+const PROJECT_SLUG = "gh/Znect-god/znect-forge";
 const PROJECT_PATH = "/project/github/Znect-god/znect-forge";
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
@@ -240,11 +241,11 @@ function createServer(env: Env) {
       inputSchema: z.object({})
     },
     async (_args) => {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
       return { content: [{ type: "text", text: JSON.stringify({
         connected: true,
         provider: "CircleCI Cloud API v3",
-        project: { id: project.id, slug: project.attributes?.slug },
+        project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG },
         permissions: "read-only"
       }, null, 2) }] };
     }
@@ -257,10 +258,10 @@ function createServer(env: Env) {
       inputSchema: { limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ limit }) => {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
       const payload = JSON.stringify({
-        project: { id: project.id, slug: project.attributes?.slug ?? "gh/Znect-god/znect-forge" },
+        project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG },
         runs
       }, null, 2);
       const safe = redactKnownSecrets(payload, env);
@@ -632,16 +633,16 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
   const url = new URL(request.url);
   try {
     if (url.pathname === "/api/v1/status") {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
-      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, slug: project.attributes?.slug }, permissions: "read-only" });
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
+      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG }, permissions: "read-only" });
     }
     if (url.pathname === "/api/v1/runs") {
       const rawLimit = url.searchParams.get("limit");
       const limit = rawLimit === null ? 10 : Number(rawLimit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 30) return json({ error: "limit must be an integer between 1 and 30." }, 400);
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, "gh/Znect-god/znect-forge");
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
-      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, slug: project.attributes?.slug ?? "gh/Znect-god/znect-forge" }, runs }), env);
+      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG }, runs }), env);
       return boundedJson(safe, 100_000);
     }
     const segments = url.pathname.split("/");

@@ -106,7 +106,7 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("CircleCI API response exceeded the configured size limit.");
   });
 
-  it("resolves only one project and validates the returned project UUID and slug", async () => {
+  it("resolves one project by slug and validates its returned UUID", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       data: [{ id: PROJECT_ID, attributes: { slug: "gh/Znect-god/znect-forge" } }]
     }), { status: 200 }));
@@ -117,7 +117,7 @@ describe("CircleCI API v3 client", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("filter%5Bslug%5D=gh%2FZnect-god%2Fznect-forge");
   });
 
-  it("rejects zero, multiple, or mismatched project resolutions", async () => {
+  it("rejects zero, multiple, or explicitly mismatched project resolutions", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -137,7 +137,7 @@ describe("CircleCI API v3 client", () => {
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
       .rejects.toThrow("did not match the configured slug");
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
-      .rejects.toThrow("did not match the configured slug");
+      .resolves.toMatchObject({ id: PROJECT_ID });
   });
 
   it("paginates runs using opaque cursors and caps the result at 30", async () => {

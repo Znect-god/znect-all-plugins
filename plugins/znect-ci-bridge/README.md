@@ -106,6 +106,10 @@ Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub 
 
 GitHub Actions validates each pull-request revision with dependency installation, npm audit, TypeScript typecheck, unit tests, smoke-test syntax validation, and a Wrangler Worker bundle dry-run. Consult the [PR checks](https://github.com/Znect-god/znect-all-plugins/pull/2) for the status of the current revision. These checks validate source code only; Wrangler dry-run does not deploy a Worker. The latest explicitly confirmed Cloudflare Preview deployment remains the older commit `51ea70791fa1f2862095653dd4ffd6a4664f5d3e` (2026-11-12 11:14 UTC), with alias URL `https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev` and immutable deployment URL `https://0cf637e9-znect-ci-bridge.znect699.workers.dev`. The current branch head has not been independently deployed to Preview. No Production deployment has been performed. No live CircleCI token or API request has been used, so CircleCI authentication, project resolution, and end-to-end MCP access remain unverified.
 
+### Current verification note (2026-11-14)
+
+The current test branch revision `bbd47ac426c25ce7d0c2debd19f7ef4a610d02f2` passed GitHub Actions typecheck, unit tests, and Wrangler dry-run. Its pull-request event did **not** run the named Preview deployment or authenticated smoke test: those steps are intentionally skipped for pull-request events. A push to `test/ci-bridge-live-preview-smoke` runs the isolated Preview deployment and then the read-only smoke test, provided the required GitHub Actions and Cloudflare Preview secrets are configured. A successful Cloudflare Workers Build check alone is not proof that the live CircleCI connection works. Production deployment remains separate and is not performed by this workflow.
+
 ## Known limitations
 
 - In development; not production-ready.

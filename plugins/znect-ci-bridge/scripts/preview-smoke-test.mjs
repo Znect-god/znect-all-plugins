@@ -18,7 +18,7 @@
  */
 
 const PREVIEW_ORIGIN =
-  "https://feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev";
+  "https://feature-ci-bridge-test-reports-v2-znect-ci-bridge.znect699.workers.dev";
 const PROTOCOL_VERSION = "2026-07-28";
 const TIMEOUT_MS = 15_000;
 
@@ -71,10 +71,37 @@ async function rpc(mcpToken, id, method, params = {}) {
         ? { "Mcp-Name": params.name }
         : {})
     },
-    body: JSON.stringify({ jsonrpc: "2.0", id, method, params })
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id,
+      method,
+      params: {
+        ...params,
+        _meta: {
+          "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
+          "io.modelcontextprotocol/clientCapabilities": {},
+          ...(method === "server/discover"
+            ? { "io.modelcontextprotocol/clientInfo": { name: "znect-ci-bridge-preview-smoke", version: "1.0.0" } }
+            : {})
+        }
+      }
+    })
   });
   if (!response.ok) {
-    throw new Error("MCP " + method + " returned HTTP " + response.status + ".");
+    const errorBody = await response.text();
+    let safeDetail = "";
+    try {
+      const parsed = JSON.parse(errorBody);
+      const candidate = typeof parsed.error === "string"
+        ? parsed.error
+        : typeof parsed.error?.message === "string"
+          ? parsed.error.message
+          : typeof parsed.message === "string"
+            ? parsed.message
+            : "";
+      if (candidate) safeDetail = " (" + candidate.slice(0, 180) + ")";
+    } catch { /* Do not print arbitrary response bodies. */ }
+    throw new Error("MCP " + method + " returned HTTP " + response.status + safeDetail + ".");
   }
   const payload = await parseRpcResponse(response);
   if (payload.error) {
@@ -92,7 +119,7 @@ async function main() {
   if (
     target.protocol !== "https:" ||
     target.hostname === "znect-ci-bridge.znect699.workers.dev" ||
-    target.hostname !== "feature-ci-bridge-test-reports-znect-ci-bridge.znect699.workers.dev"
+    target.hostname !== "feature-ci-bridge-test-reports-v2-znect-ci-bridge.znect699.workers.dev"
   ) {
     throw new Error("Refusing to run: target is not the approved Preview alias.");
   }
@@ -112,7 +139,15 @@ async function main() {
   const status = await request(PREVIEW_ORIGIN + "/api/v1/status", {
     headers: { authorization: "Bearer " + webToken }
   });
-  if (!status.ok) throw new Error("/api/v1/status returned HTTP " + status.status + ".");
+  if (!status.ok) {
+    const errorBody = await status.text();
+    let safeDetail = "";
+    try {
+      const parsed = JSON.parse(errorBody);
+      if (typeof parsed.error === "string") safeDetail = " (" + parsed.error.slice(0, 180) + ")";
+    } catch { /* Do not print arbitrary response bodies. */ }
+    throw new Error("/api/v1/status returned HTTP " + status.status + safeDetail + ".");
+  }
   const statusData = await status.json();
   if (
     statusData.connected !== true ||

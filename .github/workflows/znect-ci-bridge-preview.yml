@@ -1,4 +1,5 @@
 name: Znect CI Bridge Preview
+# Exercise the current MCP request-envelope smoke test on every branch push.
 
 on:
   workflow_dispatch:
@@ -6,6 +7,7 @@ on:
     branches:
       - feature/ci-bridge-test-reports
       - fix/ci-bridge-preview-workflow
+      - test/ci-bridge-live-preview-smoke
   pull_request:
     branches:
       - feature/ci-bridge-test-reports
@@ -15,13 +17,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: znect-ci-bridge-preview
+  group: znect-ci-bridge-preview-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
   preview:
     name: Deploy isolated Cloudflare Worker Preview
-    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports' || github.ref == 'refs/heads/fix/ci-bridge-preview-workflow')
+    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports' || github.ref == 'refs/heads/fix/ci-bridge-preview-workflow' || github.ref == 'refs/heads/test/ci-bridge-live-preview-smoke')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -48,13 +50,14 @@ jobs:
           npm run check
           node --check scripts/preview-smoke-test.mjs
 
+
       - name: Create or update the named Cloudflare Preview
         if: github.event_name != 'pull_request'
         id: preview
         run: |
           set -euo pipefail
-          output="$(npx wrangler preview --name feature-ci-bridge-test-reports --json)"
-          printf '%s\n' "$output"
+          output="$(npx --yes wrangler@4.161.0 preview --name feature-ci-bridge-test-reports-v2 --json)"
+          printf '%s\\n' "$output"
           preview_url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
           deployment_url="$(printf '%s' "$output" | jq -er '.preview.deployment_url // .preview.deploymentUrl // empty' || true)"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
@@ -64,6 +67,41 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Diagnose Preview secret scopes (names only)
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          echo "## Cloudflare Preview secret scope diagnostic" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Named Preview: feature-ci-bridge-test-reports-v2" >> "$GITHUB_STEP_SUMMARY"
+          npx wrangler preview secret list --name feature-ci-bridge-test-reports-v2 | tee /tmp/preview-secret-names.txt
+          cat /tmp/preview-secret-names.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "### Previews Base" >> "$GITHUB_STEP_SUMMARY"
+          npx wrangler preview base-config secret list | tee /tmp/preview-base-secret-names.txt
+          cat /tmp/preview-base-secret-names.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "Only secret names are listed; secret values are never requested or printed."
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Run authenticated read-only Preview smoke test
+        if: github.event_name != 'pull_request' && (success() || steps.preview.outcome == 'failure')
+        run: |
+          set -euo pipefail
+          if [ -z "${MCP_ACCESS_TOKEN:-}" ] || [ -z "${WEB_ACCESS_TOKEN:-}" ]; then
+            {
+              echo "## Live CircleCI smoke test"
+              echo
+              echo "NOT RUN: configure repository Actions secrets MCP_ACCESS_TOKEN and WEB_ACCESS_TOKEN to enable authenticated Preview verification."
+              echo "No token values are printed or written to artifacts."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Live smoke test skipped: required GitHub Actions secrets are not configured."
+            exit 0
+          fi
+          node scripts/preview-smoke-test.mjs
+        env:
+          MCP_ACCESS_TOKEN: ${{ secrets.MCP_ACCESS_TOKEN }}
+          WEB_ACCESS_TOKEN: ${{ secrets.WEB_ACCESS_TOKEN }}
 
       - name: Publish Preview result
         if: success() && github.event_name != 'pull_request'
