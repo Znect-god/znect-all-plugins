@@ -19,6 +19,14 @@ describe("browser dashboard security", () => {
     expect(DASHBOARD_HTML).toContain("tokenInput.value=\"\"");
   });
 
+  it("loads registered projects and scopes dashboard reads to the selected project", () => {
+    expect(DASHBOARD_HTML).toContain('id="project"');
+    expect(DASHBOARD_HTML).toContain('request("/api/v1/projects")');
+    expect(DASHBOARD_HTML).toContain('"/api/v1/status?project_id="+encodeURIComponent(currentProject)');
+    expect(DASHBOARD_HTML).toContain('"/api/v1/runs?limit=20&project_id="+encodeURIComponent(currentProject)');
+    expect(DASHBOARD_HTML).toContain('"?project_id="+encodeURIComponent(currentProject)');
+  });
+
   it("sends the token only in an authenticated same-origin GET without ambient credentials", () => {
     expect(DASHBOARD_HTML).toContain('method:"GET"');
     expect(DASHBOARD_HTML).toContain('Authorization:"Bearer "+token');
