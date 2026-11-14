@@ -256,6 +256,21 @@ describe("CircleCI API v3 client", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  it("rejects mismatched IDs in single-resource responses", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: WORKFLOW_ID }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: WORKFLOW_ID }
+      }), { status: 200 })));
+
+    await expect(getCircleCiRun("token", RUN_ID))
+      .rejects.toThrow("invalid or mismatched run resource");
+    await expect(getCircleCiJob("token", JOB_ID))
+      .rejects.toThrow("invalid or mismatched job resource");
+  });
+
   it("paginates workflows and jobs with opaque cursors", async () => {
     const workflow2 = "123e4567-e89b-42d3-a456-426614174004";
     const job2 = "123e4567-e89b-42d3-a456-426614174005";
