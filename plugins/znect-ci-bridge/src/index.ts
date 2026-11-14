@@ -643,6 +643,8 @@ function createServer(env: Env) {
       const workflowLimitReached = workflows.length > workflowsInspected.length;
       const safePayload = redactKnownSecrets(JSON.stringify({
         project: { id: registryProject.id, name: registryProject.name },
+        project: { id: registryProject.id, name: registryProject.name },
+        project: { id: registryProject.id, name: registryProject.name },
         run,
         workflows: workflowReports,
         diagnostics_summary: {
@@ -726,16 +728,20 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       return boundedJson(JSON.stringify(result), 60_000);
     }
     if (url.pathname === "/api/v1/status") {
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
-      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG }, permissions: "read-only" });
+      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      return json({ service: "znect-ci-bridge", connected: true, provider: "CircleCI Cloud API v3", project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug }, permissions: "read-only" });
     }
     if (url.pathname === "/api/v1/runs") {
       const rawLimit = url.searchParams.get("limit");
       const limit = rawLimit === null ? 10 : Number(rawLimit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 30) return json({ error: "limit must be an integer between 1 and 30." }, 400);
-      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, PROJECT_SLUG);
+      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
+      const project = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
       const runs = await listCircleCiRuns(env.CIRCLECI_TOKEN, project.id, limit);
-      const safe = redactKnownSecrets(JSON.stringify({ project: { id: project.id, slug: project.attributes?.slug ?? PROJECT_SLUG }, runs }), env);
+      const safe = redactKnownSecrets(JSON.stringify({ project: { id: registryProject.id, name: registryProject.name, circleci_project_id: project.id, slug: project.attributes?.slug ?? connection.projectSlug }, runs }), env);
       return boundedJson(safe, 100_000);
     }
     const segments = url.pathname.split("/");
@@ -743,7 +749,10 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const parsed = z.string().uuid().safeParse(segments[4]);
       if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
       const runId = parsed.data;
-      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, runId);
+      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, runId, circleProject.id);
       const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId, 2);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
@@ -754,6 +763,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
 
       for (const workflow of workflowsInspected) {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         const failedJobs = jobs.filter((job) => {
           const attributes = job.attributes as Record<string, unknown> | undefined;
           return attributes?.outcome === "failed" || attributes?.status === "failed";
@@ -768,6 +778,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           failedJobsInspected++;
           const attributes = job.attributes as Record<string, unknown> | undefined;
           const details = await getCircleCiJob(env.CIRCLECI_TOKEN, job.id);
+          assertCircleCiJobOwnership(details, circleProject.id, workflow.id);
           const detailAttributes = details.attributes as Record<string, unknown> | undefined;
           const executions = Array.isArray(detailAttributes?.parallel_executions)
             ? detailAttributes.parallel_executions as Array<Record<string, unknown>>
@@ -899,11 +910,15 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const parsed = z.string().uuid().safeParse(segments[4]);
       if (!parsed.success) return json({ error: "A valid CircleCI run UUID is required." }, 400);
       const runId = parsed.data;
-      const run = await getCircleCiRun(env.CIRCLECI_TOKEN, runId);
+      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const { project: registryProject, connection } = getCircleCiConnection(env, projectId);
+      const circleProject = await resolveCircleCiProject(env.CIRCLECI_TOKEN, connection.projectSlug!);
+      const run = await getCircleCiRunForProject(env.CIRCLECI_TOKEN, runId, circleProject.id);
       const workflows = await listCircleCiWorkflows(env.CIRCLECI_TOKEN, runId, 2);
       const inspected = workflows.slice(0, 10);
       const workflowReports = await Promise.all(inspected.map(async (workflow) => {
         const jobs = await listCircleCiJobs(env.CIRCLECI_TOKEN, workflow.id, 2);
+        for (const job of jobs) assertCircleCiJobOwnership(job, circleProject.id, workflow.id);
         return { workflow, jobs: jobs.slice(0, 40), jobs_total: jobs.length };
       }));
       const safe = redactKnownSecrets(JSON.stringify({
