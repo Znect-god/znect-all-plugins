@@ -69,6 +69,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Install CircleCI webhook secret into this Preview only
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          if [ -z "${CIRCLECI_WEBHOOK_SECRET:-}" ]; then
+            echo "Missing GitHub Actions secret CIRCLECI_WEBHOOK_SECRET; add it in repository Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          printf '%s' "$CIRCLECI_WEBHOOK_SECRET" | npx wrangler preview secret put CIRCLECI_WEBHOOK_SECRET --name feature-ci-bridge-test-reports-v2 --worker-name znect-ci-bridge
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CIRCLECI_WEBHOOK_SECRET: ${{ secrets.CIRCLECI_WEBHOOK_SECRET }}
+
       - name: Diagnose Preview secret scopes (names only)
         if: success() && github.event_name != 'pull_request'
         run: |
