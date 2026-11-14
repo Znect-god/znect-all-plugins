@@ -190,10 +190,12 @@ describe("Read-only browser API run details", () => {
             attributes: {
               name: "unit-tests",
               parallel_executions: [{
-                execution: 0,
                 steps: [{
                   name: "Run tests",
-                  actions: [{ name: "npm test", status: "failed", exit_code: 1, step_num: 0 }]
+                  num: 0,
+                  phase: "completed",
+                  outcome: "failed",
+                  exit_code: 1
                 }]
               }]
             }
