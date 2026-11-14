@@ -25,7 +25,7 @@ Currently routed through the adapter:
 - job logs and structured test reports;
 - artifact metadata and bounded artifact content.
 
-The adapter is constructed from a server-side CircleCI token, a registered CircleCI project slug and a registered connection ID. The caller's scope must match that connection. Run access is verified against the selected project's paginated run collection. Workflow access is verified against the selected run. Job details must expose the expected project and a valid workflow reference before sensitive job data is read.
+The adapter is constructed from a server-side CircleCI token, a registered CircleCI project slug, the stable Bridge project ID and the registered connection ID. Both project ID and connection ID must match the caller's scope; checking only the connection ID would be unsafe because connection IDs are unique only within a project. Run access is verified against the selected project's paginated run collection. Workflow access is verified against the selected run. Job details must expose the expected project and a valid workflow reference before sensitive job data is read.
 
 The automatic `diagnose_run` MCP tool and browser diagnostics routes still use the existing CircleCI v3 functions directly because their diagnostic report currently depends on CircleCI-specific job step/execution structures. They remain project-scoped and retain their ownership checks, but are not yet fully normalized through the adapter. The legacy v1.1 `list_recent_builds`, `get_build_details` and `get_build_logs` tools also remain direct compatibility paths.
 
