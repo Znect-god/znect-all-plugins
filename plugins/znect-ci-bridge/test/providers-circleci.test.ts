@@ -27,13 +27,16 @@ describe("CircleCI read-only provider adapter", () => {
         data: [{
           id: RUN_ID,
           attributes: {
-            phase: "completed",
+            phase: "ended",
             current_outcome: "failed",
-            branch: "main",
-            vcs_revision: "abc123",
-            subject: "Fix tests",
-            start_time: "2026-11-15T10:00:00Z",
-            stop_time: "2026-11-15T10:05:00Z"
+            created_at: "2026-11-15T10:00:00Z"
+          },
+          references: {
+            event: { attributes: { vcs: {
+              branch: "main",
+              revision: "abc123",
+              commit: { subject: "Fix tests" }
+            } } }
           }
         }],
         page: { next: null }
@@ -188,7 +191,7 @@ describe("CircleCI read-only provider adapter", () => {
         data: [{
           id: WORKFLOW_ID,
           references: { run: { id: "123e4567-e89b-42d3-a456-426614174099" } },
-          attributes: { status: "success" }
+          attributes: { phase: "ended", outcome: "success" }
         }],
         page: { next: null }
       }));
@@ -221,7 +224,7 @@ describe("CircleCI read-only provider adapter", () => {
             project: { id: PROJECT_ID },
             workflow: { id: "123e4567-e89b-42d3-a456-426614174099" }
           },
-          attributes: { status: "failed" }
+          attributes: { phase: "ended", outcome: "failed" }
         }],
         page: { next: null }
       }));
