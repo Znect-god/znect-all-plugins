@@ -44,7 +44,7 @@ The proposed route/schema contract is documented separately in [ZNECT_BUILD_API_
 ## Migration order
 
 1. Keep the CircleCI v3 adapter and legacy compatibility paths behaviourally equivalent.
-2. Keep the browser API and dashboard aligned with the shared model. The MCP and browser `diagnose_run` paths both use normalized step/action/execution types; extend those types deliberately if another provider needs additional diagnostic detail.
+2. Preserve the browser API and dashboard's alignment with the shared model. The MCP and browser diagnostics paths both use normalized step/action/execution types; extend those types deliberately if another provider needs additional diagnostic detail.
 3. Decide whether legacy v1.1 build tools should be represented as a compatibility API or replaced by provider-neutral run/job operations.
 4. Implement Znect Build only after its real API and credentials are available.
 5. Add provider contract tests and provider-specific fixture tests before switching any registered project from CircleCI to Znect Build.
