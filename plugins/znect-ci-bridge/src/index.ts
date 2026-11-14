@@ -719,6 +719,14 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
 
   const url = new URL(request.url);
   try {
+    if (url.pathname === "/api/v1/projects") {
+      const projects = getProjectRegistry(env).projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        providers: [...new Set(project.connections.map((connection) => connection.provider))]
+      }));
+      return boundedJson(JSON.stringify({ projects }), 20_000);
+    }
     if (url.pathname === "/api/v1/events") {
       if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
       const afterRaw = url.searchParams.get("after") ?? "0";
