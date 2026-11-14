@@ -38,8 +38,9 @@ All project-scoped CircleCI tools accept `project_id` and default to `znect-forg
 
 ### Browser dashboard and JSON API
 
-Open the root URL of a confirmed Worker deployment in a modern browser. The dashboard uses the separate `WEB_ACCESS_TOKEN`, held in tab memory only.
+Open the root URL of a confirmed Worker deployment in a modern browser. The dashboard uses the separate `WEB_ACCESS_TOKEN`, held in tab memory only, and provides a project selector populated from registered CircleCI connections.
 
+- `GET /api/v1/projects` — registered project IDs/names and configured provider types.
 - `GET /api/v1/status?project_id=znect-forge`
 - `GET /api/v1/runs?project_id=znect-forge&limit=10`
 - `GET /api/v1/runs/{run_uuid}?project_id=znect-forge`
