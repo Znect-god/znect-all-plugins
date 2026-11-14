@@ -918,7 +918,7 @@ async function handleCircleCiWebhook(request: Request, env: Env): Promise<Respon
     return json({ error: "Invalid webhook JSON." }, 400);
   }
   let event;
-  let targetProject: ReturnType<typeof findCircleCiProject>;
+  let targetProject: ReturnType<typeof findCircleCiProject> = undefined;
   try {
     const registry = getProjectRegistry(env);
     const acceptedSlugs = new Set(registry.projects.flatMap((project) =>
