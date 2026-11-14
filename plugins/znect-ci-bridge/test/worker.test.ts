@@ -667,9 +667,13 @@ describe("Worker HTTP boundary", () => {
 
   it("executes stateless check_connection using only a CircleCI GET request", async () => {
     const projectId = "123e4567-e89b-42d3-a456-426614174000";
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
-    }), { status: 200 }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [], page: { next: null }
+      }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await worker.fetch(
