@@ -60,7 +60,7 @@ function getCircleCiAdapter(env: Env, projectId: string) {
     project,
     connection,
     scope: { projectId: project.id, connectionId: connection.id },
-    adapter: createCircleCiReadOnlyAdapter(env.CIRCLECI_TOKEN, connection.projectSlug!, connection.id)
+    adapter: createCircleCiReadOnlyAdapter(env.CIRCLECI_TOKEN, connection.projectSlug!, project.id, connection.id)
   };
 }
 
