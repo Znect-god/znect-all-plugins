@@ -97,13 +97,34 @@ describe("CircleCI webhook verification", () => {
 describe("Durable event inbox storage contract", () => {
   class FakeSql {
     rows: Array<{ seq: number; event_id: string; happened_at: string; event_json: string }> = [];
+    seen: Array<{ event_id: string; happened_at: string }> = [];
     next = 1;
 
     exec(query: string, ...values: unknown[]) {
       const sql = query.replace(/\\s+/g, " ").trim();
-      if (sql.startsWith("SELECT seq FROM build_events WHERE event_id")) {
-        const row = this.rows.find((entry) => entry.event_id === values[0]);
-        return { toArray: () => row ? [{ seq: row.seq }] : [] };
+      if (sql.startsWith("INSERT OR IGNORE INTO seen_event_ids") && sql.includes("SELECT event_id, happened_at FROM build_events")) {
+        for (const row of this.rows) {
+          if (!this.seen.some((entry) => entry.event_id === row.event_id)) {
+            this.seen.push({ event_id: row.event_id, happened_at: row.happened_at });
+          }
+        }
+        return { toArray: () => [] };
+      }
+      if (sql.startsWith("SELECT event_id FROM seen_event_ids")) {
+        const id = String(values[0]);
+        const found = this.seen.some((entry) => entry.event_id === id) || this.rows.some((entry) => entry.event_id === String(values[1]));
+        return { toArray: () => found ? [{ event_id: id }] : [] };
+      }
+      if (sql.startsWith("INSERT OR IGNORE INTO seen_event_ids")) {
+        const id = String(values[0]);
+        if (!this.seen.some((entry) => entry.event_id === id)) {
+          this.seen.push({ event_id: id, happened_at: String(values[1]) });
+        }
+        return { toArray: () => [] };
+      }
+      if (sql.startsWith("DELETE FROM seen_event_ids")) {
+        this.seen = this.seen.filter((entry) => entry.happened_at >= String(values[0]));
+        return { toArray: () => [] };
       }
       if (sql.startsWith("INSERT INTO build_events")) {
         this.rows.push({
@@ -146,6 +167,31 @@ describe("Durable event inbox storage contract", () => {
       return { toArray: () => [] };
     }
   }
+
+  it("retains replay protection after older events leave the 500-event history window", async () => {
+    const sql = new FakeSql();
+    const store = new BuildEventStore({ storage: { sql } } as unknown as DurableObjectState);
+    const makeEvent = (index: number) => normalizeCircleCiWebhook({
+      ...workflowPayload,
+      id: "3888f21b-eaa7-38e3-8f3d-75a63bba" + index.toString(16).padStart(4, "0")
+    }, "workflow-completed")!;
+    const append = (event: ReturnType<typeof makeEvent>) => store.fetch(new Request("https://event-store/append", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(event)
+    }));
+
+    for (let index = 1; index <= 501; index++) {
+      const response = await append(makeEvent(index));
+      expect(response.status).toBe(200);
+    }
+    expect(sql.rows).toHaveLength(500);
+    expect(sql.seen).toHaveLength(501);
+    await expect((await append(makeEvent(1))).json()).resolves.toMatchObject({
+      accepted: true,
+      duplicate: true
+    });
+  });
 
   it("returns the newest events on the initial read and only newer events after the cursor", async () => {
     const sql = new FakeSql();
