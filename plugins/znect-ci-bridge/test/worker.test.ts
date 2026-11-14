@@ -453,8 +453,7 @@ describe("Worker HTTP boundary", () => {
       if (url.pathname === "/api/v3/jobs") {
         const workflowId = url.searchParams.get("filter[workflow_id]")!;
         return new Response(JSON.stringify({
-          data: [{ id: "123e4567-e89b-42d3-a456-426614174999", attributes: { status: "success", workflow_id: workflowId }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
-          page: { next: null }
+          data: [{ id: "123e4567-e89b-42d3-a456-426614174999", attributes: { phase: "completed", outcome: "success", name: "job" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }]
         }), { status: 200 });
       }
       throw new Error("Unexpected CircleCI request.");
