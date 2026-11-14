@@ -3,6 +3,8 @@
 - Require the API-mandated job workflow relationship before returning job details, logs, test reports or artifacts; missing or malformed references now fail closed.
 - Normalize the documented API v3 step records directly, using each step's `num`, `outcome`, `phase` and `exit_code`; derive parallel execution numbers from the ordered execution array instead of assuming a non-schema `execution` property.
 - Reject missing or malformed pagination metadata rather than silently treating an incomplete upstream collection as complete. Run listing now fails explicitly if its two-page safety window ends before the requested result limit is met.
+- Follow cursors only for CircleCI v3 workflows; read the unpaginated jobs collection with its documented `filter[workflow_id]` parameter and a 200-job safety ceiling.
+- Map run branch, revision and commit message from the documented event/VCS references, workflow outcome/phase from native fields, and job start/end timestamps from `started_at`/`ended_at`.
 - Added regression coverage for missing job relationships, native API v3 step records, parallel execution indexing and malformed pagination. Fresh CI/typecheck validation remains pending.
 
 # Changelog
