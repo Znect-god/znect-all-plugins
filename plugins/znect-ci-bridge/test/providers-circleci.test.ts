@@ -97,6 +97,49 @@ describe("CircleCI read-only provider adapter", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it("normalizes failed actions and step numbers from a verified job detail", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: {
+          id: JOB_ID,
+          references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
+          attributes: {
+            name: "unit-tests",
+            status: "failed",
+            parallel_executions: [{
+              execution: 2,
+              steps: [{
+                name: "Run tests",
+                actions: [{
+                  name: "npm test",
+                  status: "failed",
+                  exit_code: 1,
+                  step_num: 4
+                }]
+              }]
+            }]
+          }
+        }
+      })));
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.getJob(scope, JOB_ID)).resolves.toMatchObject({
+      id: JOB_ID,
+      workflowId: WORKFLOW_ID,
+      steps: [{
+        name: "Run tests",
+        execution: 2,
+        actions: [{
+          name: "npm test",
+          status: "failed",
+          exitCode: 1,
+          stepNumber: 4
+        }]
+      }]
+    });
+  });
+
   it("refuses to read job logs when the job belongs to another project", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(projectResponse())
