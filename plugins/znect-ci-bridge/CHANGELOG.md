@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0] - 2026-11-15 webhook replay protection
+### Security
+- Separated CircleCI event-ID replay keys from the 500-record event-history cap. Duplicate deliveries remain detectable for the full 30-day event retention window even after their event records are evicted.
+- Added a regression test that appends 501 distinct events and confirms the first event is still recognized as a duplicate after leaving the visible history.
+- Existing retained event IDs are migrated into the new replay-key table when the Durable Object initializes. Fresh CI/typecheck validation is pending.
+
+
 ## [0.1.0] - 2026-11-15 npm install-script policy
 ### Security
 - Added version-pinned npm `allowScripts` decisions: approved the native-binary validation scripts for `esbuild@0.28.2` and `workerd@1.20261110.1`; explicitly denied the optional support-message script for `core-js-pure@3.51.0`.
