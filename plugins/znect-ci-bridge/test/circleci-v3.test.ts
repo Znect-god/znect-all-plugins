@@ -142,41 +142,41 @@ describe("CircleCI API v3 client", () => {
       .resolves.toMatchObject({ id: PROJECT_ID });
   });
 
-  it("verifies run ownership through the referenced project-scoped pipeline", async () => {
-    const pipelineId = "123e4567-e89b-42d3-a456-426614174007";
+  it("verifies run ownership through the documented project-scoped runs collection", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: { id: RUN_ID, references: { pipeline: { id: pipelineId } } }
+        data: [{ id: RUN_ID }], page: { next: null }
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: { id: pipelineId, references: { project: { id: PROJECT_ID } } }
+        data: { id: RUN_ID, attributes: { phase: "ended" } }
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
       .resolves.toMatchObject({ id: RUN_ID });
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1][0]).toContain("filter%5Bproject_id%5D=" + PROJECT_ID);
+    expect(fetchMock.mock.calls[0][0]).toContain("filter%5Bproject_id%5D=" + PROJECT_ID);
   });
 
-  it("fails closed when a run has no verifiable pipeline or belongs to another project", async () => {
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: { id: RUN_ID, references: {} }
-      }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: { id: RUN_ID, references: { pipeline: { id: WORKFLOW_ID } } }
-      }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: { id: WORKFLOW_ID, references: { project: { id: RUN_ID } } }
-      }), { status: 200 })));
+  it("rejects runs absent from the selected project-scoped collection", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: WORKFLOW_ID }], page: { next: null }
+    }), { status: 200 })));
 
-    await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
-      .rejects.toThrow("does not expose a verifiable pipeline reference");
     await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
       .rejects.toThrow("does not belong to the selected project");
   });
 
+  it("fails closed when run ownership cannot be established within the scan window", async () => {
+    const pages = Array.from({ length: 20 }, (_, index) => new Response(JSON.stringify({
+      data: [{ id: `00000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}` }],
+      page: { next: `cursor-${index + 1}` }
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(pages.shift())));
+
+    await expect(getCircleCiRunForProject("token", RUN_ID, PROJECT_ID))
+      .rejects.toThrow("400-run safety window");
+  });
   it("checks job project and workflow references before exposing job data", () => {
     const job = {
       id: JOB_ID,
