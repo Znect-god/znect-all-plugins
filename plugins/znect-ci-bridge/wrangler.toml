@@ -14,3 +14,27 @@ namespace_id = "2026111101"
   [ratelimits.simple]
   limit = 60
   period = 60
+
+# Preview deployments use an isolated rate-limit namespace.
+[[previews.ratelimits]]
+name = "MCP_RATE_LIMITER"
+namespace_id = "26111212026001"
+
+  [previews.ratelimits.simple]
+  limit = 60
+  period = 60
+
+# Durable event inbox for signed CircleCI workflow/job completion webhooks.
+[[durable_objects.bindings]]
+name = "EVENT_STORE"
+class_name = "BuildEventStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BuildEventStore"]
+
+# Preview environments need an explicit env binding; Cloudflare provisions
+# an isolated SQLite-backed namespace for each Preview branch.
+[[previews.durable_objects.bindings]]
+name = "EVENT_STORE"
+class_name = "BuildEventStore"

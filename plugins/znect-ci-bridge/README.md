@@ -1,98 +1,92 @@
 # Znect CI Bridge
 
-**Status:** `prototype`  
-**Version:** `0.1.0`
+**Status: `in-development` — experimental; not production-ready.**  
+**Version:** `0.1.0`  
+**Target:** CircleCI Cloud project `gh/Znect-god/znect-forge`.
 
-Znect CI Bridge is an experimental, read-only MCP server for CircleCI build information. It runs as a Cloudflare Worker and is intended for an MCP-compatible client.
+Znect CI Bridge is a read-only Cloudflare Worker for inspecting CircleCI runs, workflows, jobs, logs, test results and artifacts. It exposes a Streamable HTTP MCP endpoint, a browser dashboard/JSON API, and a signed CircleCI webhook inbox.
 
-It is scoped to the fixed CircleCI project `Znect-god/znect-forge`. It must not modify, trigger, retry, cancel, or deploy Forge pipelines.
+> **Development notice:** Treat every feature as unverified unless this repository explicitly marks the exact check as passed. Unit tests, mocked API tests, Wrangler dry-runs and synthetic webhook tests do not prove full live integration. Do not use this prototype for production decisions or as the only CI monitoring channel.
 
-## Read-only MCP tools
+## Current state — 2026-11-14
 
-Legacy v1.1 tools remain available for compatibility:
-- `list_recent_builds(limit)` — latest legacy job builds; limit 1–30.
-- `get_build_details(build_num)` — legacy build metadata and step/action statuses.
-- `get_build_logs(build_num, step_index?, max_actions?)` — bounded legacy console output.
+- Work is isolated on branch `feat/ci-bridge-circleci-webhooks` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins).
+- [Draft PR #5](https://github.com/Znect-god/znect-all-plugins/pull/5) remains open and unmerged. Its base is `feature/ci-bridge-test-reports`; it is not `main`.
+- Isolated Cloudflare Preview: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`.
+- MCP endpoint: append `/mcp`. CircleCI webhook endpoint: append `/webhooks/circleci`.
+- GitHub Actions Preview run [#43581014497](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581014497) passed on commit `aae93a027626c978a049dd95f7e2254e97f78c7e`: typecheck, all 103 tests, isolated Preview deployment, Preview webhook-secret installation, authenticated browser API, live diagnostics endpoint, event inbox and MCP read-only smoke checks.
+- On 2026-11-12, after replacing a CircleCI API token that v3 rejected, live `list_recent_runs` returned three Forge runs and `get_job_details` returned the real `build-0-7-0` job (115 tests, 2 failed). This is verified live API read coverage.
+- The later Preview smoke test verified authenticated MCP discovery/read-only connection and browser API access, plus a **synthetic** signed webhook path, deduplication, durable storage and retrieval. Synthetic delivery is not a real CircleCI workflow delivery.
+- The CircleCI project webhook has since been registered successfully. CircleCI's automatic Add Webhook ping/check was accepted with a 2xx response.
+- **Still pending:** a real CircleCI `workflow-completed` delivery from an ordinary Forge workflow, verification of that event in the durable inbox and retrieval through MCP. The actual event has not yet been confirmed.
+- Companion private Forge Draft PR [#9](https://github.com/Znect-god/znect-forge/pull/9) adds the free on-demand ChatGPT channel and collects repository branches, commits, open PRs/issues, GitHub Actions statuses and bounded failed-job logs alongside this Bridge's CircleCI report. The report collector is not yet activated; it still needs review/merge and the private `ZNECT_CI_BRIDGE_WEB_TOKEN` Actions secret.
+- Production is not deployed or authorized. Do not change Production, `main`, or merge PR #5 without explicit approval.
 
-New API v3 tools are also exposed:
-- `list_recent_runs(limit)` — latest project runs with UUIDs and current outcomes; limit 1–30.
-- `get_run_details(run_id)` — one run plus its workflows and jobs, addressed by UUID.
-- `get_job_logs(job_id, step_num, execution?, stream?, max_chars?)` — bounded stdout/stderr for a job step.
+See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks. The intended free ChatGPT access path is documented in [ASSISTANT_CHANNEL.md](documentation/ASSISTANT_CHANNEL.md).
 
-The v3 tools use the fixed project slug `gh/Znect-god/znect-forge`, resolve its UUID through CircleCI, and do not attempt to translate legacy build numbers into v3 UUIDs. All tools are read-only; no build mutation tools exist.
+## Capabilities
 
-## Source layout
+### Read-only MCP tools
 
-- `src/index.ts` — Worker entry point, authentication, and MCP tools.
-- `src/circleci.ts` — legacy v1.1 fixed-origin, read-only HTTP adapter.
-- `src/circleci-v3.ts` — CircleCI Cloud API v3 read-only adapter used by the three v3 MCP tools.
-- `src/security.ts` — authentication comparison, artifact URL validation, bounded streams, redaction, output limits, and safe redirect handling.
-- `test/security.test.ts` — security helper and artifact-host/redirect tests.
-- `test/circleci.test.ts` — mocked v1.1 adapter tests.
-- `test/circleci-v3.test.ts` — mocked v3 authentication, project resolution, pagination, resource traversal, and bounded job-output tests.
-- `test/worker.test.ts` — Worker HTTP, authentication, and rate-limit boundary tests.
-- `package.json` and `package-lock.json` — pinned direct and resolved dependency versions.
-- `wrangler.toml` — Worker configuration and rate-limit binding.
-- Root `.github/workflows/znect-ci-bridge.yml` — Linux validation workflow.
+- Legacy v1.1: `list_recent_builds`, `get_build_details`, `get_build_logs`.
+- API v3: `check_connection`, `list_recent_runs`, `get_run_details`, `get_job_details`, `get_job_logs`, `get_job_test_results`, `list_job_artifacts`, `get_job_artifact`, `diagnose_run`.
+- Event inbox: `list_recent_events`.
 
-## Security controls
+All tools are intended for reading only. There are no pipeline trigger, retry, cancel, configuration-write or deployment tools.
 
-- `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` are expected as Cloudflare Worker Secrets.
-- CircleCI API requests are GET-only, use fixed origins, 15-second timeouts, and bounded response bodies.
-- MCP requests require a Bearer token. Comparison uses fixed-length SHA-256 digests.
-- The MCP endpoint is rate-limited to 60 authenticated requests per 60 seconds per Cloudflare location. The rate-limit key is a SHA-256 digest of the configured MCP token, not the raw token.
-- If the rate-limit binding is absent or unavailable, the MCP endpoint fails closed with HTTP 503.
-- Cloudflare's built-in rate limiter is approximate and local to each Cloudflare location; it is not a strict global quota. Failed authentication attempts are not covered by this per-token limit.
-- Artifact URLs and every redirect target must use HTTPS, a CircleCI artifact subdomain or S3-style AWS endpoint, and the default HTTPS port. Redirect chains are limited to three hops.
-- Log response bodies are streamed with a byte ceiling, then limited to 80,000 characters per action and 160,000 across the complete response.
-- Configured Worker secrets and common credential patterns are redacted heuristically. This is best-effort and cannot guarantee detection of every upstream secret.
-- CORS is disabled. No arbitrary artifact URL is accepted from the MCP caller.
+### Browser dashboard and JSON API
 
-The rate-limit namespace ID in `wrangler.toml` must be unique within the Cloudflare account. Check it before deployment.
+Open the root URL of a confirmed Worker deployment in a modern browser. The dashboard uses the separate `WEB_ACCESS_TOKEN`, held in tab memory only.
 
-These controls reduce risk but do not constitute a complete security audit.
+- `GET /api/v1/status`
+- `GET /api/v1/runs?limit=10`
+- `GET /api/v1/runs/{run_uuid}`
+- `GET /api/v1/diagnostics/{run_uuid}` — bounded failed-step logs, structured tests, and a small JUnit/test-results artifact for failed jobs.
+- `GET /api/v1/events?after=0&limit=20`
 
-## API compatibility
+All JSON API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
 
-The Forge project was set up on CircleCI Cloud in the earlier project workflow. CircleCI's current API for new Cloud integrations is v3; the v3 adapter now powers three separate MCP tools. CircleCI Server is not the target for this project.
+### Signed CircleCI webhook inbox
 
-The legacy v1.1 tools remain temporarily for compatibility. They use build numbers, while v3 uses UUIDs, so no automatic mapping or fallback is attempted. The exact v3 project resolution and Bearer-token access still require a live check using the user's CircleCI API token. See [the migration plan](documentation/CIRCLECI_API_MIGRATION.md).
+CircleCI sends signed events to `POST /webhooks/circleci`. The Worker verifies the HMAC-SHA256 signature, filters the fixed Forge project, normalizes a small field allowlist, deduplicates event IDs and stores events in a SQLite-backed Durable Object. The inbox is readable through `list_recent_events` and `GET /api/v1/events`. Its initial `after=0` read returns the newest events first; the returned cursor then lets clients request only later arrivals.
+
+The inbox does **not** push unsolicited messages into an open ChatGPT conversation. A separate supported polling/delivery mechanism would be needed for proactive assistant notifications.
+
+## Secrets and configuration
+
+Never commit or disclose secret values. Configure secrets in the correct environment:
+
+- `CIRCLECI_TOKEN` — CircleCI API access; server-side only.
+- `MCP_ACCESS_TOKEN` — separate MCP client Bearer token.
+- `WEB_ACCESS_TOKEN` — separate browser API Bearer token.
+- `CIRCLECI_WEBHOOK_SECRET` — shared signing secret configured in CircleCI and the matching Worker Preview/Production environment.
+
+Preview and Production secrets are independent. The current Preview workflow installs `CIRCLECI_WEBHOOK_SECRET` from the GitHub Actions secret into the named Preview. Do not infer that Production has any of these secrets.
 
 ## Development
 
-Use Node.js 22 on Linux, macOS, or Windows:
+Use Node.js 24 on a supported desktop/Linux environment:
 
 ```bash
 npm ci
-npm run typecheck
-npm run test
+npm run check
+node --check scripts/preview-smoke-test.mjs
 npx wrangler deploy --dry-run
 ```
 
-Android ARM64 Termux cannot run the current Wrangler/workerd binary. Use GitHub Actions Linux workflow for Worker validation instead.
+Android ARM64 Termux is not a supported Wrangler/workerd deployment environment for this project. Use the repository's Linux GitHub Actions workflow.
 
-## Cloudflare setup — not yet performed
+## Safety and limitations
 
-1. Check that the rate-limit namespace ID in `wrangler.toml` is unique in your Cloudflare account.
-2. Configure `CIRCLECI_TOKEN` and `MCP_ACCESS_TOKEN` as Worker Secrets. Never commit them.
-3. Deploy only after reviewing remaining limitations and explicitly authorizing deployment.
-
-No live CircleCI token or endpoint has been used, and no Cloudflare deployment has been performed.
-
-## Known limitations
-
-- Prototype only; not production-ready.
-- CircleCI Cloud hosting is established from the earlier Forge setup; live API v3 token access and project UUID resolution are not yet verified.
-- The v3 adapter and MCP tools are tested with mocked HTTP responses only; no live CircleCI API request has been made.
-- Legacy v1.1 tools remain alongside the v3 tools. There is intentionally no automatic build-number-to-UUID mapping or silent fallback.
-- Rate limiting is approximate and per Cloudflare location, not a strict global limit.
-- Failed Bearer-token attempts are not covered by the per-token rate limiter.
-- Log redaction is best-effort.
-- No persistent storage, scheduled polling, alerts, or push notifications.
-- Wrangler/workerd is unsupported in the current Android ARM64 Termux environment.
-- License remains undecided; public visibility does not grant reuse or redistribution rights.
+- The Bridge is experimental and not production-ready.
+- CircleCI Personal API tokens can have broad account permissions. The Bridge's own adapter is GET-only, but protect the token as a high-value credential.
+- Secret redaction is heuristic/best-effort, not a guarantee.
+- Cloudflare rate limiting is approximate and location-local, not a strict global quota.
+- CircleCI may return no test results/artifacts if the original job did not publish them.
+- API v3 live project resolution and the authenticated diagnostics route have passed Preview smoke checks. Unit tests cover failed-step logs, structured test results and token redaction; a real failed-run log round-trip still needs a representative live verification.
+- Real CircleCI webhook workflow delivery is pending; successful webhook registration ping is not the same as a real workflow event.
+- An independent security review and broader operational verification are required before any Production consideration.
 
 ## Relationship to Znect Forge
 
-This plugin only reads CircleCI build information. It does not change Forge source code or CircleCI configuration and does not start or alter Forge builds. The Forge 0.8.0 freeze remains in force unless explicitly changed by the user.
-
+The Bridge reads CI data for `Znect-god/znect-forge`. It must not modify Forge source/configuration, trigger or retry builds, or alter Forge release/freeze decisions. Testing should use the next ordinary Forge workflow; do not create unnecessary builds solely to generate an event.

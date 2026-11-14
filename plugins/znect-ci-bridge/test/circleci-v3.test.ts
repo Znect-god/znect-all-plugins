@@ -5,6 +5,9 @@ import {
   getCircleCiJob,
   getCircleCiRun,
   getCircleCiJobStepOutput,
+  getCircleCiJobTests,
+  getCircleCiJobArtifact,
+  listCircleCiJobArtifacts,
   isCircleCiUuid,
   listCircleCiJobs,
   listCircleCiRuns,
@@ -43,7 +46,7 @@ describe("CircleCI API v3 client", () => {
         Authorization: "Bearer synthetic-token",
         Accept: "application/json"
       },
-      redirect: "error"
+      redirect: "manual"
     });
     expect(init.signal).toBeDefined();
   });
@@ -62,14 +65,33 @@ describe("CircleCI API v3 client", () => {
 
   it.each([401, 403, 404, 429])("sanitizes upstream HTTP %i errors", async (status) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response("sensitive upstream details", { status })
+      new Response("sensitive upstream details", {
+        status,
+        headers: status === 429 ? { "retry-after": "17" } : undefined
+      })
     ));
-    const expected = status === 401 || status === 403
-      ? "CircleCI API v3 rejected the configured read-only token. Check its type and project access."
-      : status === 404
-        ? "The requested CircleCI API v3 resource was not found or is not accessible."
-        : "CircleCI API v3 rate limit exceeded. Retry after the indicated interval.";
+    const expected = status === 401
+      ? "CircleCI API v3 authentication failed (HTTP 401). Check whether CIRCLECI_TOKEN is a valid, unexpired Personal API Token."
+      : status === 403
+        ? "CircleCI API v3 authorization failed (HTTP 403). The authenticated account or token does not have access to this project."
+        : status === 404
+          ? "The requested CircleCI API v3 resource was not found or is not accessible."
+          : "CircleCI API v3 rate limit exceeded. Retry after 17 seconds.";
     await expect(circleV3Get("token", "/api/v3/runs")).rejects.toThrow(expected);
+  });
+
+  it("normalizes upstream network and timeout failures", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new DOMException("sensitive runtime detail", "TimeoutError")
+    ));
+    await expect(circleV3Get("token", "/api/v3/runs"))
+      .rejects.toThrow("CircleCI API request timed out.");
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new TypeError("sensitive socket detail")
+    ));
+    await expect(circleV3GetText("token", "/api/v3/jobs/" + JOB_ID + "/stdout"))
+      .rejects.toThrow("CircleCI API request failed due to a network or TLS error.");
   });
 
   it("rejects malformed and oversized JSON bodies", async () => {
@@ -84,7 +106,7 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("CircleCI API response exceeded the configured size limit.");
   });
 
-  it("resolves only one project and validates the returned project UUID and slug", async () => {
+  it("resolves one project by slug and validates its returned UUID", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       data: [{ id: PROJECT_ID, attributes: { slug: "gh/Znect-god/znect-forge" } }]
     }), { status: 200 }));
@@ -95,7 +117,7 @@ describe("CircleCI API v3 client", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("filter%5Bslug%5D=gh%2FZnect-god%2Fznect-forge");
   });
 
-  it("rejects zero, multiple, or mismatched project resolutions", async () => {
+  it("rejects zero, multiple, or explicitly mismatched project resolutions", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -103,6 +125,9 @@ describe("CircleCI API v3 client", () => {
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: [{ id: PROJECT_ID, attributes: { slug: "gh/other/repo" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: PROJECT_ID, attributes: {} }]
       }), { status: 200 })));
 
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
@@ -111,6 +136,8 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("did not resolve to exactly one project");
     await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
       .rejects.toThrow("did not match the configured slug");
+    await expect(resolveCircleCiProject("token", "gh/Znect-god/znect-forge"))
+      .resolves.toMatchObject({ id: PROJECT_ID });
   });
 
   it("paginates runs using opaque cursors and caps the result at 30", async () => {
@@ -178,6 +205,60 @@ describe("CircleCI API v3 client", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  it("paginates workflows and jobs with opaque cursors", async () => {
+    const workflow2 = "123e4567-e89b-42d3-a456-426614174004";
+    const job2 = "123e4567-e89b-42d3-a456-426614174005";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: "workflow-cursor" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: workflow2 }], page: { next: null }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: JOB_ID }], page: { next: "job-cursor" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: job2 }], page: { next: null }
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listCircleCiWorkflows("token", RUN_ID)).resolves.toHaveLength(2);
+    await expect(listCircleCiJobs("token", WORKFLOW_ID)).resolves.toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[1][0]).toContain("page%5Bcursor%5D=workflow-cursor");
+    expect(fetchMock.mock.calls[3][0]).toContain("page%5Bcursor%5D=job-cursor");
+    expect(fetchMock.mock.calls[0][0]).toContain("page%5Blimit%5D=20");
+  });
+
+  it("rejects repeated cursors while traversing workflows and jobs", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: "repeat" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: "repeat" }
+      }), { status: 200 })));
+    await expect(listCircleCiWorkflows("token", RUN_ID))
+      .rejects.toThrow("repeated a pagination cursor while listing workflows");
+  });
+
+  it("enforces a caller-selected page ceiling for nested collections", async () => {
+    const nextJobId = "123e4567-e89b-42d3-a456-426614174006";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: JOB_ID }], page: { next: "cursor-1" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: nextJobId }], page: { next: "cursor-2" }
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listCircleCiJobs("token", WORKFLOW_ID, 2))
+      .rejects.toThrow("safety limit of 40 items");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("reads bounded stdout and uses the documented step/execution filters", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("line1\nline2\nline3", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -196,6 +277,76 @@ describe("CircleCI API v3 client", () => {
     await expect(circleV3GetText("token", "/api/v3/jobs/" + JOB_ID + "/stdout?filter%5Bstep_num%5D=0"))
       .resolves.toEqual({ text: "", truncated: false });
     await expect(circleV3GetText("token", "/api/v3/jobs/" + JOB_ID + "/stdout?filter%5Bstep_num%5D=0"))
-      .rejects.toThrow("CircleCI API v3 rejected the configured read-only token");
+      .rejects.toThrow("CircleCI API v3 authorization failed (HTTP 403). The authenticated account or token does not have access to this project.");
   });
+
+  it("reads bounded structured test results as JSON Lines", async () => {
+    const body = '{"name":"sampleTest","result":"failure"}\n';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(body, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getCircleCiJobTests("token", JOB_ID, 128))
+      .resolves.toEqual({ text: body, truncated: false });
+    expect(fetchMock.mock.calls[0][0]).toBe("https://circleci.com/api/v3/jobs/" + JOB_ID + "/tests");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: "GET",
+      headers: { Authorization: "Bearer token", Accept: "text/plain" },
+      redirect: "manual"
+    });
+  });
+
+  it("returns an empty test result when CircleCI has no test data", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+    await expect(getCircleCiJobTests("token", JOB_ID))
+      .resolves.toEqual({ text: "", truncated: false });
+  });
+
+  it("lists artifact metadata without altering or exposing the API response shape", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        { id: "artifact-1", attributes: { path: "test-results/junit.xml", url: "https://example.s3.amazonaws.com/file", size: 512, node_index: 0 } }
+      ]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(listCircleCiJobArtifacts("token", JOB_ID)).resolves.toMatchObject([
+      { id: "artifact-1", attributes: { path: "test-results/junit.xml", size: 512, node_index: 0 } }
+    ]);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://circleci.com/api/v3/jobs/" + JOB_ID + "/artifacts");
+  });
+
+  it("rejects an invalid artifacts collection and excessive artifact count", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: {} }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: Array.from({ length: 101 }, () => ({})) }), { status: 200 })));
+    await expect(listCircleCiJobArtifacts("token", JOB_ID))
+      .rejects.toThrow("invalid artifacts collection");
+    await expect(listCircleCiJobArtifacts("token", JOB_ID))
+      .rejects.toThrow("more than 100 artifacts");
+  });
+
+
+  it("downloads a listed artifact by exact path through an allowlisted URL", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: "artifact-1", attributes: { path: "test-results/junit.xml", url: "https://s3.amazonaws.com/bucket/report.xml" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("<testsuite failures=\"1\"/>", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "test-results/junit.xml", 256))
+      .resolves.toEqual({ path: "test-results/junit.xml", text: "<testsuite failures=\"1\"/>", truncated: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "GET", redirect: "manual" });
+  });
+
+  it("rejects path traversal and artifact URLs outside the allowlist", async () => {
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "../secrets.txt"))
+      .rejects.toThrow("Invalid CircleCI artifact path.");
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: "artifact-1", attributes: { path: "report.xml", url: "https://attacker.example/report.xml" } }]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "report.xml"))
+      .rejects.toThrow("not on an allowed HTTPS host");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
 });

@@ -1,0 +1,135 @@
+name: Znect CI Bridge Preview
+# Deploy the isolated Worker Preview and run smoke checks on branch pushes; PR runs validate code only.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/ci-bridge-test-reports
+      - fix/ci-bridge-preview-workflow
+      - test/ci-bridge-live-preview-smoke
+      - feat/ci-bridge-circleci-webhooks
+  pull_request:
+    branches:
+      - feature/ci-bridge-test-reports
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: znect-ci-bridge-preview-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Deploy isolated Cloudflare Worker Preview
+    if: github.repository == 'Znect-god/znect-all-plugins' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/ci-bridge-test-reports' || github.ref == 'refs/heads/fix/ci-bridge-preview-workflow' || github.ref == 'refs/heads/test/ci-bridge-live-preview-smoke' || github.ref == 'refs/heads/feat/ci-bridge-circleci-webhooks')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: plugins/znect-ci-bridge
+    steps:
+      - name: Checkout approved feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: plugins/znect-ci-bridge/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run typecheck and unit tests
+        run: |
+          npm run check
+          node --check scripts/preview-smoke-test.mjs
+
+
+      - name: Create or update the named Cloudflare Preview
+        if: github.event_name != 'pull_request'
+        id: preview
+        run: |
+          set -euo pipefail
+          output="$(npx --yes wrangler@4.161.0 preview --name feat-ci-bridge-circleci-webhooks --json)"
+          printf '%s\\n' "$output"
+          preview_url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
+          deployment_url="$(printf '%s' "$output" | jq -er '.preview.deployment_url // .preview.deploymentUrl // empty' || true)"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          if [ -n "$deployment_url" ]; then
+            echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Install CircleCI webhook secret into this Preview only
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          if [ -z "${CIRCLECI_WEBHOOK_SECRET:-}" ]; then
+            echo "Missing GitHub Actions secret CIRCLECI_WEBHOOK_SECRET; add it in repository Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          printf '%s' "$CIRCLECI_WEBHOOK_SECRET" | npx wrangler preview secret put CIRCLECI_WEBHOOK_SECRET --name feat-ci-bridge-circleci-webhooks --worker-name znect-ci-bridge
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CIRCLECI_WEBHOOK_SECRET: ${{ secrets.CIRCLECI_WEBHOOK_SECRET }}
+
+      - name: Diagnose Preview secret scopes (names only)
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          echo "## Cloudflare Preview secret scope diagnostic" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Named Preview: feat-ci-bridge-circleci-webhooks" >> "$GITHUB_STEP_SUMMARY"
+          npx wrangler preview secret list --name feat-ci-bridge-circleci-webhooks | tee /tmp/preview-secret-names.txt
+          cat /tmp/preview-secret-names.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "### Previews Base" >> "$GITHUB_STEP_SUMMARY"
+          npx wrangler preview base-config secret list | tee /tmp/preview-base-secret-names.txt
+          cat /tmp/preview-base-secret-names.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "Only secret names are listed; secret values are never requested or printed."
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Run authenticated read-only Preview smoke test
+        if: github.event_name != 'pull_request' && (success() || steps.preview.outcome == 'failure')
+        run: |
+          set -euo pipefail
+          if [ -z "${MCP_ACCESS_TOKEN:-}" ] || [ -z "${WEB_ACCESS_TOKEN:-}" ]; then
+            {
+              echo "## Live CircleCI smoke test"
+              echo
+              echo "NOT RUN: configure repository Actions secrets MCP_ACCESS_TOKEN and WEB_ACCESS_TOKEN to enable authenticated Preview verification."
+              echo "No token values are printed or written to artifacts."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Live smoke test skipped: required GitHub Actions secrets are not configured."
+            exit 0
+          fi
+          node scripts/preview-smoke-test.mjs
+        env:
+          PREVIEW_ORIGIN: ${{ steps.preview.outputs.preview_url }}
+          MCP_ACCESS_TOKEN: ${{ secrets.MCP_ACCESS_TOKEN }}
+          WEB_ACCESS_TOKEN: ${{ secrets.WEB_ACCESS_TOKEN }}
+          CIRCLECI_WEBHOOK_SECRET: ${{ secrets.CIRCLECI_WEBHOOK_SECRET }}
+
+      - name: Publish Preview result
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          {
+            echo "## Znect CI Bridge Preview"
+            echo
+            echo "- Preview URL: $PREVIEW_URL"
+            echo "- Branch: feat/ci-bridge-circleci-webhooks"
+            echo "- Environment: Cloudflare Worker Preview only"
+            echo "- Production deployment: not performed"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}

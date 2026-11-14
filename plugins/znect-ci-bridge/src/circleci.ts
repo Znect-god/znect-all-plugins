@@ -1,4 +1,4 @@
-import { readBoundedJson } from "./security";
+import { fetchWithSafeErrors, readBoundedJson, retryAfterSeconds } from "./security";
 
 const CIRCLECI_API = "https://circleci.com/api/v1.1";
 const FETCH_TIMEOUT_MS = 15_000;
@@ -26,7 +26,7 @@ export async function circleGet<T>(
     throw new Error("Invalid internal CircleCI API path.");
   }
 
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithSafeErrors(url.toString(), {
     method: "GET",
     headers: { "Circle-Token": token, "Accept": "application/json" },
     redirect: "manual",
@@ -36,7 +36,9 @@ export async function circleGet<T>(
   if (!response.ok) {
     const safeMessage = response.status === 401 || response.status === 403
       ? "CircleCI rejected the configured read-only token. Check the Worker secret."
-      : `CircleCI API returned HTTP ${response.status}.`;
+      : response.status === 429
+        ? `CircleCI API rate limit exceeded.${retryAfterSeconds(response.headers.get("retry-after")) === null ? " Retry after the indicated interval." : ` Retry after ${retryAfterSeconds(response.headers.get("retry-after"))} seconds.`}`
+        : `CircleCI API returned HTTP ${response.status}.`;
     throw new Error(safeMessage);
   }
 

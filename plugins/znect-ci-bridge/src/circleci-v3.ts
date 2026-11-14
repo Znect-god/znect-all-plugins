@@ -1,9 +1,10 @@
-import { readBoundedJson, readBoundedText } from "./security";
+import { allowedArtifactUrl, fetchAllowedArtifact, fetchWithSafeErrors, readBoundedJson, readBoundedText, retryAfterSeconds } from "./security";
 
 const CIRCLECI_V3_API = "https://circleci.com/api/v3";
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_JSON_BYTES = 1_000_000;
 const MAX_TEXT_BYTES = 1_000_000;
+const MAX_ARTIFACTS = 100;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface V3Resource<T = Record<string, unknown>> {
@@ -56,7 +57,7 @@ function validateApiPath(path: string): URL {
 /** Fixed-origin, GET-only CircleCI API v3 request with bounded JSON parsing. */
 export async function circleV3Get<T>(token: string, path: string): Promise<T> {
   const url = validateApiPath(path);
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithSafeErrors(url.toString(), {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -74,7 +75,7 @@ export async function circleV3Get<T>(token: string, path: string): Promise<T> {
         : response.status === 404
         ? "The requested CircleCI API v3 resource was not found or is not accessible."
         : response.status === 429
-          ? "CircleCI API v3 rate limit exceeded. Retry after the indicated interval."
+          ? `CircleCI API v3 rate limit exceeded.${retryAfterSeconds(response.headers.get("retry-after")) === null ? " Retry after the indicated interval." : ` Retry after ${retryAfterSeconds(response.headers.get("retry-after"))} seconds.`}`
           : `CircleCI API v3 returned HTTP ${response.status}.`;
     throw new Error(safeMessage);
   }
@@ -89,7 +90,7 @@ export async function circleV3GetText(
   maxBytes = MAX_TEXT_BYTES
 ): Promise<{ text: string; truncated: boolean }> {
   const url = validateApiPath(path);
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithSafeErrors(url.toString(), {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -134,8 +135,11 @@ export async function resolveCircleCiProject(
   const project = result.data[0];
   assertUuid(project.id, "project ID");
   const slug = project.attributes?.slug;
+  // The API resolves the project by the exact filter[slug] query. Some
+  // valid project responses omit attributes.slug, so only compare it when
+  // CircleCI actually supplies the field.
   if (typeof slug === "string" && slug !== projectSlug) {
-    throw new Error("CircleCI project identity did not match the configured slug.");
+    throw new Error(`CircleCI project identity did not match the configured slug (received: ${slug}).`);
   }
   return project;
 }
@@ -181,7 +185,7 @@ export async function listCircleCiRuns(
     if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid runs collection.");
     for (const run of page.data) assertUuid(run.id, "run ID");
     runs.push(...page.data);
-    const next = page.page?.next;
+    const next: string | null | undefined = page.page?.next;
     if (typeof next !== "string" || next.length === 0) break;
     if (seenCursors.has(next)) throw new Error("CircleCI API v3 repeated a pagination cursor.");
     seenCursors.add(next);
@@ -190,39 +194,76 @@ export async function listCircleCiRuns(
   return runs.slice(0, limit);
 }
 
+const COLLECTION_PAGE_SIZE = 20;
+const MAX_COLLECTION_PAGES = 10;
+
+/** Fetch a bounded collection completely, following only opaque API cursors. */
+async function listCircleCiCollection(
+  pathForCursor: (cursor: string | null) => string,
+  resourceLabel: "workflow" | "job",
+  token: string,
+  maxPages = MAX_COLLECTION_PAGES
+): Promise<V3Resource[]> {
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > MAX_COLLECTION_PAGES) {
+    throw new Error(`Collection page limit must be between 1 and ${MAX_COLLECTION_PAGES}.`);
+  }
+  const resources: V3Resource[] = [];
+  const seenCursors = new Set<string>();
+  let cursor: string | null = null;
+
+  for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
+    const page: V3Collection = await circleV3Get<V3Collection>(
+      token,
+      pathForCursor(cursor)
+    );
+    if (!Array.isArray(page.data)) {
+      throw new Error(`CircleCI API v3 returned an invalid ${resourceLabel}s collection.`);
+    }
+    for (const resource of page.data) assertUuid(resource.id, `${resourceLabel} ID`);
+    resources.push(...page.data);
+
+    const next = page.page?.next;
+    if (typeof next !== "string" || next.length === 0) return resources;
+    if (seenCursors.has(next)) {
+      throw new Error(`CircleCI API v3 repeated a pagination cursor while listing ${resourceLabel}s.`);
+    }
+    seenCursors.add(next);
+    cursor = next;
+  }
+
+  throw new Error(`CircleCI API v3 ${resourceLabel}s collection exceeded the safety limit of ${maxPages * COLLECTION_PAGE_SIZE} items.`);
+}
+
 export async function listCircleCiWorkflows(
   token: string,
-  runId: string
+  runId: string,
+  maxPages = MAX_COLLECTION_PAGES
 ): Promise<V3Resource[]> {
   assertUuid(runId, "run ID");
-  const query = new URLSearchParams({
-    "filter[run_id]": runId,
-    "page[limit]": "20"
-  });
-  const page = await circleV3Get<V3Collection>(
-    token,
-    `/api/v3/workflows?${query.toString()}`
-  );
-  if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid workflows collection.");
-  for (const workflow of page.data) assertUuid(workflow.id, "workflow ID");
-  return page.data;
+  return listCircleCiCollection((cursor) => {
+    const query = new URLSearchParams({
+      "filter[run_id]": runId,
+      "page[limit]": String(COLLECTION_PAGE_SIZE)
+    });
+    if (cursor) query.set("page[cursor]", cursor);
+    return `/api/v3/workflows?${query.toString()}`;
+  }, "workflow", token, maxPages);
 }
 
 export async function listCircleCiJobs(
   token: string,
-  workflowId: string
+  workflowId: string,
+  maxPages = MAX_COLLECTION_PAGES
 ): Promise<V3Resource[]> {
   assertUuid(workflowId, "workflow ID");
-  const query = new URLSearchParams({
-    "filter[workflow_id]": workflowId
-  });
-  const page = await circleV3Get<V3Collection>(
-    token,
-    `/api/v3/jobs?${query.toString()}`
-  );
-  if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid jobs collection.");
-  for (const job of page.data) assertUuid(job.id, "job ID");
-  return page.data;
+  return listCircleCiCollection((cursor) => {
+    const query = new URLSearchParams({
+      "filter[workflow_id]": workflowId,
+      "page[limit]": String(COLLECTION_PAGE_SIZE)
+    });
+    if (cursor) query.set("page[cursor]", cursor);
+    return `/api/v3/jobs?${query.toString()}`;
+  }, "job", token, maxPages);
 }
 
 export async function getCircleCiJob(
@@ -258,4 +299,73 @@ export async function getCircleCiJobStepOutput(
     `/api/v3/jobs/${jobId}/${stream}?${query.toString()}`,
     maxBytes
   );
+}
+
+
+export interface CircleCiArtifact {
+  id?: string;
+  attributes?: {
+    path?: string;
+    url?: string;
+    node_index?: number;
+    size?: number;
+  };
+}
+
+/** Read the structured test results as bounded JSON Lines. */
+export async function getCircleCiJobTests(
+  token: string,
+  jobId: string,
+  maxBytes = MAX_TEXT_BYTES
+): Promise<{ text: string; truncated: boolean }> {
+  assertUuid(jobId, "job ID");
+  return circleV3GetText(token, `/api/v3/jobs/${jobId}/tests`, maxBytes);
+}
+
+/** List artifact metadata for one job; presigned URLs are kept internal. */
+export async function listCircleCiJobArtifacts(
+  token: string,
+  jobId: string
+): Promise<CircleCiArtifact[]> {
+  assertUuid(jobId, "job ID");
+  const result = await circleV3Get<V3Collection<CircleCiArtifact["attributes"]>>(
+    token,
+    `/api/v3/jobs/${jobId}/artifacts`
+  );
+  if (!Array.isArray(result.data)) {
+    throw new Error("CircleCI API v3 returned an invalid artifacts collection.");
+  }
+  if (result.data.length > MAX_ARTIFACTS) {
+    throw new Error("CircleCI job returned more than 100 artifacts; refusing an unbounded response.");
+  }
+  return result.data;
+}
+
+
+/** Fetch one artifact by its exact listed path; caller cannot supply a URL. */
+export async function getCircleCiJobArtifact(
+  token: string,
+  jobId: string,
+  artifactPath: string,
+  maxBytes = MAX_TEXT_BYTES
+): Promise<{ path: string; text: string; truncated: boolean }> {
+  if (typeof artifactPath !== "string" || artifactPath.length < 1 || artifactPath.length > 512 ||
+      artifactPath.startsWith("/") || artifactPath.split("/").some((part) => part === "." || part === "..")) {
+    throw new Error("Invalid CircleCI artifact path.");
+  }
+  const artifacts = await listCircleCiJobArtifacts(token, jobId);
+  const matches = artifacts.filter((artifact) => artifact.attributes?.path === artifactPath);
+  if (matches.length !== 1) {
+    throw new Error(matches.length === 0
+      ? "The requested artifact path was not found for this job."
+      : "The requested artifact path is ambiguous for this job.");
+  }
+  const rawUrl = matches[0].attributes?.url;
+  if (typeof rawUrl !== "string") throw new Error("CircleCI artifact does not include a download URL.");
+  const url = allowedArtifactUrl(rawUrl);
+  if (!url) throw new Error("CircleCI artifact URL is not on an allowed HTTPS host.");
+  const response = await fetchAllowedArtifact(url);
+  if (!response.ok) throw new Error(`CircleCI artifact download failed (HTTP ${response.status}).`);
+  const bounded = await readBoundedText(response, maxBytes);
+  return { path: artifactPath, ...bounded };
 }

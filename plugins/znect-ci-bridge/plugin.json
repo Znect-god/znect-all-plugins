@@ -2,8 +2,8 @@
   "id": "znect-ci-bridge",
   "name": "Znect CI Bridge",
   "version": "0.1.0",
-  "status": "prototype",
-  "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
+  "status": "in-development",
+  "description": "Experimental read-only CircleCI bridge with MCP tools, browser API, and signed webhook event inbox.",
   "platforms": {
     "intended": [
       "Cloudflare Workers",
@@ -17,19 +17,20 @@
   "permissions": [
     "Network access to the configured Cloudflare Worker and approved CircleCI API endpoints",
     "Read-only CircleCI project/build data using a secret token",
-    "Bearer authentication for the MCP endpoint"
+    "Separate Bearer authentication tokens for MCP and browser JSON API access"
   ],
   "dependencies": [
-    "Node.js 22 toolchain for development",
+    "Node.js 24 toolchain for development",
     "Cloudflare Workers runtime",
     "Cloudflare Agents SDK 0.33.0",
     "MCP TypeScript server/client SDK 2.4.0",
     "Zod 4.6.7",
     "Wrangler 4.160.0",
-    "CircleCI API v1.1 (legacy/deprecated)"
+    "CircleCI API v3 (current), with legacy API v1.1 compatibility tools"
   ],
   "security_controls": [
     "Bearer authentication for /mcp with fixed-length digest comparison",
+    "Streamable HTTP Origin validation delegated to Cloudflare Agents SDK v2; rejects malformed, opaque, and untrusted browser origins",
     "Fixed CircleCI project path and read-only GET requests",
     "CircleCI redirect rejection and 15-second outbound request timeouts; artifact redirects are manually revalidated",
     "HTTPS artifact URL allowlist and default-port restriction",
@@ -38,23 +39,29 @@
     "Configured Worker secrets redacted from returned logs",
     "Secrets supplied through Cloudflare Worker Secrets",
     "CircleCI API JSON response body size ceiling",
+    "Nested workflow/job inspection and automatic diagnostics have explicit page, failed-job, log-action, and artifact budgets to remain below the 50-subrequest Workers Free ceiling",
     "Maximum three allowlisted artifact redirects",
-    "Cloudflare Rate Limiting binding: 60 authenticated MCP requests per 60 seconds per Cloudflare location",
-    "Rate-limit key is a SHA-256 digest of the configured MCP token; raw token is not used as the key",
     "Fail-closed HTTP 503 when rate limiting is missing or unavailable",
-    "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats"
+    "Best-effort pattern redaction for common Bearer/Basic, GitHub/GitLab/Slack, Stripe, Google, npm, AWS, JWT, PEM, and key/value credential formats",
+    "Separate Bearer authentication for /mcp (MCP_ACCESS_TOKEN) and /api/v1/* (WEB_ACCESS_TOKEN)",
+    "Cloudflare Rate Limiting binding: 60 authenticated MCP and browser API requests per 60 seconds per Cloudflare location",
+    "Authenticated rate-limit keys are SHA-256 digests of their respective access tokens; raw tokens are not used as keys",
+    "Failed MCP and browser API authentication attempts use a separate SHA-256 client-IP digest bucket",
+    "CircleCI outbound webhook ingress verifies v1 HMAC-SHA256 signatures against the exact raw request body",
+    "Webhook payloads are capped at 64 KiB, filtered to the fixed Forge project, normalized to allowlisted fields, and deduplicated by CircleCI event ID",
+    "SQLite-backed Durable Object stores at most 500 normalized events and prunes events older than 30 days"
   ],
   "limitations": [
-    "Prototype only; not production-ready",
-    "Cloudflare deployment and end-to-end MCP behavior not verified",
-    "CircleCI connectivity and log retrieval not verified",
-    "CircleCI API v1.1 is legacy; API v3 migration is researched but blocked on token type, project UUID, and response-mapping verification",
+    "In development; not production-ready",
+    "Production Cloudflare deployment and end-to-end production MCP behavior are not verified; the current feature-branch head has passed an isolated Cloudflare Preview deployment and authenticated smoke test.",
+    "CircleCI API v3 project resolution and read-only access to the fixed Forge project were verified by the authenticated Preview smoke test; broader live run/job/log/artifact response coverage remains to be verified.",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
-    "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit",
-    "Failed authentication attempts are not covered by the authenticated per-token rate limit",
+    "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit; dedicated edge WAF hardening remains advisable.",
     "Rate-limit namespace ID must be unique within the user's Cloudflare account",
-    "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials"
+    "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials",
+    "Event inbox is queryable through MCP and browser API but does not push unsolicited messages into an open ChatGPT conversation; a supported notification delivery or polling channel remains to be implemented",
+    "CircleCI project webhook registration and automatic Add Webhook ping/check succeeded; an actual CircleCI workflow-completed delivery and end-to-end inbox retrieval remain unverified."
   ],
   "testing": {
     "performed": [
@@ -76,18 +83,35 @@
       "Mocked CircleCI HTTP adapter tests cover fixed-origin GET requests, path confinement, 401/403/429 errors, sanitized failures, malformed JSON, and oversized responses",
       "Artifact allowlist regression tests cover regional S3 endpoints and reject unrelated AWS service hosts",
       "Artifact redirect regression tests cover the configured redirect-hop limit",
-      "GitHub Actions run 43088128444 passed npm ci, npm audit with zero vulnerabilities, TypeScript typecheck, 29 tests across three files, and Wrangler dry-run with MCP_RATE_LIMITER"
+      "GitHub Actions run 43088128444 passed npm ci, npm audit with zero vulnerabilities, TypeScript typecheck, 29 tests across three files, and Wrangler dry-run with MCP_RATE_LIMITER",
+      "Worker API regression test verifies configured CircleCI, MCP, and browser credentials are redacted from upstream error responses",
+      "Security helper regression tests verify oversized diagnostic JSON remains parseable and is marked as truncated",
+      "Current CI validates the latest read-only MCP Worker bundle with dependency audit, TypeScript, Vitest, and Wrangler dry-run",
+      "MCP transport regression tests reject untrusted, null, and file Origin headers with HTTP 403",
+      "CircleCI timeout/network errors and Retry-After parsing covered by mocked tests",
+      "Nested CircleCI pagination enforces caller-selected page ceilings; run diagnostics are bounded to fit Workers Free subrequest limits",
+      "Browser dashboard security tests verify text-only DOM rendering, no token persistence, omitted ambient credentials, redirect rejection, and no-referrer requests",
+      "Browser run-details API enforces the same 10-workflow/40-job inspection ceilings as MCP and marks truncated workflow summaries incomplete",
+      "CircleCI v1 webhook HMAC verification and normalized event parsing tests added",
+      "Worker tests added for signed webhook acceptance, invalid signatures, foreign-project filtering, and authenticated event inbox API",
+      "GitHub Actions run 43566730976 on commit e15809b passed npm ci, typecheck/unit tests, isolated Cloudflare Preview deployment, Preview-only CIRCLECI_WEBHOOK_SECRET installation, and authenticated read-only smoke checks.",
+      "Authenticated Preview smoke test verified live CircleCI API v3 project access, 13 read-only MCP tools, browser event inbox, synthetic v1 HMAC-signed webhook acceptance, duplicate suppression, durable SQLite event storage, and event retrieval through browser API and MCP.",
+      "GitHub Actions run 43568768594 passed isolated Preview deployment, Preview-only webhook secret installation, secret-name diagnostics, and authenticated read-only smoke test.",
+      "GitHub Actions run 43568774133 passed the same isolated Preview validation on the latest test/documentation revision.",
+      "CircleCI project webhook was registered successfully; CircleCI's automatic Add Webhook ping/check received a 2xx response from the isolated Preview endpoint."
     ],
     "pending": [
-      "Live Cloudflare Worker deployment and endpoint checks",
-      "Live CircleCI API integration and log retrieval",
-      "Edge-level throttling for failed authentication attempts and broader log-secret exposure review",
-      "Implement and verify API v3 migration after token and project identity checks; mocked v1.1 adapter tests do not establish live compatibility"
+      "Wait for and verify a real CircleCI workflow-completed delivery from an ordinary Znect Forge workflow, correlate CircleCI delivery history with the durable Preview inbox, verify event-ID deduplication, and retrieve the event through MCP/browser API.",
+      "Implement and verify a supported polling/delivery path from the event inbox to the assistant workflow before claiming proactive notifications.",
+      "Complete broader live CircleCI API v3 run/workflow/job/log/artifact parity checks and an independent security review before any Production deployment.",
+      "Consider a dedicated Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects."
     ]
   },
   "secrets": [
     "CIRCLECI_TOKEN",
-    "MCP_ACCESS_TOKEN"
+    "MCP_ACCESS_TOKEN",
+    "WEB_ACCESS_TOKEN",
+    "CIRCLECI_WEBHOOK_SECRET"
   ],
   "license": "undecided"
 }

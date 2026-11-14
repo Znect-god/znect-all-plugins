@@ -2,12 +2,43 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
+  fetchWithSafeErrors,
+  retryAfterSeconds,
   limitText,
+  stringifyBoundedJson,
   readBoundedJson,
   readBoundedText,
   redactKnownSecrets,
   safeEqual
 } from "../src/security";
+
+describe("fetchWithSafeErrors", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("normalizes timeout and network failures without reflecting runtime details", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new DOMException("sensitive runtime detail", "TimeoutError")
+    ));
+    await expect(fetchWithSafeErrors("https://circleci.com/api/v3/runs", {}))
+      .rejects.toThrow("CircleCI API request timed out.");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
+      new TypeError("sensitive socket and request details")
+    ));
+    await expect(fetchWithSafeErrors("https://circleci.com/api/v3/runs", {}))
+      .rejects.toThrow("CircleCI API request failed due to a network or TLS error.");
+  });
+});
+
+describe("retryAfterSeconds", () => {
+  it("parses numeric and HTTP-date Retry-After values without reflecting invalid input", () => {
+    const now = Date.parse("2026-11-12T12:00:00Z");
+    expect(retryAfterSeconds("17", now)).toBe(17);
+    expect(retryAfterSeconds("1.2", now)).toBe(2);
+    expect(retryAfterSeconds("Thu, 12 Nov 2026 12:00:30 GMT", now)).toBe(30);
+    expect(retryAfterSeconds("invalid\nheader", now)).toBeNull();
+    expect(retryAfterSeconds(null, now)).toBeNull();
+  });
+});
 
 describe("safeEqual", () => {
   it("accepts identical values and rejects different values", async () => {
@@ -25,6 +56,16 @@ describe("redactKnownSecrets", () => {
         MCP_ACCESS_TOKEN: "def456"
       })
     ).toBe("Circle [REDACTED]; MCP [REDACTED]");
+  });
+
+
+  it("redacts the dedicated browser access token from returned output", () => {
+    const webToken = "web-secret-value";
+    const output = redactKnownSecrets("log line contains " + webToken, {
+      WEB_ACCESS_TOKEN: webToken
+    });
+    expect(output).not.toContain(webToken);
+    expect(output).toContain("[REDACTED]");
   });
 
   it("redacts common credential patterns in JSON, headers, and environment output", () => {
@@ -194,5 +235,23 @@ describe("fetchAllowedArtifact", () => {
       fetchAllowedArtifact(new URL("https://123-gh.circle-artifacts.com/log.txt"), 2)
     ).rejects.toThrow("Artifact redirect limit exceeded.");
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+
+describe("stringifyBoundedJson", () => {
+  it("keeps oversized diagnostic JSON valid and marks omitted content", () => {
+    const output = stringifyBoundedJson({
+      run_id: "example",
+      diagnostics: [{ stdout: "long output ".repeat(20_000), stderr: "error" }]
+    }, 1_000);
+    expect(output.length).toBeLessThanOrEqual(1_000);
+    expect(JSON.parse(output)).toMatchObject({ response_truncated: true, run_id: "example" });
+  });
+
+  it("rejects invalid response budgets", () => {
+    expect(() => stringifyBoundedJson({ ok: true }, 0)).toThrow(
+      "maxChars must be a positive safe integer."
+    );
   });
 });

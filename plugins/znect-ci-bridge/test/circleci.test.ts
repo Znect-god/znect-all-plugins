@@ -33,7 +33,7 @@ describe("CircleCI read-only HTTP adapter", () => {
         "Circle-Token": "synthetic-token",
         "Accept": "application/json"
       },
-      redirect: "error"
+      redirect: "manual"
     });
     expect(init.signal).toBeDefined();
   });
@@ -64,7 +64,7 @@ describe("CircleCI read-only HTTP adapter", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(circleGet("token", "/project/github/Znect-god/znect-forge"))
-      .rejects.toThrow("CircleCI API returned HTTP 429.");
+      .rejects.toThrow("CircleCI API rate limit exceeded. Retry after the indicated interval.");
   });
 
   it("rejects malformed and oversized JSON responses", async () => {

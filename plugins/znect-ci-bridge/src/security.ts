@@ -1,6 +1,36 @@
+/** Normalize network failures so runtime internals and request details never reach callers. */
+export async function fetchWithSafeErrors(
+  url: string,
+  init: RequestInit,
+  label = "CircleCI API"
+): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "";
+    if (name === "TimeoutError" || name === "AbortError") {
+      throw new Error(`${label} request timed out.`);
+    }
+    throw new Error(`${label} request failed due to a network or TLS error.`);
+  }
+}
+
+/** Parse Retry-After without reflecting arbitrary upstream header contents. */
+export function retryAfterSeconds(value: string | null, now = Date.now()): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
+    const seconds = Number(trimmed);
+    return Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds) : null;
+  }
+  const timestamp = Date.parse(trimmed);
+  return Number.isFinite(timestamp) ? Math.max(0, Math.ceil((timestamp - now) / 1000)) : null;
+}
+
 export interface SecretEnv {
   CIRCLECI_TOKEN?: string;
   MCP_ACCESS_TOKEN?: string;
+  WEB_ACCESS_TOKEN?: string;
 }
 
 export async function safeEqual(a: string, b: string): Promise<boolean> {
@@ -18,7 +48,7 @@ export async function safeEqual(a: string, b: string): Promise<boolean> {
 
 export function redactKnownSecrets(value: string, env: SecretEnv): string {
   let redacted = value;
-  for (const secret of [env.CIRCLECI_TOKEN, env.MCP_ACCESS_TOKEN]) {
+  for (const secret of [env.CIRCLECI_TOKEN, env.MCP_ACCESS_TOKEN, env.WEB_ACCESS_TOKEN]) {
     if (secret) redacted = redacted.split(secret).join("[REDACTED]");
   }
 
@@ -137,6 +167,60 @@ export function limitText(
   };
 }
 
+
+/**
+ * Serialize JSON without returning a syntactically broken document when large
+ * diagnostic strings exceed the response budget. Longest string fields are
+ * shortened first and the root object records that content was omitted.
+ */
+export function stringifyBoundedJson(value: Record<string, unknown>, maxChars: number): string {
+  if (!Number.isSafeInteger(maxChars) || maxChars < 1) {
+    throw new Error("maxChars must be a positive safe integer.");
+  }
+  const clone = JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  let serialized = JSON.stringify(clone, null, 2);
+  if (serialized.length <= maxChars) return serialized;
+
+  clone.response_truncated = true;
+  type StringSlot = { parent: Record<string, unknown> | unknown[]; key: string | number; value: string };
+  const findLongest = (node: unknown, parent?: Record<string, unknown> | unknown[], key?: string | number): StringSlot | null => {
+    if (typeof node === "string") {
+      return parent === undefined || key === undefined ? null : { parent, key, value: node };
+    }
+    if (Array.isArray(node)) {
+      let longest: StringSlot | null = null;
+      node.forEach((child, index) => {
+        const candidate = findLongest(child, node, index);
+        if (candidate && (!longest || candidate.value.length > longest.value.length)) longest = candidate;
+      });
+      return longest;
+    }
+    if (node && typeof node === "object") {
+      let longest: StringSlot | null = null;
+      for (const [childKey, child] of Object.entries(node)) {
+        const candidate = findLongest(child, node as Record<string, unknown>, childKey);
+        if (candidate && (!longest || candidate.value.length > longest.value.length)) longest = candidate;
+      }
+      return longest;
+    }
+    return null;
+  };
+
+  for (let attempt = 0; serialized.length > maxChars && attempt < 10_000; attempt++) {
+    const slot = findLongest(clone);
+    if (!slot || slot.value.length === 0) break;
+    const excess = serialized.length - maxChars;
+    const nextBudget = Math.max(0, slot.value.length - excess - 64);
+    const shortened = limitText(slot.value, nextBudget).text;
+    if (Array.isArray(slot.parent)) slot.parent[slot.key as number] = shortened;
+    else slot.parent[slot.key as string] = shortened;
+    serialized = JSON.stringify(clone, null, 2);
+  }
+
+  if (serialized.length <= maxChars) return serialized;
+  return JSON.stringify({ response_truncated: true, error: "Diagnostic response exceeded the JSON size limit." });
+}
+
 export async function readBoundedJson<T>(
   response: Response,
   maxBytes: number
@@ -158,11 +242,11 @@ export async function fetchAllowedArtifact(
 ): Promise<Response> {
   let currentUrl = initialUrl;
   for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
-    const response = await fetch(currentUrl.toString(), {
+    const response = await fetchWithSafeErrors(currentUrl.toString(), {
       method: "GET",
       redirect: "manual",
       signal: AbortSignal.timeout(15_000)
-    });
+    }, "CircleCI artifact");
     if (![301, 302, 303, 307, 308].includes(response.status)) {
       return response;
     }
