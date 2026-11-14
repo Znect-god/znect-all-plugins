@@ -61,9 +61,9 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
     ...(text(attrs.branch) ? { branch: text(attrs.branch) } : {}),
     ...(text(attrs.vcs_revision) ? { commitSha: text(attrs.vcs_revision) } : {}),
     ...(text(attrs.subject) ? { commitMessage: text(attrs.subject) } : {}),
-    ...(iso(attrs.start_time) ? { startedAt: iso(attrs.start_time) } : {}),
-    ...(iso(attrs.stop_time) ? { completedAt: iso(attrs.stop_time) } : {}),
-    ...(text(attrs.url) ? { url: text(attrs.url) } : {})
+    ...(iso(attrs.start_time ?? attrs.created_at) ? { startedAt: iso(attrs.start_time ?? attrs.created_at) } : {}),
+    ...(iso(attrs.stop_time ?? attrs.stopped_at) ? { completedAt: iso(attrs.stop_time ?? attrs.stopped_at) } : {}),
+    ...(text(attrs.url ?? attrs.web_url) ? { url: text(attrs.url ?? attrs.web_url) } : {})
   };
 }
 
@@ -73,7 +73,7 @@ function mapWorkflow(resource: V3Resource, runId: string): CiWorkflow {
     id: resource.id,
     runId,
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
-    ...(text(attrs.status) || text(attrs.outcome) ? { status: text(attrs.status) ?? text(attrs.outcome) } : {})
+    ...(text(attrs.outcome) || text(attrs.status) ? { status: text(attrs.outcome) ?? text(attrs.status) } : {})
   };
 }
 
@@ -122,8 +122,8 @@ function mapJob(resource: V3Resource, projectId: string, workflowId?: string, ru
     ...(workflowId ? { workflowId } : {}),
     status: statusOf(resource),
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
-    ...(iso(attrs.start_time) ? { startedAt: iso(attrs.start_time) } : {}),
-    ...(iso(attrs.stop_time) ? { completedAt: iso(attrs.stop_time) } : {}),
+    ...(iso(attrs.start_time ?? attrs.created_at) ? { startedAt: iso(attrs.start_time ?? attrs.created_at) } : {}),
+    ...(iso(attrs.stop_time ?? attrs.stopped_at) ? { completedAt: iso(attrs.stop_time ?? attrs.stopped_at) } : {}),
     ...(steps.length ? { steps } : {})
   };
 }
