@@ -233,7 +233,7 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
       throw new Error("CircleCI workflow does not belong to the selected run and project.");
     }
     const project = await this.project(scope);
-    const jobs = await listCircleCiJobs(this.token, workflowId, 2);
+    const jobs = await listCircleCiJobs(this.token, workflowId);
     for (const job of jobs) assertCircleCiJobOwnership(job, project.id, workflowId);
     return jobs.map((job) => mapJob(job, scope.projectId, workflowId, runId));
   }
