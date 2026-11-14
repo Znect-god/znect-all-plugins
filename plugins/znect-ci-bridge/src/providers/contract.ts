@@ -36,8 +36,8 @@ export interface CiWorkflow {
 export interface CiJob {
   id: string;
   projectId: string;
-  runId: string;
-  workflowId: string;
+  runId?: string;
+  workflowId?: string;
   name?: string;
   status: string;
   startedAt?: string;
@@ -78,7 +78,7 @@ export interface ReadOnlyCiProviderAdapter {
   listRuns(scope: CiProjectScope, limit: number): Promise<CiRun[]>;
   getRun(scope: CiProjectScope, runId: string): Promise<CiRun>;
   listWorkflows(scope: CiProjectScope, runId: string): Promise<CiWorkflow[]>;
-  listJobs(scope: CiProjectScope, workflowId: string): Promise<CiJob[]>;
+  listJobs(scope: CiProjectScope, runId: string, workflowId: string): Promise<CiJob[]>;
   getJob(scope: CiProjectScope, jobId: string): Promise<CiJob>;
   getJobLogs(scope: CiProjectScope, jobId: string, options: {
     step: number;
