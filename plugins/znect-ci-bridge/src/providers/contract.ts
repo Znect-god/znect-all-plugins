@@ -33,6 +33,20 @@ export interface CiWorkflow {
   status?: string;
 }
 
+export interface CiJobAction {
+  name?: string;
+  status?: string;
+  outcome?: string;
+  exitCode?: number;
+  stepNumber?: number;
+}
+
+export interface CiJobStep {
+  name?: string;
+  execution: number;
+  actions: CiJobAction[];
+}
+
 export interface CiJob {
   id: string;
   projectId: string;
@@ -42,6 +56,7 @@ export interface CiJob {
   status: string;
   startedAt?: string;
   completedAt?: string;
+  steps?: CiJobStep[];
 }
 
 export interface CiLogOutput {
