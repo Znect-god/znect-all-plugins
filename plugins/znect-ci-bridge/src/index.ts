@@ -616,7 +616,7 @@ function createServer(env: Env) {
   server.registerTool(
     "list_recent_events",
     {
-      description: "Read newly received, signed CircleCI workflow/job completion events for the fixed Znect Forge project. Use the returned next_cursor as after on the next call. Read-only.",
+      description: "Read signed CircleCI workflow/job completion events for the fixed Znect Forge project. The initial after=0 read returns the newest events first; pass next_cursor as after on subsequent reads to receive only newer events. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
         after: z.number().int().min(0).default(0),
