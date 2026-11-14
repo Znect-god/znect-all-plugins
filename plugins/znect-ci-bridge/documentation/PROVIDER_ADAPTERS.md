@@ -25,7 +25,7 @@ Currently routed through the adapter:
 - normalized job step/action diagnostics, job logs and structured test reports;
 - artifact metadata and bounded artifact content.
 
-The adapter is constructed from a server-side CircleCI token, a registered CircleCI project slug, the stable Bridge project ID and the registered connection ID. Both project ID and connection ID must match the caller's scope; checking only the connection ID would be unsafe because connection IDs are unique only within a project. Run access is verified against the selected project's paginated run collection. Workflow access is verified against the selected run. Job details must expose the expected project and a valid workflow reference before sensitive job data is read.
+The adapter is constructed from a server-side CircleCI token, a registered CircleCI project slug, the stable Bridge project ID and the registered connection ID. Both project ID and connection ID must match the caller's scope; checking only the connection ID would be unsafe because connection IDs are unique only within a project. Run access is verified against the selected project's paginated run collection. Workflow access is verified against the selected run. Job details must expose the expected project before sensitive job data is read. If a workflow reference is supplied, it must be a valid UUID; run diagnostics additionally require it to match the workflow already verified for that run.
 
 The browser JSON API still uses the existing CircleCI v3 functions directly and remains to be migrated. The legacy v1.1 `list_recent_builds`, `get_build_details` and `get_build_logs` tools also remain direct compatibility paths. Automatic `diagnose_run` now uses normalized `CiJobStep`/`CiJobAction` structures rather than exposing provider response objects.
 
@@ -44,7 +44,7 @@ The proposed route/schema contract is documented separately in [ZNECT_BUILD_API_
 ## Migration order
 
 1. Keep the CircleCI v3 adapter and legacy compatibility paths behaviourally equivalent.
-2. Move `diagnose_run` and browser diagnostics to normalized adapter methods. If richer step-level diagnostics are required, extend the shared contract with explicit normalized step/action/execution types rather than leaking provider response objects.
+2. Move the browser JSON API to normalized adapter methods. The MCP `diagnose_run` path already uses normalized step/action/execution types; extend those types deliberately if another provider needs additional diagnostic detail.
 3. Decide whether legacy v1.1 build tools should be represented as a compatibility API or replaced by provider-neutral run/job operations.
 4. Implement Znect Build only after its real API and credentials are available.
 5. Add provider contract tests and provider-specific fixture tests before switching any registered project from CircleCI to Znect Build.
