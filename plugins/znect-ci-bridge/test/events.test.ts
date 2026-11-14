@@ -142,7 +142,7 @@ describe("Durable event inbox storage contract", () => {
       ...workflowPayload,
       id: "3888f21b-eaa7-38e3-8f3d-75a63bba889" + suffix
     }, "workflow-completed");
-    const events = ["1", "2", "3"].map((suffix) => makeEvent(suffix));
+    const events = ["1", "2", "3"].map((suffix) => makeEvent(suffix)!);
     expect(events.every(Boolean)).toBe(true);
 
     const append = (event: typeof events[number]) => store.fetch(new Request("https://event-store/append", {
@@ -164,11 +164,12 @@ describe("Durable event inbox storage contract", () => {
       next_cursor: 3
     });
 
-    const newest = makeEvent("4");
+    const newest = makeEvent("4")!;
     await append(newest);
     const updates = await store.fetch(new Request("https://event-store/events?after=3&limit=10"));
     await expect(updates.json()).resolves.toMatchObject({
       events: [{ cursor: 4, id: "3888f21b-eaa7-38e3-8f3d-75a63bba8894" }],
       next_cursor: 4
     });
-  });});
+  });
+});
