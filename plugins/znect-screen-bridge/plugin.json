@@ -1,0 +1,47 @@
+{
+  "id": "znect-screen-bridge",
+  "name": "Znect Screen Bridge",
+  "version": "0.1.0",
+  "status": "prototype",
+  "description": "Concept-stage Android screen-sharing bridge with user-controlled capture and provider-neutral AI/client adapters; implementation deferred until the Znect Forge foundation is established.",
+  "platforms": {
+    "intended": [
+      "Android"
+    ],
+    "tested": []
+  },
+  "permissions": [
+    "Android MediaProjection consent for screen capture (not implemented)",
+    "Foreground service and notification for an active capture session (not implemented)",
+    "Optional overlay permission for floating controls (not implemented)",
+    "Network access only for a user-configured authenticated and encrypted client transport (not implemented)"
+  ],
+  "dependencies": [
+    "Android SDK (target version to be selected during implementation)",
+    "Android MediaProjection APIs",
+    "Provider/client adapter interface (to be designed)"
+  ],
+  "limitations": [
+    "Documentation-only concept; no executable implementation",
+    "No screen capture, overlay, transport, or AI adapter has been implemented",
+    "ChatGPT continuous screen/video access is not guaranteed by a ChatGPT Free subscription",
+    "OpenAI API usage is separate from ChatGPT subscription and billing",
+    "No compatibility, privacy, or security testing has been performed",
+    "Implementation intentionally deferred until after the Znect Forge foundation"
+  ],
+  "testing": {
+    "performed": [],
+    "not_yet_verified": [
+      "Android build",
+      "MediaProjection consent and lifecycle",
+      "Foreground service behavior",
+      "Floating controls and overlay permission",
+      "Frame processing and local preview",
+      "Authenticated encrypted transport",
+      "Provider integrations",
+      "Privacy and security review",
+      "Supported-device compatibility"
+    ]
+  },
+  "license": "undecided"
+}
