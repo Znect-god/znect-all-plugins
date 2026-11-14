@@ -42,9 +42,6 @@ interface Env {
   };
 }
 
-const PROJECT_SLUG = "gh/Znect-god/znect-forge";
-const PROJECT_PATH = "/project/github/Znect-god/znect-forge";
-
 function getProjectRegistry(env: Env) {
   return loadProjectRegistry(env.ZNECT_PROJECT_REGISTRY);
 }
