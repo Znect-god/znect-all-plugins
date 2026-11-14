@@ -129,7 +129,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         var button=element("button","","Open");
         button.type="button";
         button.addEventListener("click",function(){loadDetails(run.id);});
-        row.appendChild(main);row.appendChild(button);row.appendChild(element("span","pill",attrs.status||attrs.outcome||"unknown"));
+        row.appendChild(main);row.appendChild(button);row.appendChild(element("span","pill",run.status||"unknown"));
         runsBox.appendChild(row);
       });
     }).catch(function(error){
