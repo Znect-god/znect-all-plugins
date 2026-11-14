@@ -144,34 +144,51 @@ export async function resolveCircleCiProject(
   return project;
 }
 
-/** Resolve a run through its pipeline and verify that pipeline belongs to the selected project. */
+/**
+ * Verify run ownership using only the documented project-scoped runs collection.
+ * The scan is bounded to 20 pages (400 runs); older runs fail closed rather than
+ * being fetched by an unscoped UUID alone.
+ */
 export async function getCircleCiRunForProject(
   token: string,
   runId: string,
   projectId: string
 ): Promise<V3Resource> {
   assertUuid(projectId, "project ID");
-  const run = await getCircleCiRun(token, runId);
-  const references = run.references as Record<string, unknown> | undefined;
-  const pipelineReference = references?.pipeline as Record<string, unknown> | undefined;
-  const pipelineId = pipelineReference?.id;
-  if (typeof pipelineId !== "string" || !isCircleCiUuid(pipelineId)) {
-    throw new Error("CircleCI run does not expose a verifiable pipeline reference; refusing cross-project access.");
-  }
-  const query = new URLSearchParams({ "filter[project_id]": projectId });
-  const pipelineResult = await circleV3Get<V3SingleResource>(
-    token,
-    `/api/v3/pipelines/${pipelineId}?${query.toString()}`
-  );
-  const pipeline = pipelineResult?.data;
-  const pipelineReferences = pipeline?.references as Record<string, unknown> | undefined;
-  const projectReference = pipelineReferences?.project as Record<string, unknown> | undefined;
-  if (!pipeline || pipeline.id !== pipelineId || projectReference?.id !== projectId) {
-    throw new Error("CircleCI run does not belong to the selected project.");
-  }
-  return run;
-}
+  assertUuid(runId, "run ID");
+  let cursor: string | null = null;
+  const seenCursors = new Set<string>();
+  const maxPages = 20;
 
+  for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
+    const query = new URLSearchParams({
+      "filter[project_id]": projectId,
+      "page[limit]": "20"
+    });
+    if (cursor) query.set("page[cursor]", cursor);
+    const page = await circleV3Get<V3Collection>(
+      token,
+      "/api/v3/runs?" + query.toString()
+    );
+    if (!Array.isArray(page.data)) {
+      throw new Error("CircleCI API v3 returned an invalid project-scoped runs collection.");
+    }
+    for (const run of page.data) assertUuid(run.id, "run ID");
+    if (page.data.some((run) => run.id === runId)) {
+      return getCircleCiRun(token, runId);
+    }
+    const next = page.page?.next;
+    if (typeof next !== "string" || next.length === 0) {
+      throw new Error("CircleCI run does not belong to the selected project.");
+    }
+    if (seenCursors.has(next)) {
+      throw new Error("CircleCI API v3 repeated a pagination cursor during run ownership verification.");
+    }
+    seenCursors.add(next);
+    cursor = next;
+  }
+  throw new Error("CircleCI run ownership could not be verified within the 400-run safety window.");
+}
 /** Verify the project and workflow references before any job data is returned. */
 export function assertCircleCiJobOwnership(
   job: V3Resource,
