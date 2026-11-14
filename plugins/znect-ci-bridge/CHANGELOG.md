@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0] - 2026-11-15 workflow ownership verification
+### Security
+- Added explicit validation of each CircleCI workflow's `references.run.id`; provider-side filter parameters are no longer treated as sufficient proof of ownership.
+- Added regression coverage for a workflow linked to a different run and updated browser API fixtures to include the required ownership reference.
+- Added coverage for legacy Durable Object event-ID migration and cross-workflow job rejection. Fresh CI/typecheck validation remains pending.
+
+
 ## [0.1.0] - 2026-11-15 webhook replay protection
 ### Security
 - Separated CircleCI event-ID replay keys from the 500-record event-history cap. Duplicate deliveries remain detectable for the full 30-day event retention window even after their event records are evicted.
