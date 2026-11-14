@@ -21,6 +21,12 @@ describe("Read-only browser API run details", () => {
       expect(init?.method).toBe("GET");
       expect(new Headers(init?.headers).get("authorization")).toBe("Bearer circle-test-token");
 
+      if (url.pathname === "/api/v3/projects") {
+        return new Response(JSON.stringify({ data: [{ id: "123e4567-e89b-42d3-a456-426614174000", attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/runs") {
+        return new Response(JSON.stringify({ data: [{ id: runId }], page: { next: null } }), { status: 200 });
+      }
       if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({
           data: { id: runId, attributes: { status: "success", pipeline_number: 42 } }
@@ -34,7 +40,7 @@ describe("Read-only browser API run details", () => {
       }
       if (url.pathname === "/api/v3/jobs") {
         return new Response(JSON.stringify({
-          data: [{ id: jobId, attributes: { name: "unit-tests", status: "success" } }],
+          data: [{ id: jobId, attributes: { name: "unit-tests", status: "success" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
           page: { next: null }
         }), { status: 200 });
       }
@@ -67,7 +73,7 @@ describe("Read-only browser API run details", () => {
       },
       limits: { max_workflows: 10, max_jobs_per_workflow: 40 }
     });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("returns a sanitized upstream error when CircleCI rejects run-detail access", async () => {
@@ -99,6 +105,12 @@ describe("Read-only browser API run details", () => {
       expect(init?.method).toBe("GET");
       expect(new Headers(init?.headers).get("authorization")).toBe("Bearer circle-test-token");
 
+      if (url.pathname === "/api/v3/projects") {
+        return new Response(JSON.stringify({ data: [{ id: "123e4567-e89b-42d3-a456-426614174000", attributes: { slug: "gh/Znect-god/znect-forge" } }] }), { status: 200 });
+      }
+      if (url.pathname === "/api/v3/runs") {
+        return new Response(JSON.stringify({ data: [{ id: runId }], page: { next: null } }), { status: 200 });
+      }
       if (url.pathname === `/api/v3/runs/${runId}`) {
         return new Response(JSON.stringify({
           data: { id: runId, attributes: { status: "failed", pipeline_number: 43 } }
@@ -112,7 +124,7 @@ describe("Read-only browser API run details", () => {
       }
       if (url.pathname === "/api/v3/jobs") {
         return new Response(JSON.stringify({
-          data: [{ id: jobId, attributes: { name: "unit-tests", outcome: "failed" } }],
+          data: [{ id: jobId, attributes: { name: "unit-tests", outcome: "failed" }, references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } } }],
           page: { next: null }
         }), { status: 200 });
       }
@@ -120,6 +132,7 @@ describe("Read-only browser API run details", () => {
         return new Response(JSON.stringify({
           data: {
             id: jobId,
+            references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } },
             attributes: {
               name: "unit-tests",
               parallel_executions: [{
@@ -165,7 +178,7 @@ describe("Read-only browser API run details", () => {
     expect(body).toContain("[REDACTED]");
     expect(body).not.toContain("web-test-token");
     expect(JSON.parse(body).diagnostics_summary.incomplete).toBe(false);
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
   it("returns 404 for unknown API paths without contacting CircleCI", async () => {
