@@ -252,7 +252,7 @@ describe("CircleCI API v3 client", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: RUN_ID, attributes: { phase: "ended", current_outcome: "succeeded" } } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: WORKFLOW_ID }], page: { next: null, prev: null } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: JOB_ID }], page: { next: null, prev: null } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: JOB_ID }] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: JOB_ID, attributes: { name: "typecheck" } } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -284,33 +284,30 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("invalid or mismatched job resource");
   });
 
-  it("paginates workflows and jobs with opaque cursors", async () => {
+  it("paginates workflows and reads the unpaginated jobs collection", async () => {
     const workflow2 = "123e4567-e89b-42d3-a456-426614174004";
-    const job2 = "123e4567-e89b-42d3-a456-426614174005";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: WORKFLOW_ID }], page: { next: "workflow-cursor" }
+        data: [{ id: WORKFLOW_ID }], page: { next: "workflow-cursor", prev: null }
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: workflow2 }], page: { next: null }
+        data: [{ id: workflow2 }], page: { next: null, prev: "workflow-cursor" }
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: JOB_ID }], page: { next: "job-cursor" }
-      }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: job2 }], page: { next: null }
+        data: [{ id: JOB_ID }]
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listCircleCiWorkflows("token", RUN_ID)).resolves.toHaveLength(2);
-    await expect(listCircleCiJobs("token", WORKFLOW_ID)).resolves.toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    await expect(listCircleCiJobs("token", WORKFLOW_ID)).resolves.toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[1][0]).toContain("page%5Bcursor%5D=workflow-cursor");
-    expect(fetchMock.mock.calls[3][0]).toContain("page%5Bcursor%5D=job-cursor");
     expect(fetchMock.mock.calls[0][0]).toContain("page%5Blimit%5D=20");
+    expect(fetchMock.mock.calls[2][0]).toContain("filter%5Bworkflow_id%5D=" + WORKFLOW_ID);
+    expect(fetchMock.mock.calls[2][0]).not.toContain("page%5B");
   });
 
-  it("rejects repeated cursors while traversing workflows and jobs", async () => {
+  it("rejects repeated cursors while traversing workflows", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: [{ id: WORKFLOW_ID }], page: { next: "repeat" }
@@ -322,7 +319,7 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("repeated a pagination cursor while listing workflows");
   });
 
-  it("enforces a caller-selected page ceiling for nested collections", async () => {
+  it("enforces a caller-selected page ceiling for workflow collections", async () => {
     const nextJobId = "123e4567-e89b-42d3-a456-426614174006";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -333,7 +330,7 @@ describe("CircleCI API v3 client", () => {
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(listCircleCiJobs("token", WORKFLOW_ID, 2))
+    await expect(listCircleCiWorkflows("token", RUN_ID, 2))
       .rejects.toThrow("safety limit of 40 items");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
