@@ -18,10 +18,11 @@ export interface BridgeEvent {
   job_number?: number;
 }
 
-const EXPECTED_PROJECTS = new Set([
+const DEFAULT_PROJECT_SLUGS = new Set([
   "gh/Znect-god/znect-forge",
   "github/Znect-god/znect-forge"
 ]);
+const PROJECT_SLUG_RE = /^(?:gh|github)\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_EVENT_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_EVENTS = 500;
@@ -101,7 +102,8 @@ export async function verifyCircleCiSignature(
 /** Reduce the open CircleCI webhook payload to a bounded, non-sensitive event record. */
 export function normalizeCircleCiWebhook(
   payload: unknown,
-  headerEventType: string | null
+  headerEventType: string | null,
+  acceptedProjectSlugs: ReadonlySet<string> = DEFAULT_PROJECT_SLUGS
 ): BridgeEvent | null {
   const root = record(payload);
   const type = safeString(root.type, 64);
@@ -116,7 +118,7 @@ export function normalizeCircleCiWebhook(
 
   const project = record(root.project);
   const projectSlug = safeString(project.slug, 256);
-  if (!projectSlug || !EXPECTED_PROJECTS.has(projectSlug)) return null;
+  if (!projectSlug || !PROJECT_SLUG_RE.test(projectSlug) || !acceptedProjectSlugs.has(projectSlug)) return null;
 
   const id = safeString(root.id, 64);
   if (!id || !UUID_RE.test(id)) throw new Error("Invalid CircleCI webhook event ID.");
@@ -140,7 +142,7 @@ export function normalizeCircleCiWebhook(
     id,
     type,
     happened_at: new Date(happenedTime).toISOString(),
-    project_slug: "gh/Znect-god/znect-forge",
+    project_slug: projectSlug,
     pipeline_id: safeString(pipeline.id, 64),
     pipeline_number: safeNumber(pipeline.number),
     branch: safeString(vcs.branch, 256) ?? safeString(git.branch, 256),
@@ -185,7 +187,7 @@ export class BuildEventStore {
       }
       if (!event || typeof event.id !== "string" || !UUID_RE.test(event.id) ||
           (event.type !== "workflow-completed" && event.type !== "job-completed") ||
-          !EXPECTED_PROJECTS.has(event.project_slug) || !Number.isFinite(Date.parse(event.happened_at))) {
+          typeof event.project_slug !== "string" || !PROJECT_SLUG_RE.test(event.project_slug) || !Number.isFinite(Date.parse(event.happened_at))) {
         return Response.json({ error: "Invalid normalized event." }, { status: 400 });
       }
       const existing = this.sql.exec("SELECT seq FROM build_events WHERE event_id = ?", event.id).toArray();
