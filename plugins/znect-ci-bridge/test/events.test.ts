@@ -101,7 +101,7 @@ describe("Durable event inbox storage contract", () => {
     next = 1;
 
     exec(query: string, ...values: unknown[]) {
-      const sql = query.replace(/\\s+/g, " ").trim();
+      const sql = query.replace(/\s+/g, " ").trim();
       if (sql.startsWith("INSERT OR IGNORE INTO seen_event_ids") && sql.includes("SELECT event_id, happened_at FROM build_events")) {
         for (const row of this.rows) {
           if (!this.seen.some((entry) => entry.event_id === row.event_id)) {
@@ -191,6 +191,30 @@ describe("Durable event inbox storage contract", () => {
       accepted: true,
       duplicate: true
     });
+  });
+
+  it("migrates replay keys from event records created before the separate deduplication table", async () => {
+    const sql = new FakeSql();
+    const legacyEvent = normalizeCircleCiWebhook(workflowPayload, "workflow-completed")!;
+    sql.rows.push({
+      seq: 1,
+      event_id: legacyEvent.id,
+      happened_at: legacyEvent.happened_at,
+      event_json: JSON.stringify(legacyEvent)
+    });
+    const store = new BuildEventStore({ storage: { sql } } as unknown as DurableObjectState);
+
+    expect(sql.seen).toEqual([{
+      event_id: legacyEvent.id,
+      happened_at: legacyEvent.happened_at
+    }]);
+    const response = await store.fetch(new Request("https://event-store/append", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(legacyEvent)
+    }));
+    await expect(response.json()).resolves.toMatchObject({ accepted: true, duplicate: true });
+    expect(sql.rows).toHaveLength(1);
   });
 
   it("returns the newest events on the initial read and only newer events after the cursor", async () => {
