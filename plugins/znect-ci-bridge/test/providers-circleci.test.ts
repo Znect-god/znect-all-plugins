@@ -140,6 +140,39 @@ describe("CircleCI read-only provider adapter", () => {
     });
   });
 
+  it("rejects a job whose workflow reference differs from the selected run workflow", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: [{ id: RUN_ID }],
+        page: { next: null }
+      }))
+      .mockResolvedValueOnce(response({
+        data: { id: RUN_ID, attributes: { status: "success" } }
+      }))
+      .mockResolvedValueOnce(response({
+        data: [{ id: WORKFLOW_ID, references: { run: { id: RUN_ID } }, attributes: { status: "success" } }],
+        page: { next: null }
+      }))
+      .mockResolvedValueOnce(response({
+        data: [{
+          id: JOB_ID,
+          references: {
+            project: { id: PROJECT_ID },
+            workflow: { id: "123e4567-e89b-42d3-a456-426614174099" }
+          },
+          attributes: { status: "failed" }
+        }],
+        page: { next: null }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.listJobs(scope, RUN_ID, WORKFLOW_ID))
+      .rejects.toThrow("does not belong to the selected project and workflow");
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
   it("refuses to read job logs when the job belongs to another project", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(projectResponse())
