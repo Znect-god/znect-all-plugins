@@ -257,7 +257,7 @@ describe("CircleCI API v3 client", () => {
         data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }], page: { next: "same" }
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: RUN_ID }], page: { next: "same" }
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }], page: { next: "same" }
       }), { status: 200 })));
     await expect(listCircleCiRuns("token", PROJECT_ID, 30))
       .rejects.toThrow("repeated a pagination cursor");
