@@ -41,6 +41,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 </section>
 <section class="panel" id="runs-panel" hidden>
 <div class="actions" style="justify-content:space-between;margin-top:0"><h2 style="font-size:1.05rem;margin:0">Recent runs</h2><button id="refresh">Refresh</button></div>
+<div class="actions"><label for="project" style="margin:0">Project</label><select id="project" aria-label="Select Znect project"></select></div>
 <div id="runs" style="margin-top:12px"></div>
 </section>
 <section class="panel" id="details-panel" hidden>
@@ -54,11 +55,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 (function(){
   "use strict";
   var token="";
+  var currentProject="znect-forge";
   var lastDetails=null;
   var sessionVersion=0;
   var runsRequestId=0;
   var detailsRequestId=0;
   var tokenInput=document.getElementById("token");
+  var projectSelect=document.getElementById("project");
   var message=document.getElementById("message");
   var runsPanel=document.getElementById("runs-panel");
   var detailsPanel=document.getElementById("details-panel");
@@ -80,10 +83,25 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
     runsBox.replaceChildren();detailsBox.replaceChildren();rawBox.textContent="";
     if(!token){setMessage("Enter the Bridge access token.","error");return;}
-    setMessage("Checking connection…");
-    request("/api/v1/status").then(function(data){
+    setMessage("Loading registered projects…");
+    request("/api/v1/projects").then(function(data){
       if(version!==sessionVersion)return;
-      setMessage("Connected to "+(data.project.slug||"CircleCI project")+". Read-only access confirmed.","good");
+      var projects=(Array.isArray(data.projects)?data.projects:[]).filter(function(project){
+        return Array.isArray(project.providers)&&project.providers.indexOf("circleci")!==-1;
+      });
+      projectSelect.replaceChildren();
+      projects.forEach(function(project){
+        var option=element("option","",project.name);
+        option.value=project.id;
+        projectSelect.appendChild(option);
+      });
+      if(!projects.length)throw new Error("No registered project has a CircleCI connection.");
+      currentProject=projects.some(function(project){return project.id==="znect-forge";})?"znect-forge":projects[0].id;
+      projectSelect.value=currentProject;
+      return request("/api/v1/status?project_id="+encodeURIComponent(currentProject));
+    }).then(function(data){
+      if(version!==sessionVersion)return;
+      setMessage("Connected to "+(data.project.name||data.project.slug||"CircleCI project")+". Read-only access confirmed.","good");
       runsPanel.hidden=false;
       loadRuns();
     }).catch(function(error){
@@ -96,7 +114,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     var version=sessionVersion;
     var requestId=++runsRequestId;
     runsBox.replaceChildren(element("p","status","Loading runs…"));
-    request("/api/v1/runs?limit=20").then(function(data){
+    request("/api/v1/runs?limit=20&project_id="+encodeURIComponent(currentProject)).then(function(data){
       if(version!==sessionVersion||requestId!==runsRequestId)return;
       runsBox.replaceChildren();
       var items=Array.isArray(data.runs)?data.runs:[];
@@ -123,7 +141,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     var version=sessionVersion;
     var requestId=++detailsRequestId;
     setMessage("Loading run details…");
-    request("/api/v1/runs/"+encodeURIComponent(id)).then(function(data){
+    request("/api/v1/runs/"+encodeURIComponent(id)+"?project_id="+encodeURIComponent(currentProject)).then(function(data){
       if(version!==sessionVersion||requestId!==detailsRequestId)return;
       lastDetails=data;detailsPanel.hidden=false;detailsBox.replaceChildren();
       var run=data.run||{};var attrs=run.attributes||{};
@@ -151,6 +169,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   }
   document.getElementById("connect").addEventListener("click",connect);
   document.getElementById("refresh").addEventListener("click",loadRuns);
+  projectSelect.addEventListener("change",function(){
+    currentProject=projectSelect.value;
+    detailsPanel.hidden=true;lastDetails=null;rawBox.textContent="";
+    setMessage("Switching project…");
+    request("/api/v1/status?project_id="+encodeURIComponent(currentProject)).then(function(data){
+      setMessage("Connected to "+(data.project.name||data.project.slug||"CircleCI project")+".","good");
+      loadRuns();
+    }).catch(function(error){setMessage(error.message,"error");});
+  });
   document.getElementById("disconnect").addEventListener("click",function(){
     sessionVersion++;runsRequestId++;detailsRequestId++;
     token="";tokenInput.value="";runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
