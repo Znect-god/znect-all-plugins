@@ -9,6 +9,7 @@ import {
   listCircleCiJobs,
   listCircleCiRuns,
   listCircleCiWorkflows,
+  isCircleCiUuid,
   resolveCircleCiProject,
   type CircleCiArtifact,
   type V3Resource
@@ -160,7 +161,9 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
     const job = await getCircleCiJob(this.token, jobId);
     assertCircleCiJobOwnership(job, project.id);
     const workflowId = workflowReference(job);
-    if (!workflowId) throw new Error("CircleCI job is missing its workflow ownership reference.");
+    if (!workflowId || !isCircleCiUuid(workflowId)) {
+      throw new Error("CircleCI job is missing a valid workflow ownership reference.");
+    }
     return mapJob(job, scope.projectId, workflowId);
   }
 
