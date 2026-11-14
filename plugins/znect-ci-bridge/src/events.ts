@@ -108,9 +108,11 @@ export function normalizeCircleCiWebhook(
   // CircleCI Test Ping Event uses an abbreviated payload and is only a
   // connectivity check. It must be acknowledged, never stored as a build event.
   // The request signature has already been verified by the caller.
-  if (type === "ping" || headerEventType === "ping") return null;
-  if (type !== headerEventType) throw new Error("CircleCI webhook event type mismatch.");
+  // Ping payloads are intentionally abbreviated. After signature verification,
+  // acknowledge any payload that is not one of the two supported build events.
+  // This also tolerates Ping variants that omit the payload type or event header.
   if (type !== "workflow-completed" && type !== "job-completed") return null;
+  if (type !== headerEventType) throw new Error("CircleCI webhook event type mismatch.");
 
   const project = record(root.project);
   const projectSlug = safeString(project.slug, 256);
