@@ -39,6 +39,7 @@ export interface CiJobAction {
   outcome?: string;
   exitCode?: number;
   stepNumber?: number;
+  isInsignificant?: boolean;
 }
 
 export interface CiJobStep {
