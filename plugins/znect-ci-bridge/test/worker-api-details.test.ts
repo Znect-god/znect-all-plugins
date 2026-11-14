@@ -165,7 +165,7 @@ describe("Read-only browser API run details", () => {
     expect(body).toContain("[REDACTED]");
     expect(body).not.toContain("web-test-token");
     expect(body).toContain('"incomplete":false');
-    expect(fetchMock).toHaveBeenCalledTimes(7);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
   it("returns 404 for unknown API paths without contacting CircleCI", async () => {
