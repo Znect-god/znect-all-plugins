@@ -40,7 +40,7 @@ describe("CircleCI read-only provider adapter", () => {
       }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "circleci-main");
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
     await expect(adapter.listRuns(scope, 10)).resolves.toEqual([{
       id: RUN_ID,
       projectId: "znect-forge",
@@ -57,10 +57,20 @@ describe("CircleCI read-only provider adapter", () => {
   it("rejects a scope using a different registered connection before network access", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "circleci-main");
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
 
     await expect(adapter.listRuns({ ...scope, connectionId: "other-connection" }, 10))
       .rejects.toThrow("does not match the configured CircleCI connection");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a different project even when the connection ID is reused", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.listRuns({ projectId: "another-project", connectionId: "circleci-main" }, 10))
+      .rejects.toThrow("does not match the configured CircleCI project connection");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -79,7 +89,7 @@ describe("CircleCI read-only provider adapter", () => {
       }))
       .mockResolvedValueOnce(new Response("test failure output", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
-    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "circleci-main");
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
 
     await expect(adapter.getJobLogs(scope, JOB_ID, {
       step: 0, stream: "stderr", maxBytes: 1024
@@ -98,7 +108,7 @@ describe("CircleCI read-only provider adapter", () => {
         }
       }));
     vi.stubGlobal("fetch", fetchMock);
-    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "circleci-main");
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
 
     await expect(adapter.getJobLogs(scope, JOB_ID, {
       step: 0, stream: "stderr", maxBytes: 1024
