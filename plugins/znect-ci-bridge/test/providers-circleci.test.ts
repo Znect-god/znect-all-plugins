@@ -140,6 +140,32 @@ describe("CircleCI read-only provider adapter", () => {
     });
   });
 
+  it("rejects a workflow whose explicit run reference differs from the requested run", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: [{ id: RUN_ID }],
+        page: { next: null }
+      }))
+      .mockResolvedValueOnce(response({
+        data: { id: RUN_ID, attributes: { status: "success" } }
+      }))
+      .mockResolvedValueOnce(response({
+        data: [{
+          id: WORKFLOW_ID,
+          references: { run: { id: "123e4567-e89b-42d3-a456-426614174099" } },
+          attributes: { status: "success" }
+        }],
+        page: { next: null }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.listWorkflows(scope, RUN_ID))
+      .rejects.toThrow("does not belong to the selected run");
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
   it("rejects a job whose workflow reference differs from the selected run workflow", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(projectResponse())
