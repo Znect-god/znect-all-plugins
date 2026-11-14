@@ -213,8 +213,8 @@ export async function getCircleCiRun(
 ): Promise<V3Resource> {
   assertUuid(runId, "run ID");
   const result = await circleV3Get<V3SingleResource>(token, `/api/v3/runs/${runId}`);
-  if (!result || !result.data || typeof result.data.id !== "string") {
-    throw new Error("CircleCI API v3 returned an invalid run resource.");
+  if (!result || !result.data || result.data.id !== runId) {
+    throw new Error("CircleCI API v3 returned an invalid or mismatched run resource.");
   }
   return result.data;
 }
@@ -335,8 +335,8 @@ export async function getCircleCiJob(
 ): Promise<V3Resource> {
   assertUuid(jobId, "job ID");
   const result = await circleV3Get<V3SingleResource>(token, `/api/v3/jobs/${jobId}`);
-  if (!result || !result.data || typeof result.data.id !== "string") {
-    throw new Error("CircleCI API v3 returned an invalid job resource.");
+  if (!result || !result.data || result.data.id !== jobId) {
+    throw new Error("CircleCI API v3 returned an invalid or mismatched job resource.");
   }
   return result.data;
 }
