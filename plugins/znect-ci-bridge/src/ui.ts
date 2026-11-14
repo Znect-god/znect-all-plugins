@@ -14,7 +14,7 @@ h1{font-size:clamp(1.5rem,4vw,2.1rem);margin:0;letter-spacing:-.04em}
 .sub{color:#9ca8ba;margin:6px 0 0;font-size:.92rem}
 .panel{background:#1a202b;border:1px solid #303a49;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 12px 30px #0002}
 label{display:block;font-size:.88rem;color:#bdc7d6;margin-bottom:8px}
-input{width:100%;padding:13px 14px;border:1px solid #465367;border-radius:10px;background:#10151e;color:#fff;font:inherit}
+input{width:100%;padding:13px 14px;border:1px solid #465367;border-radius:10px;background:#10151e;color:#fff;font:inherit}select{padding:10px 12px;border:1px solid #465367;border-radius:10px;background:#10151e;color:#fff;font:inherit;min-width:180px}
 button{border:1px solid #52647d;border-radius:10px;padding:10px 14px;background:#29384c;color:#fff;font:inherit;cursor:pointer}
 button:hover{background:#344a65}button:disabled{opacity:.5;cursor:wait}
 .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
@@ -31,7 +31,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 </head>
 <body>
 <main>
-<header><div><h1>Znect CI Bridge</h1><p class="sub">Read-only CircleCI dashboard · Znect Forge</p></div><span class="pill">FREE WEB ACCESS</span></header>
+<header><div><h1>Znect CI Bridge</h1><p class="sub">Read-only CircleCI dashboard · registered Znect projects</p></div><span class="pill">FREE WEB ACCESS</span></header>
 <section class="panel" aria-labelledby="access-title">
 <h2 id="access-title" style="font-size:1.05rem;margin:0 0 12px">Secure access</h2>
 <label for="token">Web access token</label>
