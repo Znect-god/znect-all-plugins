@@ -35,7 +35,7 @@ export interface ProjectRegistry {
 const MAX_REGISTRY_BYTES = 32_768;
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}$/;
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-const CIRCLECI_SLUG_PATTERN = /^(gh|github)\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+const CIRCLECI_SLUG_PATTERN = /^gh\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
