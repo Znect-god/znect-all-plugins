@@ -103,3 +103,19 @@ The signing secret must be configured independently as Cloudflare Preview/Produc
 - The inbox is not a push channel into an open ChatGPT conversation. A supported polling/delivery integration is still required before proactive assistant notifications can be claimed.
 
 The event receiver has not been promoted to Production. No webhook secret values or CircleCI credentials are stored in Git.
+
+
+### 2026-11-14 Preview validation update
+
+The feature-branch head `e15809bce835408e3b93745255c47d8ac3332257` was deployed to an isolated Cloudflare Worker Preview by GitHub Actions run [43566730976](https://github.com/Znect-god/znect-all-plugins/actions/runs/43566730976). The run passed dependency installation, TypeScript/unit checks, Preview deployment, Preview-only installation of `CIRCLECI_WEBHOOK_SECRET`, secret-name diagnostics, and the authenticated read-only smoke test.
+
+The smoke test confirmed live CircleCI API v3 authentication and read access to the fixed Forge project, all 13 MCP tools marked read-only, the authenticated browser event inbox, and the SQLite-backed Durable Object binding. It sent a synthetic event signed with the configured webhook secret, confirmed first delivery acceptance and duplicate suppression, and verified retrieval through both the browser API and MCP `list_recent_events` tool. This verifies the Preview webhook implementation and storage path, but is not evidence that CircleCI itself has been configured to send webhooks.
+
+The earlier pending items concerning Preview deployment, Preview secret installation, and synthetic signed-webhook/storage verification are therefore resolved for this commit. The following remain open:
+
+- Register the real CircleCI project webhook for `workflow-completed` and verify an actual CircleCI-signed delivery and retry.
+- Verify broader live CircleCI API v3 run/workflow/job/log/artifact response handling beyond project access.
+- Implement a supported polling/delivery path before claiming proactive notifications into an open assistant conversation.
+- Complete an independent security review before any Production deployment.
+
+Production was not deployed or modified. PR #5 remains Draft and unmerged. The branch remains separate from `main`.
