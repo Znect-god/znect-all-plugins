@@ -1,5 +1,5 @@
 name: Znect CI Bridge Preview
-# Exercise the current MCP request-envelope smoke test on every branch push.
+# Deploy the isolated Worker Preview and run smoke checks on branch pushes; PR runs validate code only.
 
 on:
   workflow_dispatch:
