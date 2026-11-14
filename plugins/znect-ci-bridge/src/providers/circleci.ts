@@ -147,7 +147,8 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
           ...(outcome ?? phase ? { status: outcome ?? phase } : {}),
           ...(outcome ? { outcome } : {}),
           ...(typeof stepRecord.exit_code === "number" ? { exitCode: stepRecord.exit_code } : {}),
-          stepNumber: stepRecord.num
+          stepNumber: stepRecord.num,
+          isInsignificant: stepRecord.is_insignificant
         }]
       });
     }
