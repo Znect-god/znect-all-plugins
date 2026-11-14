@@ -118,6 +118,8 @@ describe("CircleCI read-only provider adapter", () => {
                 name: "Run tests",
                 num: 4,
                 phase: "completed",
+                type: "run",
+                is_insignificant: false,
                 outcome: "failed",
                 exit_code: 1
               }]
@@ -156,8 +158,8 @@ describe("CircleCI read-only provider adapter", () => {
           attributes: {
             name: "parallel-tests",
             parallel_executions: [
-              { steps: [{ name: "worker zero", num: 0, phase: "completed", outcome: "success" }] },
-              { steps: [{ name: "worker one", num: 7, phase: "completed", outcome: "failed", exit_code: 1 }] }
+              { steps: [{ name: "worker zero", num: 0, phase: "completed", type: "run", is_insignificant: false, outcome: "success" }] },
+              { steps: [{ name: "worker one", num: 7, phase: "completed", type: "run", is_insignificant: false, outcome: "failed", exit_code: 1 }] }
             ]
           }
         }
@@ -169,6 +171,24 @@ describe("CircleCI read-only provider adapter", () => {
         { execution: 1, actions: [{ stepNumber: 7, status: "failed", exitCode: 1 }] }
       ]
     });
+  });
+
+  it("rejects malformed API v3 step records instead of dropping diagnostics", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: {
+          id: JOB_ID,
+          references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
+          attributes: {
+            parallel_executions: [{
+              steps: [{ name: "missing step number", phase: "completed", type: "run", is_insignificant: false }]
+            }]
+          }
+        }
+      })));
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+    await expect(adapter.getJob(scope, JOB_ID)).rejects.toThrow("malformed job step data");
   });
 
   it("rejects job details missing the API-required workflow relationship", async () => {
