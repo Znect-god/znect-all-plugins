@@ -1,5 +1,6 @@
 import {
   assertCircleCiJobOwnership,
+  assertCircleCiWorkflowOwnership,
   getCircleCiJob,
   getCircleCiJobArtifact,
   getCircleCiJobStepOutput,
@@ -196,7 +197,10 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
     let pending = this.workflowCache.get(runId);
     if (!pending) {
       pending = listCircleCiWorkflows(this.token, runId, 2)
-        .then((workflows) => workflows.map((workflow) => mapWorkflow(workflow, runId)));
+        .then((workflows) => {
+          for (const workflow of workflows) assertCircleCiWorkflowOwnership(workflow, runId);
+          return workflows.map((workflow) => mapWorkflow(workflow, runId));
+        });
       this.workflowCache.set(runId, pending);
     }
     return pending;
