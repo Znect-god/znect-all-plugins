@@ -5,6 +5,7 @@
 - Reject missing or malformed pagination metadata rather than silently treating an incomplete upstream collection as complete. Run listing now fails explicitly if its two-page safety window ends before the requested result limit is met.
 - Follow cursors only for CircleCI v3 workflows; read the unpaginated jobs collection with its documented `filter[workflow_id]` parameter and a 200-job safety ceiling.
 - Map run branch, revision and commit message from the documented event/VCS references, workflow outcome/phase from native fields, and job start/end timestamps from `started_at`/`ended_at`.
+- Enforce the advertised 40-job-per-workflow inspection cap in MCP diagnostics and browser run/diagnostics endpoints; report per-workflow and summary truncation flags so omitted jobs cannot be mistaken for a complete inspection.
 - Added regression coverage for missing job relationships, native API v3 step records, parallel execution indexing and malformed pagination. Fresh CI/typecheck validation remains pending.
 
 # Changelog
