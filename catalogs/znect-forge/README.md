@@ -1,24 +1,27 @@
 # Znect Forge Module Catalog
 
-**Status:** prototype / catalog foundation  
-**Branch:** `catalog/znect-forge`
+**Status:** catalog foundation / no published modules  
+**Branch:** `catalog/znect-forge`  
+**Repository:** `Znect-god/znect-all-plugins`
 
-This directory is the dedicated module catalog source for Znect Forge. It is intentionally separate from CI Bridge and other repository tooling.
+This directory is the dedicated remote catalog source for Znect Forge. It is separate from CI Bridge, CircleCI workflows, and other build/bridge tooling.
 
 ## Files
 
-- `catalog.json` — machine-readable catalog manifest.
-- `catalog.schema.json` — JSON Schema for validating the manifest.
-- `SECURITY.md` — signature and trust requirements for catalog publication.
+- `catalog.template.json` — unsigned schema-v2 template for preparing a release; it is not a live catalog and must never be fetched as trusted data.
+- `catalog.schema.json` — schema matching the current Forge schema-v2 parser and manifest contract.
+- `SECURITY.md` — signature and trust requirements for publication.
+
+A production release will publish a signed `catalog.json` in this directory. Forge must fetch that exact file from this branch over HTTPS and verify it before using any module entry.
 
 ## Current state
 
-The catalog currently contains no published modules. An empty list means only that no module entries have been published here; it does not imply that a Forge installation has no installed modules.
+No module packages have been published in this catalog. The template has an empty module list and placeholder timestamps/signature; it is deliberately not installable or valid as a signed release.
 
-The catalog must be cryptographically authenticated before Forge accepts it. Forge must pin a public verification key independently of catalog content. The corresponding private signing key must never be committed to this repository.
+An empty, successfully verified catalog means no modules are currently published. It is different from a missing catalog, failed network request, invalid signature, or unconfigured trust anchor.
 
-## Planned client behavior
+## Forge behavior
 
-Forge checks connectivity, fetches this catalog, verifies its signature and schema, then compares the declared modules and versions with the local installation. It presents explicit per-module actions such as Install, Update, or Remove. No package is installed, updated, or removed without user confirmation.
+When internet connectivity is available, Forge will offer the explicit action **“Проверить необходимые модули и обновление их”**. On activation, it refreshes this catalog, verifies the signature/schema, compares entries with locally reconciled package state, and presents the appropriate per-module action: Install, Update, or Remove. The user must confirm each state-changing operation.
 
-Do not publish installable module entries until their package locations, versions, hashes, compatibility, permissions, dependencies, and lifecycle behavior have been reviewed and verified.
+Do not publish installable entries until package URLs, versions, hashes, publisher certificate fingerprints, compatibility, permissions, dependencies, and lifecycle behavior have been reviewed and verified.
