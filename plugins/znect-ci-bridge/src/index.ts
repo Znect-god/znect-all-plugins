@@ -363,7 +363,7 @@ function createServer(env: Env) {
           id: connection.id,
           provider: connection.provider,
           status: "configured",
-          provider_availability: "not_checked"
+          provider_availability: connection.provider === "circleci" ? "not_checked" : "not_implemented"
         }))
       }));
       return { content: [{ type: "text", text: stringifyBoundedJson({ projects }, 20_000) }] };
@@ -834,7 +834,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           id: connection.id,
           provider: connection.provider,
           status: "configured",
-          provider_availability: "not_checked"
+          provider_availability: connection.provider === "circleci" ? "not_checked" : "not_implemented"
         }))
       }));
       return boundedJson(JSON.stringify({ projects }), 20_000);
