@@ -265,6 +265,27 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("invalid workflow pagination metadata");
   });
 
+  it("rejects run and workflow pages that exceed the requested API page limit", async () => {
+    const oversizedRuns = Array.from({ length: 11 }, (_, index) => ({
+      id: `00000000-0000-4000-8001-${String(index + 1).padStart(12, "0")}`,
+      references: { project: { id: PROJECT_ID } }
+    }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
+      data: oversizedRuns, page: { next: null }
+    }), { status: 200 })));
+    await expect(listCircleCiRuns("token", PROJECT_ID, 10))
+      .rejects.toThrow("more runs than the requested page limit");
+
+    const oversizedWorkflows = Array.from({ length: 21 }, (_, index) => ({
+      id: `00000000-0000-4000-8001-${String(index + 1).padStart(12, "0")}`
+    }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
+      data: oversizedWorkflows, page: { next: null }
+    }), { status: 200 })));
+    await expect(listCircleCiWorkflows("token", RUN_ID))
+      .rejects.toThrow("more workflows than the requested page limit");
+  });
+
   it("rejects malformed run resource IDs returned by the API", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       data: [{ id: "not-a-uuid" }], page: { next: null }
