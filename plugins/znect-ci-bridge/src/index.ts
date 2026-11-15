@@ -347,6 +347,30 @@ function createServer(env: Env) {
   // Project-scoped live connectivity check for a registered CircleCI project.
   // Read-only: this tool never starts or changes a pipeline.
   server.registerTool(
+    "list_projects",
+    {
+      description: "List registered Znect projects and their configured CI connections. Registration, CI configuration, and live provider availability are reported separately. Read-only.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {}
+    },
+    async () => {
+      const projects = getProjectRegistry(env).projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        status: "registered",
+        ci_status: project.connections.length === 0 ? "not_configured" : "configured",
+        connections: project.connections.map((connection) => ({
+          id: connection.id,
+          provider: connection.provider,
+          status: "configured",
+          provider_availability: "not_checked"
+        }))
+      }));
+      return { content: [{ type: "text", text: stringifyBoundedJson({ projects }, 20_000) }] };
+    }
+  );
+
+  server.registerTool(
     "check_connection",
     {
       description: "Verify MCP-to-CircleCI authentication and read access to one registered Znect project. Returns connection status and project identity only. Read-only.",
@@ -355,14 +379,27 @@ function createServer(env: Env) {
     },
     async ({ project_id, connection_id }) => {
       const { project: registryProject, connection, scope, adapter } = getCircleCiAdapter(env, project_id, connection_id);
-      const recentRuns = await adapter.listRuns(scope, 1);
-      return { content: [{ type: "text", text: JSON.stringify({
-        connected: true,
-        provider: adapter.provider,
-        project: { id: registryProject.id, name: registryProject.name, slug: connection.projectSlug },
-        permissions: "read-only",
-        read_probe: { recent_runs_available: recentRuns.length }
-      }, null, 2) }] };
+      try {
+        const recentRuns = await adapter.listRuns(scope, 1);
+        return { content: [{ type: "text", text: JSON.stringify({
+          connected: true,
+          provider: adapter.provider,
+          project: { id: registryProject.id, name: registryProject.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "available",
+          permissions: "read-only",
+          read_probe: { recent_runs_available: recentRuns.length }
+        }, null, 2) }] };
+      } catch {
+        return { content: [{ type: "text", text: JSON.stringify({
+          connected: false,
+          provider: adapter.provider,
+          project: { id: registryProject.id, name: registryProject.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "unavailable",
+          error: "Provider read probe failed; check provider credentials and connectivity."
+        }, null, 2) }] };
+      }
     }
   );
   server.registerTool(
@@ -742,12 +779,12 @@ function createServer(env: Env) {
       description: "Read signed CircleCI workflow/job completion events for one registered Znect project. Select project_id; the initial after=0 read returns the newest events first, and next_cursor can be passed as after to receive later events. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
-        project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(),
+        project_id: z.string().min(2).max(63),
         after: z.number().int().min(0).default(0),
         limit: z.number().int().min(1).max(50).default(20)
       }
     },
-    async ({ project_id, connection_id, after, limit }) => {
+    async ({ project_id, after, limit }) => {
       if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
       const project = findProject(getProjectRegistry(env), project_id);
       if (!project) throw new Error(`Unknown Znect project: ${project_id}.`);
@@ -767,7 +804,7 @@ function createServer(env: Env) {
 }
 
 async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> {
-  if (!env.CIRCLECI_TOKEN || !env.WEB_ACCESS_TOKEN) return json({ error: "Web access secrets are not configured." }, 503);
+  if (!env.WEB_ACCESS_TOKEN) return json({ error: "Web access secret is not configured." }, 503);
   const authorization = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(.+)$/i.exec(authorization);
   if (!(await safeEqual(match?.[1] ?? "", env.WEB_ACCESS_TOKEN))) {
@@ -828,17 +865,29 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const projectId = url.searchParams.get("project_id");
       if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const { project, connection, scope, adapter } = getCircleCiAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
-      const recentRuns = await adapter.listRuns(scope, 1);
-      return json({
-        service: "znect-ci-bridge",
-        connected: true,
-        provider: adapter.provider,
-        project: { id: project.id, name: project.name, status: "registered" },
-        connection: { id: connection.id, status: "configured" },
-        provider_availability: "available",
-        permissions: "read-only",
-        read_probe: { recent_runs_available: recentRuns.length }
-      });
+      try {
+        const recentRuns = await adapter.listRuns(scope, 1);
+        return json({
+          service: "znect-ci-bridge",
+          connected: true,
+          provider: adapter.provider,
+          project: { id: project.id, name: project.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "available",
+          permissions: "read-only",
+          read_probe: { recent_runs_available: recentRuns.length }
+        });
+      } catch {
+        return json({
+          service: "znect-ci-bridge",
+          connected: false,
+          provider: adapter.provider,
+          project: { id: project.id, name: project.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "unavailable",
+          error: "Provider read probe failed; check provider credentials and connectivity."
+        });
+      }
     }
     if (url.pathname === "/api/v1/runs") {
       const rawLimit = url.searchParams.get("limit");
