@@ -176,3 +176,25 @@ export function findCircleCiProject(
   }
   return undefined;
 }
+
+/**
+ * Resolve a configured provider connection without silently selecting the first
+ * one when a project has multiple connections for the same provider.
+ */
+export function selectProjectConnection(
+  project: ProjectRegistryEntry,
+  provider: CiProvider,
+  connectionId?: string
+): ProjectConnection {
+  const matches = project.connections.filter((connection) => connection.provider === provider);
+  if (connectionId) {
+    const selected = matches.find((connection) => connection.id === connectionId);
+    if (!selected) throw new Error(`Project ${project.id} has no ${provider} connection named ${connectionId}.`);
+    return selected;
+  }
+  if (matches.length === 0) throw new Error(`Project ${project.id} has no ${provider} connection.`);
+  if (matches.length > 1) {
+    throw new Error(`Project ${project.id} has multiple ${provider} connections; provide connection_id.`);
+  }
+  return matches[0];
+}
