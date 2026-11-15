@@ -4,7 +4,8 @@ import {
   findProject,
   parseProjectRegistry,
   loadProjectRegistry,
-  selectProjectConnection
+  selectProjectConnection,
+  describeProjectStatus
 } from "../src/registry";
 
 const forge = {
@@ -119,6 +120,42 @@ describe("project registry", () => {
     expect(parsed.projects[0].connections.map((connection) => connection.id))
       .toEqual(["circleci-main", "build-main"]);
   });
+  it("reports project registration, CI configuration, and provider availability independently", () => {
+    const empty = parseProjectRegistry(JSON.stringify({
+      version: 1,
+      projects: [{
+        id: "znect-familiar",
+        name: "Znect Familiar",
+        repositories: [],
+        components: [],
+        connections: []
+      }]
+    })).projects[0];
+    expect(describeProjectStatus(empty)).toEqual({
+      id: "znect-familiar",
+      name: "Znect Familiar",
+      status: "registered",
+      ci_status: "not_configured",
+      providers: [],
+      connections: []
+    });
+
+    const configured = describeProjectStatus(forge);
+    expect(configured.status).toBe("registered");
+    expect(configured.ci_status).toBe("configured");
+    expect(configured.connections).toEqual([{
+      id: "circleci-main",
+      provider: "circleci",
+      status: "configured",
+      provider_availability: "not_checked"
+    }]);
+    const reserved = describeProjectStatus({
+      ...forge,
+      connections: [{ id: "build-main", provider: "znect-build" }]
+    });
+    expect(reserved.connections[0].provider_availability).toBe("not_implemented");
+  });
+
   it("requires explicit connection selection when a project has multiple CircleCI connections", () => {
     const parsed = parseProjectRegistry(JSON.stringify({
       version: 1,
