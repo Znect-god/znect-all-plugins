@@ -249,7 +249,8 @@ export class BuildEventStore {
             after,
             limit
           )).toArray() as Array<{ seq: number; event_json: string }>;
-      const events = rows.map((row) => ({ cursor: row.seq, ...JSON.parse(row.event_json) as BridgeEvent }));
+      // The database sequence is authoritative; never allow stored JSON to override its cursor.
+      const events = rows.map((row) => ({ ...JSON.parse(row.event_json) as BridgeEvent, cursor: row.seq }));
       const nextCursor = rows.length ? Math.max(...rows.map((row) => row.seq)) : after;
       return Response.json({ events, next_cursor: nextCursor });
     }
