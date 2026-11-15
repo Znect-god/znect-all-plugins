@@ -120,9 +120,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       return request("/api/v1/status?"+scopeQuery());
     }).then(function(data){
       if(version!==sessionVersion)return;
-      setMessage("Connected to "+(data.project.name||data.project.slug||"CircleCI project")+". Read-only access confirmed.","good");
-      runsPanel.hidden=false;
-      loadRuns();
+      if(data.provider_availability==="available"){
+        setMessage("Connected to "+(data.project.name||"CircleCI project")+" via "+(data.connection.id||"selected connection")+". Read-only access confirmed.","good");
+        runsPanel.hidden=false;
+        loadRuns();
+      }else{
+        setMessage("Project and connection are configured, but the CircleCI provider is currently unavailable.","error");
+        runsPanel.hidden=false;
+        runsBox.replaceChildren(element("p","status error",data.error||"Provider availability could not be confirmed."));
+      }
     }).catch(function(error){
       if(version!==sessionVersion)return;
       token="";tokenInput.value="";setMessage(error.message,"error");
@@ -189,8 +195,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     detailsPanel.hidden=true;lastDetails=null;rawBox.textContent="";
     setMessage("Switching CI connection…");
     request("/api/v1/status?"+scopeQuery()).then(function(data){
-      setMessage("Connected to "+(data.project.name||data.project.slug||"CircleCI project")+".","good");
-      loadRuns();
+      if(data.provider_availability==="available"){
+        setMessage("Connected to "+(data.project.name||"CircleCI project")+" via "+(data.connection.id||"selected connection")+".","good");
+        loadRuns();
+      }else{
+        setMessage("Project and connection are configured, but the provider is unavailable.","error");
+        runsBox.replaceChildren(element("p","status error",data.error||"Provider availability could not be confirmed."));
+      }
     }).catch(function(error){setMessage(error.message,"error");});
   }
   projectSelect.addEventListener("change",function(){
