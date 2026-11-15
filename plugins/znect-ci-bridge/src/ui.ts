@@ -41,7 +41,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 </section>
 <section class="panel" id="runs-panel" hidden>
 <div class="actions" style="justify-content:space-between;margin-top:0"><h2 style="font-size:1.05rem;margin:0">Recent runs</h2><button id="refresh">Refresh</button></div>
-<div class="actions"><label for="project" style="margin:0">Project</label><select id="project" aria-label="Select Znect project"></select></div>
+<div class="actions"><label for="project" style="margin:0">Project</label><select id="project" aria-label="Select Znect project"></select><label for="connection" style="margin:0">CI connection</label><select id="connection" aria-label="Select CircleCI connection"></select></div>
 <div id="runs" style="margin-top:12px"></div>
 </section>
 <section class="panel" id="details-panel" hidden>
@@ -55,13 +55,16 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 (function(){
   "use strict";
   var token="";
-  var currentProject="znect-forge";
+  var currentProject="";
+  var currentConnection="";
   var lastDetails=null;
   var sessionVersion=0;
   var runsRequestId=0;
   var detailsRequestId=0;
   var tokenInput=document.getElementById("token");
   var projectSelect=document.getElementById("project");
+  var connectionSelect=document.getElementById("connection");
+  var registeredProjects=[];
   var message=document.getElementById("message");
   var runsPanel=document.getElementById("runs-panel");
   var detailsPanel=document.getElementById("details-panel");
@@ -76,6 +79,21 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       return response.json().then(function(data){if(!response.ok)throw new Error(data.error||("Request failed: "+response.status));return data;});
     });
   }
+  function scopeQuery(){return "project_id="+encodeURIComponent(currentProject)+"&connection_id="+encodeURIComponent(currentConnection);}
+  function selectProject(projectId){
+    currentProject=projectId;
+    var project=registeredProjects.find(function(item){return item.id===projectId;});
+    var connections=(project&&Array.isArray(project.connections)?project.connections:[]).filter(function(item){return item.provider==="circleci";});
+    connectionSelect.replaceChildren();
+    connections.forEach(function(connection){
+      var option=element("option","",connection.id);
+      option.value=connection.id;
+      connectionSelect.appendChild(option);
+    });
+    currentConnection=connections.length?connections[0].id:"";
+    connectionSelect.value=currentConnection;
+    connectionSelect.disabled=connections.length<2;
+  }
   function connect(){
     var version=++sessionVersion;
     runsRequestId++;detailsRequestId++;
@@ -86,19 +104,20 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     setMessage("Loading registered projects…");
     request("/api/v1/projects").then(function(data){
       if(version!==sessionVersion)return;
-      var projects=(Array.isArray(data.projects)?data.projects:[]).filter(function(project){
-        return Array.isArray(project.providers)&&project.providers.indexOf("circleci")!==-1;
+      registeredProjects=(Array.isArray(data.projects)?data.projects:[]).filter(function(project){
+        return Array.isArray(project.connections)&&project.connections.some(function(connection){return connection.provider==="circleci";});
       });
       projectSelect.replaceChildren();
-      projects.forEach(function(project){
+      registeredProjects.forEach(function(project){
         var option=element("option","",project.name);
         option.value=project.id;
         projectSelect.appendChild(option);
       });
-      if(!projects.length)throw new Error("No registered project has a CircleCI connection.");
-      currentProject=projects.some(function(project){return project.id==="znect-forge";})?"znect-forge":projects[0].id;
+      if(!registeredProjects.length)throw new Error("No registered project has a CircleCI connection.");
+      var firstProject=registeredProjects.some(function(project){return project.id==="znect-forge";})?"znect-forge":registeredProjects[0].id;
+      selectProject(firstProject);
       projectSelect.value=currentProject;
-      return request("/api/v1/status?project_id="+encodeURIComponent(currentProject));
+      return request("/api/v1/status?"+scopeQuery());
     }).then(function(data){
       if(version!==sessionVersion)return;
       setMessage("Connected to "+(data.project.name||data.project.slug||"CircleCI project")+". Read-only access confirmed.","good");
@@ -114,7 +133,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     var version=sessionVersion;
     var requestId=++runsRequestId;
     runsBox.replaceChildren(element("p","status","Loading runs…"));
-    request("/api/v1/runs?limit=20&project_id="+encodeURIComponent(currentProject)).then(function(data){
+    request("/api/v1/runs?limit=20&"+scopeQuery()).then(function(data){
       if(version!==sessionVersion||requestId!==runsRequestId)return;
       runsBox.replaceChildren();
       var items=Array.isArray(data.runs)?data.runs:[];
@@ -140,7 +159,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     var version=sessionVersion;
     var requestId=++detailsRequestId;
     setMessage("Loading run details…");
-    request("/api/v1/runs/"+encodeURIComponent(id)+"?project_id="+encodeURIComponent(currentProject)).then(function(data){
+    request("/api/v1/runs/"+encodeURIComponent(id)+"?"+scopeQuery()).then(function(data){
       if(version!==sessionVersion||requestId!==detailsRequestId)return;
       lastDetails=data;detailsPanel.hidden=false;detailsBox.replaceChildren();
       var run=data.run||{};      detailsBox.appendChild(element("p","meta","Run "+run.id+" · "+(run.status||"status unavailable")));
@@ -166,14 +185,21 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   }
   document.getElementById("connect").addEventListener("click",connect);
   document.getElementById("refresh").addEventListener("click",loadRuns);
-  projectSelect.addEventListener("change",function(){
-    currentProject=projectSelect.value;
+  function refreshSelectedScope(){
     detailsPanel.hidden=true;lastDetails=null;rawBox.textContent="";
-    setMessage("Switching project…");
-    request("/api/v1/status?project_id="+encodeURIComponent(currentProject)).then(function(data){
+    setMessage("Switching CI connection…");
+    request("/api/v1/status?"+scopeQuery()).then(function(data){
       setMessage("Connected to "+(data.project.name||data.project.slug||"CircleCI project")+".","good");
       loadRuns();
     }).catch(function(error){setMessage(error.message,"error");});
+  }
+  projectSelect.addEventListener("change",function(){
+    selectProject(projectSelect.value);
+    refreshSelectedScope();
+  });
+  connectionSelect.addEventListener("change",function(){
+    currentConnection=connectionSelect.value;
+    refreshSelectedScope();
   });
   document.getElementById("disconnect").addEventListener("click",function(){
     sessionVersion++;runsRequestId++;detailsRequestId++;
