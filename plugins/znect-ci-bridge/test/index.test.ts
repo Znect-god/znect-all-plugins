@@ -99,7 +99,7 @@ describe("MCP tool schemas and error boundary", () => {
         name: "list_recent_events",
         arguments: { project_id: "znect-forge", after: 0, limit: 20 }
       }),
-      { ...env, EVENT_STORE: namespace } as typeof env & { EVENT_STORE: unknown },
+      { ...env, EVENT_STORE: namespace } as Parameters<typeof worker.fetch>[1],
       ctx
     );
     expect(response.status).toBe(200);
