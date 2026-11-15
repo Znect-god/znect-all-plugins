@@ -1,3 +1,9 @@
+## [0.1.0] - 2026-11-15 CircleCI upstream error response handling
+### Reliability
+- Discard non-success CircleCI API response bodies without buffering or exposing upstream content.
+- Include a safely parsed `Retry-After` interval for job stdout/stderr rate-limit errors, matching JSON API behavior; no automatic retries are performed.
+- Added regression coverage for text-endpoint 429 handling and response-body cancellation. Fresh CI/typecheck validation remains pending.
+
 ## [0.1.0] - 2026-11-15 bounded event inbox reads
 ### Reliability and data integrity
 - Bound event inbox response bodies to 60 KB while streaming and cancel oversized responses before buffering them.
