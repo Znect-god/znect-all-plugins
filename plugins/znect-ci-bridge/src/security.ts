@@ -15,6 +15,15 @@ export async function fetchWithSafeErrors(
   }
 }
 
+/** Release an upstream error response without buffering or exposing its body. */
+export async function discardResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // The upstream request has already failed; body cancellation is best-effort.
+  }
+}
+
 /** Parse Retry-After without reflecting arbitrary upstream header contents. */
 export function retryAfterSeconds(value: string | null, now = Date.now()): number | null {
   if (!value) return null;
