@@ -301,7 +301,7 @@ describe("Read-only browser API run details", () => {
     });
     expect(body).toContain("results-a.xml");
     expect(body).not.toContain("results-b.xml");
-    expect(fetchMock).toHaveBeenCalledTimes(10);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
   });
 
   it("returns 404 for unknown API paths without contacting CircleCI", async () => {
