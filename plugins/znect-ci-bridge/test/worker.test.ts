@@ -76,6 +76,70 @@ describe("Worker HTTP boundary", () => {
     expect(JSON.stringify(forwarded)).not.toContain("author.email");
   });
 
+  it("returns a retryable response when the event-store binding throws", async () => {
+    const payload = {
+      id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895",
+      type: "workflow-completed",
+      happened_at: new Date().toISOString(),
+      project: { slug: "gh/Znect-god/znect-forge" },
+      workflow: { id: "fda08377-fe7e-46b1-8992-3a7aaecac9c3", status: "failed" }
+    };
+    const body = JSON.stringify(payload);
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => { throw new Error("internal binding detail"); } })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/webhooks/circleci", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "circleci-event-type": "workflow-completed",
+          "circleci-signature": await circleCiSignature(body, "webhook-test-secret")
+        },
+        body
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Event storage is temporarily unavailable; CircleCI may retry delivery."
+    });
+  });
+
+  it("rejects malformed event-store acknowledgements with a retryable response", async () => {
+    const payload = {
+      id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895",
+      type: "workflow-completed",
+      happened_at: new Date().toISOString(),
+      project: { slug: "gh/Znect-god/znect-forge" },
+      workflow: { id: "fda08377-fe7e-46b1-8992-3a7aaecac9c3", status: "failed" }
+    };
+    const body = JSON.stringify(payload);
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => Response.json({ accepted: true }) })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/webhooks/circleci", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "circleci-event-type": "workflow-completed",
+          "circleci-signature": await circleCiSignature(body, "webhook-test-secret")
+        },
+        body
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Event storage returned an invalid acknowledgement; CircleCI may retry delivery."
+    });
+  });
+
   it("rejects unsigned or invalid CircleCI webhook requests", async () => {
     const response = await worker.fetch(
       new Request("https://bridge.example/webhooks/circleci", {
