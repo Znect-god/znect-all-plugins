@@ -12,6 +12,11 @@
 - Enforce the advertised 40-job-per-workflow inspection cap in MCP diagnostics and browser run/diagnostics endpoints; report per-workflow and summary truncation flags so omitted jobs cannot be mistaken for a complete inspection.
 - Added regression coverage for missing job relationships, native API v3 step records, parallel execution indexing and malformed pagination. Fresh CI/typecheck validation remains pending.
 
+## [0.1.0] - 2026-11-15 bounded webhook request streaming
+### Security
+- Enforce the 64 KiB CircleCI webhook body ceiling while reading the incoming request stream, cancelling oversized bodies before buffering the full payload.
+- Added a Worker-boundary regression test for an oversized request without a declared Content-Length. Fresh CI/typecheck validation remains pending.
+
 # Changelog
 
 ## [0.1.0] - 2026-11-15 workflow ownership verification
