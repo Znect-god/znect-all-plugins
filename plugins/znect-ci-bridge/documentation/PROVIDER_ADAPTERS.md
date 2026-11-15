@@ -67,3 +67,6 @@ After signature verification and event normalization, the Worker writes the even
 
 
 Event inbox reads through both MCP and the browser JSON API share a bounded response reader. The reader enforces a 60 KB streaming byte ceiling, validates the event-page envelope, cursor values and requested event count, and rejects malformed or oversized responses before returning data. Durable Object binding exceptions and non-success responses are converted to safe failures; no raw storage exception details are exposed to callers.
+
+
+CircleCI v3 requests are GET-only and are not automatically retried. HTTP 401/403/404/429 and other non-success statuses are mapped to bounded, sanitized errors; `Retry-After` accepts either delta-seconds or an HTTP date and is reported to callers without being used for an implicit retry. Non-success response bodies are cancelled best-effort instead of being buffered or exposed. Job stdout/stderr 429 errors include the same parsed retry interval as JSON API errors. Network and timeout failures are normalized without reflecting runtime details.
