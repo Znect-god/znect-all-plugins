@@ -198,3 +198,23 @@ export function selectProjectConnection(
   }
   return matches[0];
 }
+
+/**
+ * Derive registry/configuration/provider states without implying live reachability.
+ * Provider availability is only established by a provider-specific read probe.
+ */
+export function describeProjectStatus(project: ProjectRegistryEntry) {
+  return {
+    id: project.id,
+    name: project.name,
+    status: "registered" as const,
+    ci_status: project.connections.length === 0 ? "not_configured" as const : "configured" as const,
+    providers: [...new Set(project.connections.map((connection) => connection.provider))],
+    connections: project.connections.map((connection) => ({
+      id: connection.id,
+      provider: connection.provider,
+      status: "configured" as const,
+      provider_availability: connection.provider === "circleci" ? "not_checked" as const : "not_implemented" as const
+    }))
+  };
+}
