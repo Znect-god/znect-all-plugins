@@ -1009,15 +1009,28 @@ async function handleCircleCiWebhook(request: Request, env: Env): Promise<Respon
   }
   if (!event) return json({ accepted: true, ignored: true, reason: "Unsupported event type or project." }, 202);
   if (!targetProject) return json({ error: "Registered CircleCI project mapping was not found." }, 400);
-  const stored = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(targetProject.project.id))
-    .fetch("https://event-store/append", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(event)
-    });
-  if (!stored.ok) return json({ error: "Unable to persist CircleCI event; CircleCI may retry delivery." }, 503);
-  const result = await stored.json() as { duplicate?: boolean };
-  return json({ accepted: true, duplicate: result.duplicate === true }, 202);
+  try {
+    const stored = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(targetProject.project.id))
+      .fetch("https://event-store/append", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(event)
+      });
+    if (!stored.ok) {
+      return json({ error: "Unable to persist CircleCI event; CircleCI may retry delivery." }, 503);
+    }
+    const result: unknown = await stored.json();
+    if (result === null || typeof result !== "object" || Array.isArray(result) ||
+        (result as Record<string, unknown>).accepted !== true ||
+        typeof (result as Record<string, unknown>).duplicate !== "boolean") {
+      return json({ error: "Event storage returned an invalid acknowledgement; CircleCI may retry delivery." }, 503);
+    }
+    return json({ accepted: true, duplicate: (result as { duplicate: boolean }).duplicate }, 202);
+  } catch {
+    // Treat binding failures and malformed acknowledgements as transient so
+    // CircleCI receives a retryable response instead of an unhandled Worker error.
+    return json({ error: "Event storage is temporarily unavailable; CircleCI may retry delivery." }, 503);
+  }
 }
 
 export default {
