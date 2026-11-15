@@ -268,7 +268,10 @@ describe("Read-only browser API run details", () => {
         return new Response('{"name":"sample test","result":"failure"}\n', { status: 200 });
       }
       if (url.pathname === `/api/v3/jobs/${jobId}/artifacts`) {
-        return new Response(JSON.stringify({ data: [] }), { status: 200 });
+        return new Response(JSON.stringify({ data: [
+          { id: "123e4567-e89b-42d3-a456-426614174101", attributes: { path: "junit/results-a.xml", size: 100 } },
+          { id: "123e4567-e89b-42d3-a456-426614174102", attributes: { path: "test-results/results-b.xml", size: 120 } }
+        ] }), { status: 200 });
       }
       throw new Error("Unexpected upstream request: " + url.pathname);
     });
@@ -291,7 +294,13 @@ describe("Read-only browser API run details", () => {
     expect(body).toContain('"failed_steps"');
     expect(body).toContain("[REDACTED]");
     expect(body).not.toContain("web-test-token");
-    expect(JSON.parse(body).diagnostics_summary.incomplete).toBe(false);
+    expect(JSON.parse(body).diagnostics_summary).toMatchObject({
+      report_artifact_limit_reached: true,
+      report_data_incomplete: true,
+      incomplete: true
+    });
+    expect(body).toContain("results-a.xml");
+    expect(body).not.toContain("results-b.xml");
     expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
