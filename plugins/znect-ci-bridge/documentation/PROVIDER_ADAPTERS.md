@@ -59,3 +59,8 @@ The proposed route/schema contract is documented separately in [ZNECT_BUILD_API_
 ## Verification status
 
 GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) passed on PR #2 commit `2840dc49c0165b220b69344ff779624a83c03268`, not on the later feature-branch head. Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed for that earlier commit. The install emitted a non-fatal npm warning that install scripts for `core-js-pure`, `esbuild` and `workerd` are not covered by `allowScripts`. The subsequent compatibility-test changes and current branch head remain unverified by this run. This run did not deploy the Worker. The real CircleCI workflow-completed delivery and Znect Build API integration remain separate pending work.
+
+
+## Webhook event persistence
+
+After signature verification and event normalization, the Worker writes the event to the project-scoped Durable Object. A non-2xx storage response, a thrown binding request, or an invalid acknowledgement is treated as a transient persistence failure and returned to CircleCI as HTTP 503. The Worker returns HTTP 202 only after it receives a valid acknowledgement containing both `accepted: true` and a boolean `duplicate` field. This preserves retry behavior and prevents malformed storage responses from being reported as successful ingestion.
