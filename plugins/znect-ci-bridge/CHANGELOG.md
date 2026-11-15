@@ -1,3 +1,9 @@
+## [0.1.0] - 2026-11-15 bounded event inbox reads
+### Reliability and data integrity
+- Bound event inbox response bodies to 60 KB while streaming and cancel oversized responses before buffering them.
+- Validate event page shape, cursor fields and requested result count before exposing Durable Object data through MCP or the browser API.
+- Convert thrown storage bindings, non-success responses and malformed event pages into safe, consistent errors; added Worker and MCP regression tests. Fresh CI/typecheck validation remains pending.
+
 ## [0.1.0] - 2026-11-15 webhook event-store failure handling
 ### Reliability
 - Convert Durable Object binding failures and malformed event-store acknowledgements into explicit retryable HTTP 503 responses, so webhook delivery failures do not escape as unhandled Worker exceptions or false acceptances.
