@@ -238,6 +238,61 @@ describe("Worker HTTP boundary", () => {
     expect(String(storeFetch.mock.calls[0][0])).toContain("after=3&limit=10");
   });
 
+  it("returns 503 when the event inbox Durable Object throws", async () => {
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => { throw new Error("private storage detail"); } })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(503);
+    const body = await response.text();
+    expect(body).toContain("Event storage is temporarily unavailable or returned invalid data.");
+    expect(body).not.toContain("private storage detail");
+  });
+
+  it("rejects malformed event inbox JSON from the Durable Object", async () => {
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => new Response("{not-json", { status: 200 }) })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: "Event storage is temporarily unavailable or returned invalid data." });
+  });
+
+  it("rejects oversized event inbox responses before buffering them", async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array(60_001)); },
+      cancel() { cancelled = true; }
+    });
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => new Response(body, { status: 200 }) })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(503);
+    expect(cancelled).toBe(true);
+  });
+
   it("serves a minimal health response without exposing secrets", async () => {
     const response = await worker.fetch(
       new Request("https://bridge.example/health"),
