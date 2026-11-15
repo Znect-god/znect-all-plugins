@@ -3,7 +3,7 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { DASHBOARD_HTML } from "./ui";
 import { BuildEventStore, normalizeCircleCiWebhook, verifyCircleCiSignature } from "./events";
-import { findCircleCiProject, findProject, loadProjectRegistry, selectProjectConnection } from "./registry";
+import { describeProjectStatus, findCircleCiProject, findProject, loadProjectRegistry, selectProjectConnection } from "./registry";
 export { BuildEventStore };
 import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
@@ -354,18 +354,7 @@ function createServer(env: Env) {
       inputSchema: {}
     },
     async () => {
-      const projects = getProjectRegistry(env).projects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        status: "registered",
-        ci_status: project.connections.length === 0 ? "not_configured" : "configured",
-        connections: project.connections.map((connection) => ({
-          id: connection.id,
-          provider: connection.provider,
-          status: "configured",
-          provider_availability: connection.provider === "circleci" ? "not_checked" : "not_implemented"
-        }))
-      }));
+      const projects = getProjectRegistry(env).projects.map(describeProjectStatus);
       return { content: [{ type: "text", text: stringifyBoundedJson({ projects }, 20_000) }] };
     }
   );
@@ -824,19 +813,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
   const url = new URL(request.url);
   try {
     if (url.pathname === "/api/v1/projects") {
-      const projects = getProjectRegistry(env).projects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        status: "registered",
-        ci_status: project.connections.length === 0 ? "not_configured" : "configured",
-        providers: [...new Set(project.connections.map((connection) => connection.provider))],
-        connections: project.connections.map((connection) => ({
-          id: connection.id,
-          provider: connection.provider,
-          status: "configured",
-          provider_availability: connection.provider === "circleci" ? "not_checked" : "not_implemented"
-        }))
-      }));
+      const projects = getProjectRegistry(env).projects.map(describeProjectStatus);
       return boundedJson(JSON.stringify({ projects }), 20_000);
     }
     if (url.pathname === "/api/v1/events") {
