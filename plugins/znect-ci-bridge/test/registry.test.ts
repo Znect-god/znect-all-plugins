@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   findCircleCiProject,
   findProject,
-  parseProjectRegistry
+  parseProjectRegistry,
+  loadProjectRegistry
 } from "../src/registry";
 
 const forge = {
@@ -80,4 +81,42 @@ describe("project registry", () => {
     expect(() => parseProjectRegistry(JSON.stringify({ version: 2, projects: [] }))).toThrow(/schema version/i);
     expect(() => parseProjectRegistry("x".repeat(32_769))).toThrow(/32 KiB/i);
   });
+  it("allows projects without CI connections and does not inject a Forge-only default", () => {
+    const registry = loadProjectRegistry();
+    expect(registry.projects).toEqual([]);
+    const parsed = parseProjectRegistry(JSON.stringify({
+      version: 1,
+      projects: [{
+        id: "znect-familiar",
+        name: "Znect Familiar",
+        repositories: [{ fullName: "Znect-god/znect-familiar" }],
+        components: [],
+        connections: []
+      }]
+    }));
+    expect(parsed.projects[0].connections).toEqual([]);
+  });
+
+  it("preserves multiple repositories and multiple provider connections in one project", () => {
+    const parsed = parseProjectRegistry(JSON.stringify({
+      version: 1,
+      projects: [{
+        id: "znect-ai",
+        name: "Znect AI",
+        repositories: [
+          { fullName: "Znect-god/znect-ai" },
+          { fullName: "Znect-god/znect-ai-tools" }
+        ],
+        components: [],
+        connections: [
+          { id: "circleci-main", provider: "circleci", projectSlug: "gh/Znect-god/znect-ai" },
+          { id: "build-main", provider: "znect-build" }
+        ]
+      }]
+    }));
+    expect(parsed.projects[0].repositories).toHaveLength(2);
+    expect(parsed.projects[0].connections.map((connection) => connection.id))
+      .toEqual(["circleci-main", "build-main"]);
+  });
+
 });

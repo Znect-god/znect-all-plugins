@@ -140,9 +140,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
       }
       return { id: connectionId, provider, ...(projectSlug ? { projectSlug } : {}) };
     });
-    if (connections.length === 0) throw new Error(`Project ${id} must have at least one CI connection.`);
-
-    projects.push({ id, name, repositories, components, connections });
+        projects.push({ id, name, repositories, components, connections });
   }
 
   const circleCiSlugs = projects.flatMap((project) =>
@@ -156,19 +154,10 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
 }
 
 
-const DEFAULT_PROJECT_REGISTRY = JSON.stringify({
-  version: 1,
-  projects: [{
-    id: "znect-forge",
-    name: "Znect Forge",
-    repositories: [{ fullName: "Znect-god/znect-forge", componentId: "android-app" }],
-    components: [{ id: "android-app", name: "Android application", repository: "Znect-god/znect-forge" }],
-    connections: [{ id: "circleci-main", provider: "circleci", projectSlug: "gh/Znect-god/znect-forge" }]
-  }]
-});
+const EMPTY_PROJECT_REGISTRY = JSON.stringify({ version: 1, projects: [] });
 
 export function loadProjectRegistry(raw?: string): ProjectRegistry {
-  return parseProjectRegistry(raw ?? DEFAULT_PROJECT_REGISTRY);
+  return parseProjectRegistry(raw ?? EMPTY_PROJECT_REGISTRY);
 }
 
 export function findProject(registry: ProjectRegistry, projectId: string): ProjectRegistryEntry | undefined {

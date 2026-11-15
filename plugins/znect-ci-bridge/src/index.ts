@@ -214,7 +214,7 @@ function createServer(env: Env) {
     {
       description: "Read the latest CircleCI v1.1 job runs for one registered Znect project. Read-only; returns branch, status, build number, commit and build URL. Limit 1–30.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), limit: z.number().int().min(1).max(30).default(10) }
+      inputSchema: { project_id: z.string().min(2).max(63), limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ project_id, limit }) => {
       const { connection } = getCircleCiConnection(env, project_id);
@@ -240,7 +240,7 @@ function createServer(env: Env) {
     {
       description: "Read detailed metadata and step/action statuses for one build in a selected registered Znect project. Does not retrieve console output.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), build_num: z.number().int().min(1) }
+      inputSchema: { project_id: z.string().min(2).max(63), build_num: z.number().int().min(1) }
     },
     async ({ project_id, build_num }) => {
       const { connection } = getCircleCiConnection(env, project_id);
@@ -281,7 +281,7 @@ function createServer(env: Env) {
       description: "Read console output for a CircleCI build step/action. Fetches the presigned output URL returned by CircleCI; never accepts arbitrary URLs. Output is bounded to 80,000 characters per action and 160,000 characters total per response; at most 10 actions are fetched to remain within Worker subrequest limits.",
       annotations: { readOnlyHint: true },
       inputSchema: {
-        project_id: z.string().min(2).max(63).default("znect-forge"),
+        project_id: z.string().min(2).max(63),
         build_num: z.number().int().min(1),
         step_index: z.number().int().min(0).optional(),
         max_actions: z.number().int().min(1).max(10).default(10)
@@ -352,7 +352,7 @@ function createServer(env: Env) {
     {
       description: "Verify MCP-to-CircleCI authentication and read access to one registered Znect project. Returns connection status and project identity only. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge") }
+      inputSchema: { project_id: z.string().min(2).max(63) }
     },
     async ({ project_id }) => {
       const { project: registryProject, connection, scope, adapter } = getCircleCiAdapter(env, project_id);
@@ -371,7 +371,7 @@ function createServer(env: Env) {
     {
       description: "Read the latest CircleCI API v3 runs for one registered Znect project. Returns UUID run IDs and current outcomes. Read-only; limit 1–30.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), limit: z.number().int().min(1).max(30).default(10) }
+      inputSchema: { project_id: z.string().min(2).max(63), limit: z.number().int().min(1).max(30).default(10) }
     },
     async ({ project_id, limit }) => {
       const { project: registryProject, connection, scope, adapter } = getCircleCiAdapter(env, project_id);
@@ -390,7 +390,7 @@ function createServer(env: Env) {
     {
       description: "Read one CircleCI API v3 run by UUID for a selected registered project, including its workflows and jobs. Read-only; use a run UUID returned by list_recent_runs for the same project.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), run_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63), run_id: z.string().uuid() }
     },
     async ({ project_id, run_id }) => {
       const { project: registryProject, scope, adapter } = getCircleCiAdapter(env, project_id);
@@ -416,7 +416,7 @@ function createServer(env: Env) {
     {
       description: "Read a CircleCI API v3 job resource by UUID after verifying its project ownership. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), job_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63), job_id: z.string().uuid() }
     },
     async ({ project_id, job_id }) => {
       const { scope, adapter } = getCircleCiAdapter(env, project_id);
@@ -433,7 +433,7 @@ function createServer(env: Env) {
       description: "Read bounded stdout or stderr for a CircleCI API v3 job step. Requires a job UUID and step number. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
-        project_id: z.string().min(2).max(63).default("znect-forge"),
+        project_id: z.string().min(2).max(63),
         job_id: z.string().uuid(),
         step_num: z.number().int().min(0),
         execution: z.number().int().min(0).default(0),
@@ -471,7 +471,7 @@ function createServer(env: Env) {
       description: "Read structured CircleCI test results for a job as bounded JSON Lines. Read-only; requires a job UUID from get_run_details.",
       annotations: { readOnlyHint: true },
       inputSchema: {
-        project_id: z.string().min(2).max(63).default("znect-forge"),
+        project_id: z.string().min(2).max(63),
         job_id: z.string().uuid(),
         max_chars: z.number().int().min(1).max(80_000).default(40_000)
       }
@@ -500,7 +500,7 @@ function createServer(env: Env) {
     {
       description: "List metadata for artifacts uploaded by a CircleCI job. Presigned download URLs are deliberately not exposed. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), job_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63), job_id: z.string().uuid() }
     },
     async ({ project_id, job_id }) => {
       const { scope, adapter } = getCircleCiAdapter(env, project_id);
@@ -522,7 +522,7 @@ function createServer(env: Env) {
       description: "Download one CircleCI job artifact by its exact path from list_job_artifacts. The URL is resolved internally, host-validated, and the text response is bounded. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
-        project_id: z.string().min(2).max(63).default("znect-forge"),
+        project_id: z.string().min(2).max(63),
         job_id: z.string().uuid(),
         artifact_path: z.string().min(1).max(512),
         max_chars: z.number().int().min(1).max(80_000).default(40_000)
@@ -554,7 +554,7 @@ function createServer(env: Env) {
     {
       description: "Automatically inspect one run through the selected read-only CI provider adapter. Verifies project, run, workflow and job ownership before reading logs, tests, or artifacts. Read-only; does not rerun or modify pipelines.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63).default("znect-forge"), run_id: z.string().uuid() }
+      inputSchema: { project_id: z.string().min(2).max(63), run_id: z.string().uuid() }
     },
     async ({ project_id, run_id }) => {
       const { project: registryProject, scope, adapter } = getCircleCiAdapter(env, project_id);
@@ -743,7 +743,7 @@ function createServer(env: Env) {
       description: "Read signed CircleCI workflow/job completion events for one registered Znect project. Select project_id; the initial after=0 read returns the newest events first, and next_cursor can be passed as after to receive later events. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
-        project_id: z.string().min(2).max(63).default("znect-forge"),
+        project_id: z.string().min(2).max(63),
         after: z.number().int().min(0).default(0),
         limit: z.number().int().min(1).max(50).default(20)
       }
@@ -803,7 +803,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(limit) || limit < 1 || limit > 50) {
         return json({ error: "after must be a non-negative integer and limit must be 1–50." }, 400);
       }
-      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const project = findProject(getProjectRegistry(env), projectId);
       if (!project) return json({ error: "Unknown Znect project." }, 404);
       try {
@@ -816,7 +817,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       }
     }
     if (url.pathname === "/api/v1/status") {
-      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
       const recentRuns = await adapter.listRuns(scope, 1);
       return json({
@@ -832,7 +834,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const rawLimit = url.searchParams.get("limit");
       const limit = rawLimit === null ? 10 : Number(rawLimit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 30) return json({ error: "limit must be an integer between 1 and 30." }, 400);
-      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
       const runs = await adapter.listRuns(scope, limit);
       return boundedJson(redactedBoundedJson({ project: { id: project.id, name: project.name, provider: adapter.provider }, runs }, env, 100_000), 100_000);
@@ -841,7 +844,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "diagnostics") {
       const parsed = z.string().uuid().safeParse(segments[4]);
       if (!parsed.success) return json({ error: "A valid CI run UUID is required." }, 400);
-      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
       const run = await adapter.getRun(scope, parsed.data);
       const workflows = await adapter.listWorkflows(scope, run.id);
@@ -986,7 +990,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
     if (segments.length === 5 && segments[1] === "api" && segments[2] === "v1" && segments[3] === "runs") {
       const parsed = z.string().uuid().safeParse(segments[4]);
       if (!parsed.success) return json({ error: "A valid CI run UUID is required." }, 400);
-      const projectId = url.searchParams.get("project_id") ?? "znect-forge";
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const { project, scope, adapter } = getCircleCiAdapter(env, projectId);
       const run = await adapter.getRun(scope, parsed.data);
       const workflows = await adapter.listWorkflows(scope, run.id);
