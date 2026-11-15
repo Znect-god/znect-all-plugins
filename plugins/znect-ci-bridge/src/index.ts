@@ -3,7 +3,7 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { DASHBOARD_HTML } from "./ui";
 import { BuildEventStore, normalizeCircleCiWebhook, verifyCircleCiSignature } from "./events";
-import { findCircleCiProject, findProject, loadProjectRegistry } from "./registry";
+import { findCircleCiProject, findProject, loadProjectRegistry, selectProjectConnection } from "./registry";
 export { BuildEventStore };
 import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
@@ -36,17 +36,8 @@ function getProjectRegistry(env: Env) {
 function getCircleCiConnection(env: Env, projectId: string, connectionId?: string) {
   const project = findProject(getProjectRegistry(env), projectId);
   if (!project) throw new Error(`Unknown Znect project: ${projectId}.`);
-  const circleConnections = project.connections.filter((item) => item.provider === "circleci");
-  if (connectionId) {
-    const connection = circleConnections.find((item) => item.id === connectionId);
-    if (!connection?.projectSlug) throw new Error(`Project ${projectId} has no CircleCI connection named ${connectionId}.`);
-    return { project, connection };
-  }
-  if (circleConnections.length === 0) throw new Error(`Project ${projectId} has no CircleCI connection.`);
-  if (circleConnections.length > 1) {
-    throw new Error(`Project ${projectId} has multiple CircleCI connections; provide connection_id.`);
-  }
-  return { project, connection: circleConnections[0] };
+  const connection = selectProjectConnection(project, "circleci", connectionId);
+  return { project, connection };
 }
 
 function getCircleCiAdapter(env: Env, projectId: string, connectionId?: string) {
