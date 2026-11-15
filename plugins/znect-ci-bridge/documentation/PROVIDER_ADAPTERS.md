@@ -64,3 +64,6 @@ GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins
 ## Webhook event persistence
 
 After signature verification and event normalization, the Worker writes the event to the project-scoped Durable Object. A non-2xx storage response, a thrown binding request, or an invalid acknowledgement is treated as a transient persistence failure and returned to CircleCI as HTTP 503. The Worker returns HTTP 202 only after it receives a valid acknowledgement containing both `accepted: true` and a boolean `duplicate` field. This preserves retry behavior and prevents malformed storage responses from being reported as successful ingestion.
+
+
+Event inbox reads through both MCP and the browser JSON API share a bounded response reader. The reader enforces a 60 KB streaming byte ceiling, validates the event-page envelope, cursor values and requested event count, and rejects malformed or oversized responses before returning data. Durable Object binding exceptions and non-success responses are converted to safe failures; no raw storage exception details are exposed to callers.
