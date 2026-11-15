@@ -217,6 +217,23 @@ describe("Durable event inbox storage contract", () => {
     expect(sql.rows).toHaveLength(1);
   });
 
+  it("does not allow event JSON to override the authoritative SQLite cursor", async () => {
+    const sql = new FakeSql();
+    const store = new BuildEventStore({ storage: { sql } } as unknown as DurableObjectState);
+    const event = normalizeCircleCiWebhook(workflowPayload, "workflow-completed")!;
+    const append = await store.fetch(new Request("https://event-store/append", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...event, cursor: 999_999 })
+    }));
+    expect(append.status).toBe(200);
+    const response = await store.fetch(new Request("https://event-store/events?after=0&limit=10"));
+    await expect(response.json()).resolves.toMatchObject({
+      events: [{ cursor: 1, id: event.id }],
+      next_cursor: 1
+    });
+  });
+
   it("returns the newest events on the initial read and only newer events after the cursor", async () => {
     const sql = new FakeSql();
     const store = new BuildEventStore({
