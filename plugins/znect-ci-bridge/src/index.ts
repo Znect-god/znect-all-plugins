@@ -526,7 +526,10 @@ function createServer(env: Env) {
                 break;
               }
               const stepNum = action.stepNumber;
-              if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) continue;
+              if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) {
+                reportDataIncomplete = true;
+                continue;
+              }
               logActionsInspected++;
               const output: Record<string, unknown> = {};
               for (const stream of ["stdout", "stderr"] as const) {
@@ -776,7 +779,11 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             for (const action of step.actions) {
               if ((action.status !== "failed" && action.outcome !== "failed") || action.isInsignificant === true) continue;
               if (logActionsInspected >= 3) { logActionLimitReached = true; incomplete = true; break; }
-              if (typeof action.stepNumber !== "number" || !Number.isInteger(action.stepNumber) || action.stepNumber < 0) continue;
+              if (typeof action.stepNumber !== "number" || !Number.isInteger(action.stepNumber) || action.stepNumber < 0) {
+                reportDataIncomplete = true;
+                incomplete = true;
+                continue;
+              }
               logActionsInspected++;
               const output: Record<string, string> = {};
               for (const stream of ["stdout", "stderr"] as const) {
