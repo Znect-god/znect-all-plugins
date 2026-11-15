@@ -1,3 +1,8 @@
+## [0.1.0] - 2026-11-15 webhook event-store failure handling
+### Reliability
+- Convert Durable Object binding failures and malformed event-store acknowledgements into explicit retryable HTTP 503 responses, so webhook delivery failures do not escape as unhandled Worker exceptions or false acceptances.
+- Added Worker-boundary regression tests for a thrown storage binding and an invalid acknowledgement. Fresh CI/typecheck validation remains pending.
+
 ## [0.1.0] - 2026-11-15 CircleCI API v3 schema alignment
 ### Security and correctness
 - Require the API-mandated job workflow relationship before returning job details, logs, test reports or artifacts; missing or malformed references now fail closed.
