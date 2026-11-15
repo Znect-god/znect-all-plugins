@@ -83,6 +83,21 @@ describe("CircleCI API v3 client", () => {
     await expect(circleV3Get("token", "/api/v3/runs")).rejects.toThrow(expected);
   });
 
+  it("reports the upstream Retry-After interval for text endpoints and discards error bodies", async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new TextEncoder().encode("sensitive upstream details")); },
+      cancel() { cancelled = true; }
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, {
+      status: 429,
+      headers: { "retry-after": "17" }
+    })));
+    await expect(circleV3GetText("token", `/api/v3/jobs/${JOB_ID}/stdout`))
+      .rejects.toThrow("CircleCI API v3 rate limit exceeded. Retry after 17 seconds.");
+    expect(cancelled).toBe(true);
+  });
+
   it("normalizes upstream network and timeout failures", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
       new DOMException("sensitive runtime detail", "TimeoutError")
