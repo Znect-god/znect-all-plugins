@@ -126,6 +126,54 @@ function boundedJson(serialized: string, maxChars: number): Response {
   });
 }
 
+const MAX_EVENT_PAGE_BYTES = 60_000;
+
+async function readEventPage(response: Response, limit: number): Promise<Record<string, unknown>> {
+  if (!response.ok) throw new Error("Event storage is unavailable.");
+  const declaredLength = response.headers.get("content-length");
+  if (declaredLength !== null && Number(declaredLength) > MAX_EVENT_PAGE_BYTES) {
+    try { await response.body?.cancel(); } catch { /* response is rejected */ }
+    throw new Error("Event storage returned an oversized response.");
+  }
+  if (!response.body) throw new Error("Event storage returned an empty response.");
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value.byteLength > MAX_EVENT_PAGE_BYTES - total) {
+        try { await reader.cancel(); } catch { /* response is rejected */ }
+        throw new Error("Event storage returned an oversized response.");
+      }
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  let parsed: unknown;
+  try { parsed = JSON.parse(new TextDecoder().decode(bytes)); }
+  catch { throw new Error("Event storage returned invalid JSON."); }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Event storage returned an invalid event page.");
+  }
+  const page = parsed as Record<string, unknown>;
+  if (!Array.isArray(page.events) || page.events.length > limit ||
+      !Number.isSafeInteger(page.next_cursor) || (page.next_cursor as number) < 0 ||
+      page.events.some((item) => item === null || typeof item !== "object" || Array.isArray(item) ||
+        !Number.isSafeInteger((item as Record<string, unknown>).cursor) ||
+        ((item as Record<string, unknown>).cursor as number) < 1 ||
+        typeof (item as Record<string, unknown>).id !== "string")) {
+    throw new Error("Event storage returned an invalid event page.");
+  }
+  return page;
+}
+
 async function rateLimitFailedAuthentication(request: Request, env: Env): Promise<Response | null> {
   if (!env.MCP_RATE_LIMITER) return json({ error: "Rate limiting is not configured." }, 503);
   // Cloudflare overwrites CF-Connecting-IP at the edge. Hash the address before
@@ -703,10 +751,14 @@ function createServer(env: Env) {
     async ({ project_id, after, limit }) => {
       if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
       const { project } = getCircleCiConnection(env, project_id);
-      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
-        .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
-      if (!response.ok) throw new Error(`CircleCI event storage is unavailable (HTTP ${response.status}).`);
-      const result = await response.json() as Record<string, unknown>;
+      let result: Record<string, unknown>;
+      try {
+        const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
+          .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
+        result = await readEventPage(response, limit);
+      } catch {
+        throw new Error("CircleCI event storage is temporarily unavailable or returned invalid data.");
+      }
       return { content: [{ type: "text", text: stringifyBoundedJson(result, 60_000) }] };
     }
   );
@@ -754,11 +806,14 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const projectId = url.searchParams.get("project_id") ?? "znect-forge";
       const project = findProject(getProjectRegistry(env), projectId);
       if (!project) return json({ error: "Unknown Znect project." }, 404);
-      const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
-        .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
-      if (!response.ok) return json({ error: "Event storage is unavailable.", event_store_status: response.status }, 503);
-      const result = await response.json();
-      return boundedJson(JSON.stringify(result), 60_000);
+      try {
+        const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
+          .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
+        const result = await readEventPage(response, limit);
+        return boundedJson(JSON.stringify(result), 60_000);
+      } catch {
+        return json({ error: "Event storage is temporarily unavailable or returned invalid data." }, 503);
+      }
     }
     if (url.pathname === "/api/v1/status") {
       const projectId = url.searchParams.get("project_id") ?? "znect-forge";
