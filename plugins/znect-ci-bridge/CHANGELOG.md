@@ -1,3 +1,8 @@
+## [0.1.0] - 2026-11-15 authoritative event cursors
+### Data integrity
+- Ensure event inbox cursors always come from the SQLite sequence, never from additional properties in stored event JSON.
+- Added a regression test that submits a conflicting cursor field and verifies the returned cursor and next_cursor remain database-derived. Fresh CI/typecheck validation remains pending.
+
 ## [0.1.0] - 2026-11-15 CircleCI upstream error response handling
 ### Reliability
 - Discard non-success CircleCI API response bodies without buffering or exposing upstream content.
