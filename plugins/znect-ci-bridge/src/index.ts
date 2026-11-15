@@ -575,10 +575,13 @@ function createServer(env: Env) {
           let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
           try {
             const listed = await adapter.listArtifacts(scope, job.id);
-            const eligibleReports = listed.filter((artifact) =>
-              /(?:junit|test-results).*\.xml$/i.test(artifact.path) &&
-              (artifact.size ?? 0) <= 500_000
+            const reportCandidates = listed.filter((artifact) =>
+              /(?:junit|test-results).*\.xml$/i.test(artifact.path)
             );
+            if (reportCandidates.some((artifact) => (artifact.size ?? 0) > 500_000)) {
+              reportDataIncomplete = true;
+            }
+            const eligibleReports = reportCandidates.filter((artifact) => (artifact.size ?? 0) <= 500_000);
             if (eligibleReports.length > 1) {
               reportArtifactLimitReached = true;
               reportDataIncomplete = true;
@@ -817,8 +820,13 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           }
           const reportArtifacts: Array<Record<string, unknown>> = [];
           try {
-            const eligibleArtifacts = (await adapter.listArtifacts(scope, job.id))
-              .filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path) && (artifact.size ?? 0) <= 500_000);
+            const reportCandidates = (await adapter.listArtifacts(scope, job.id))
+              .filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path));
+            if (reportCandidates.some((artifact) => (artifact.size ?? 0) > 500_000)) {
+              reportDataIncomplete = true;
+              incomplete = true;
+            }
+            const eligibleArtifacts = reportCandidates.filter((artifact) => (artifact.size ?? 0) <= 500_000);
             if (eligibleArtifacts.length > 1) {
               reportArtifactLimitReached = true;
               reportDataIncomplete = true;
