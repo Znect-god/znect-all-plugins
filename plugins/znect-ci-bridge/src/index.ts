@@ -59,6 +59,45 @@ function circleCiV1ProjectPath(projectSlug: string): string {
 const MAX_LOG_CHARS = 80_000;
 const MAX_LOG_BYTES = MAX_LOG_CHARS * 4;
 const MAX_TOTAL_LOG_CHARS = 160_000;
+const MAX_WEBHOOK_BODY_BYTES = 65_536;
+
+/** Read an incoming request body incrementally and stop as soon as its byte budget is exceeded. */
+async function readBoundedRequestBody(request: Request, maxBytes: number): Promise<ArrayBuffer | null> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new Error("maxBytes must be a non-negative safe integer.");
+  }
+  if (!request.body) return new ArrayBuffer(0);
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value.byteLength > maxBytes - total) {
+        try {
+          await reader.cancel();
+        } catch {
+          // The request is already being rejected; cancellation failure is non-fatal.
+        }
+        return null;
+      }
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes.buffer;
+}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -937,11 +976,11 @@ async function handleCircleCiWebhook(request: Request, env: Env): Promise<Respon
     return new Response("Unsupported media type", { status: 415, headers: { "accept": "application/json" } });
   }
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(declaredLength) && declaredLength > 65_536) {
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_WEBHOOK_BODY_BYTES) {
     return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
   }
-  const body = await request.arrayBuffer();
-  if (body.byteLength > 65_536) return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
+  const body = await readBoundedRequestBody(request, MAX_WEBHOOK_BODY_BYTES);
+  if (body === null) return json({ error: "Webhook payload exceeds the 64 KiB limit." }, 413);
   const signature = request.headers.get("circleci-signature");
   if (!(await verifyCircleCiSignature(body, signature, env.CIRCLECI_WEBHOOK_SECRET))) {
     const limited = await rateLimitFailedAuthentication(request, env);
