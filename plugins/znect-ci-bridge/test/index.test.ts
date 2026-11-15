@@ -89,6 +89,26 @@ describe("MCP tool schemas and error boundary", () => {
     expect(tools.some((tool) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(tool.name))).toBe(false);
   });
 
+  it("reports a safe MCP error when the event inbox Durable Object fails", async () => {
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => { throw new Error("private storage detail"); } })
+    };
+    const response = await worker.fetch(
+      rpcRequest(22, "tools/call", {
+        name: "list_recent_events",
+        arguments: { project_id: "znect-forge", after: 0, limit: 20 }
+      }),
+      { ...env, EVENT_STORE: namespace } as typeof env & { EVENT_STORE: unknown },
+      ctx
+    );
+    expect(response.status).toBe(200);
+    const payload = await parseRpc(response);
+    expect(payload.result?.isError).toBe(true);
+    expect(JSON.stringify(payload)).toContain("CircleCI event storage is temporarily unavailable or returned invalid data.");
+    expect(JSON.stringify(payload)).not.toContain("private storage detail");
+  });
+
   it("rejects invalid tool arguments before making an upstream request", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
