@@ -17,6 +17,11 @@
 - Enforce the 64 KiB CircleCI webhook body ceiling while reading the incoming request stream, cancelling oversized bodies before buffering the full payload.
 - Added a Worker-boundary regression test for an oversized request without a declared Content-Length. Fresh CI/typecheck validation remains pending.
 
+## [0.1.0] - 2026-11-15 strict CircleCI page-size validation
+### Security and correctness
+- Reject API v3 run and workflow collection pages that contain more records than the requested endpoint-specific page limit.
+- Added regression tests for oversized upstream run and workflow pages. Fresh CI/typecheck validation remains pending.
+
 # Changelog
 
 ## [0.1.0] - 2026-11-15 workflow ownership verification
