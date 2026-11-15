@@ -1,4 +1,4 @@
-import { allowedArtifactUrl, fetchAllowedArtifact, fetchWithSafeErrors, readBoundedJson, readBoundedText, retryAfterSeconds } from "./security";
+import { allowedArtifactUrl, discardResponseBody, fetchAllowedArtifact, fetchWithSafeErrors, readBoundedJson, readBoundedText, retryAfterSeconds } from "./security";
 
 const CIRCLECI_V3_API = "https://circleci.com/api/v3";
 const FETCH_TIMEOUT_MS = 15_000;
@@ -68,6 +68,7 @@ export async function circleV3Get<T>(token: string, path: string): Promise<T> {
   });
 
   if (!response.ok) {
+    await discardResponseBody(response);
     const safeMessage = response.status === 401
       ? "CircleCI API v3 authentication failed (HTTP 401). Check whether CIRCLECI_TOKEN is a valid, unexpired Personal API Token."
       : response.status === 403
@@ -102,6 +103,7 @@ export async function circleV3GetText(
 
   if (response.status === 204) return { text: "", truncated: false };
   if (!response.ok) {
+    await discardResponseBody(response);
     const safeMessage = response.status === 401
       ? "CircleCI API v3 authentication failed (HTTP 401). Check whether CIRCLECI_TOKEN is a valid, unexpired Personal API Token."
       : response.status === 403
@@ -109,7 +111,7 @@ export async function circleV3GetText(
         : response.status === 404
         ? "The requested CircleCI job output was not found or is not accessible."
         : response.status === 429
-          ? "CircleCI API v3 rate limit exceeded. Retry after the indicated interval."
+          ? `CircleCI API v3 rate limit exceeded.${retryAfterSeconds(response.headers.get("retry-after")) === null ? " Retry after the indicated interval." : ` Retry after ${retryAfterSeconds(response.headers.get("retry-after"))} seconds.`}`
           : `CircleCI API v3 returned HTTP ${response.status}.`;
     throw new Error(safeMessage);
   }
@@ -485,7 +487,10 @@ export async function getCircleCiJobArtifact(
   const url = allowedArtifactUrl(rawUrl);
   if (!url) throw new Error("CircleCI artifact URL is not on an allowed HTTPS host.");
   const response = await fetchAllowedArtifact(url);
-  if (!response.ok) throw new Error(`CircleCI artifact download failed (HTTP ${response.status}).`);
+  if (!response.ok) {
+    await discardResponseBody(response);
+    throw new Error(`CircleCI artifact download failed (HTTP ${response.status}).`);
+  }
   const bounded = await readBoundedText(response, maxBytes);
   return { path: artifactPath, ...bounded };
 }
