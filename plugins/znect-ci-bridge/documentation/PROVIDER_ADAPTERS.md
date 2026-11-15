@@ -70,3 +70,6 @@ Event inbox reads through both MCP and the browser JSON API share a bounded resp
 
 
 CircleCI v3 requests are GET-only and are not automatically retried. HTTP 401/403/404/429 and other non-success statuses are mapped to bounded, sanitized errors; `Retry-After` accepts either delta-seconds or an HTTP date and is reported to callers without being used for an implicit retry. Non-success response bodies are cancelled best-effort instead of being buffered or exposed. Job stdout/stderr 429 errors include the same parsed retry interval as JSON API errors. Network and timeout failures are normalized without reflecting runtime details.
+
+
+The event inbox cursor is always derived from the SQLite `seq` column. Stored event JSON is treated as payload only and cannot override the cursor returned to clients. Initial reads return the newest bounded snapshot; subsequent reads with `after` return events whose database sequence is greater than that cursor, in ascending sequence order.
