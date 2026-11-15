@@ -270,7 +270,8 @@ describe("Read-only browser API run details", () => {
       if (url.pathname === `/api/v3/jobs/${jobId}/artifacts`) {
         return new Response(JSON.stringify({ data: [
           { id: "123e4567-e89b-42d3-a456-426614174101", attributes: { path: "junit/results-a.xml", size: 100 } },
-          { id: "123e4567-e89b-42d3-a456-426614174102", attributes: { path: "test-results/results-b.xml", size: 120 } }
+          { id: "123e4567-e89b-42d3-a456-426614174102", attributes: { path: "test-results/results-b.xml", size: 120 } },
+          { id: "123e4567-e89b-42d3-a456-426614174103", attributes: { path: "junit/oversized.xml", size: 600_000 } }
         ] }), { status: 200 });
       }
       throw new Error("Unexpected upstream request: " + url.pathname);
