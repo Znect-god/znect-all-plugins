@@ -479,6 +479,8 @@ function createServer(env: Env) {
       let jobLimitReached = false;
       let logActionsInspected = 0;
       let logActionLimitReached = false;
+      let reportDataIncomplete = false;
+      let reportArtifactLimitReached = false;
       const workflowsInspected = workflows.slice(0, 5);
 
       for (const workflow of workflowsInspected) {
@@ -535,11 +537,14 @@ function createServer(env: Env) {
                     stream,
                     maxBytes: 12_000 * 4
                   });
-                  output[stream] = limitText(
+                  const limitedOutput = limitText(
                     redactKnownSecrets(result.text, env), 12_000, result.truncated
-                  ).text;
+                  );
+                  output[stream] = limitedOutput.text;
+                  if (limitedOutput.truncated) reportDataIncomplete = true;
                 } catch {
                   output[stream] = "Unable to retrieve this output stream.";
+                  reportDataIncomplete = true;
                 }
               }
               failedStepLogs.push({
@@ -558,27 +563,37 @@ function createServer(env: Env) {
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
+            if (report.truncated) reportDataIncomplete = true;
           } catch {
             testResultsError = "Unable to retrieve structured test results.";
+            reportDataIncomplete = true;
           }
 
           let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
           try {
             const listed = await adapter.listArtifacts(scope, job.id);
-            const reports = listed.filter((artifact) =>
+            const eligibleReports = listed.filter((artifact) =>
               /(?:junit|test-results).*\.xml$/i.test(artifact.path) &&
               (artifact.size ?? 0) <= 500_000
-            ).slice(0, 1);
+            );
+            if (eligibleReports.length > 1) {
+              reportArtifactLimitReached = true;
+              reportDataIncomplete = true;
+            }
+            const reports = eligibleReports.slice(0, 1);
             for (const artifact of reports) {
               try {
                 const report = await adapter.getArtifact(scope, job.id, artifact.path, 500_000);
                 artifacts.push({ path: artifact.path, size: artifact.size, content: report.content });
+                if (report.truncated) reportDataIncomplete = true;
               } catch {
                 artifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." });
+                reportDataIncomplete = true;
               }
             }
           } catch {
             artifacts = [{ error: "Unable to list job artifacts." }];
+            reportDataIncomplete = true;
           }
 
           diagnostics.push({
@@ -616,7 +631,9 @@ function createServer(env: Env) {
           failed_jobs_inspected: failedJobsInspected,
           failed_job_limit_reached: failedJobLimitReached,
           jobs_truncated: jobLimitReached,
-          incomplete: workflowLimitReached || jobLimitReached || failedJobLimitReached || logActionLimitReached,
+          report_data_incomplete: reportDataIncomplete,
+          report_artifact_limit_reached: reportArtifactLimitReached,
+          incomplete: workflowLimitReached || jobLimitReached || failedJobLimitReached || logActionLimitReached || reportDataIncomplete,
           log_actions_inspected: logActionsInspected,
           log_action_limit_reached: logActionLimitReached
         },
@@ -734,6 +751,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       let logActionsInspected = 0;
       let logActionLimitReached = false;
       let jobLimitReached = false;
+      let reportDataIncomplete = false;
+      let reportArtifactLimitReached = false;
       let incomplete = false;
 
       for (const workflow of workflows.slice(0, 5)) {
@@ -765,8 +784,14 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
                   const result = await adapter.getJobLogs(scope, job.id, {
                     step: action.stepNumber, execution: step.execution, stream, maxBytes: 12_000 * 4
                   });
-                  output[stream] = limitText(redactKnownSecrets(result.text, env), 12_000, result.truncated).text;
-                } catch { output[stream] = "Unable to retrieve this output stream."; }
+                  const limitedOutput = limitText(redactKnownSecrets(result.text, env), 12_000, result.truncated);
+                  output[stream] = limitedOutput.text;
+                  if (limitedOutput.truncated) { reportDataIncomplete = true; incomplete = true; }
+                } catch {
+                  output[stream] = "Unable to retrieve this output stream.";
+                  reportDataIncomplete = true;
+                  incomplete = true;
+                }
               }
               failedStepLogs.push({ step_num: action.stepNumber, execution: step.execution, action_name: action.name, ...output });
             }
@@ -777,19 +802,38 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
-          } catch { testResultsError = "Unable to retrieve structured test results."; }
+            if (report.truncated) { reportDataIncomplete = true; incomplete = true; }
+          } catch {
+            testResultsError = "Unable to retrieve structured test results.";
+            reportDataIncomplete = true;
+            incomplete = true;
+          }
           const reportArtifacts: Array<Record<string, unknown>> = [];
           try {
-            const artifacts = (await adapter.listArtifacts(scope, job.id))
-              .filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path) && (artifact.size ?? 0) <= 500_000)
-              .slice(0, 1);
+            const eligibleArtifacts = (await adapter.listArtifacts(scope, job.id))
+              .filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path) && (artifact.size ?? 0) <= 500_000);
+            if (eligibleArtifacts.length > 1) {
+              reportArtifactLimitReached = true;
+              reportDataIncomplete = true;
+              incomplete = true;
+            }
+            const artifacts = eligibleArtifacts.slice(0, 1);
             for (const artifact of artifacts) {
               try {
                 const content = await adapter.getArtifact(scope, job.id, artifact.path, 500_000);
                 reportArtifacts.push({ path: artifact.path, size: artifact.size, content: content.content });
-              } catch { reportArtifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." }); }
+                if (content.truncated) { reportDataIncomplete = true; incomplete = true; }
+              } catch {
+                reportArtifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." });
+                reportDataIncomplete = true;
+                incomplete = true;
+              }
             }
-          } catch { reportArtifacts.push({ error: "Unable to list job artifacts." }); }
+          } catch {
+            reportArtifacts.push({ error: "Unable to list job artifacts." });
+            reportDataIncomplete = true;
+            incomplete = true;
+          }
           reports.push({
             job: details,
             failed_steps: failedSteps,
@@ -820,6 +864,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           failed_jobs_inspected: failedJobsInspected,
           failed_job_limit_reached: failedJobLimitReached,
           jobs_truncated: jobLimitReached,
+          report_data_incomplete: reportDataIncomplete,
+          report_artifact_limit_reached: reportArtifactLimitReached,
           incomplete,
           log_actions_inspected: logActionsInspected,
           log_action_limit_reached: logActionLimitReached
