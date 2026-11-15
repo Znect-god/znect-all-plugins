@@ -89,6 +89,30 @@ describe("Worker HTTP boundary", () => {
     expect(response.status).toBe(401);
   });
 
+  it("stops reading an oversized webhook body before buffering the full payload", async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(65_537));
+      },
+      cancel() {
+        cancelled = true;
+      }
+    });
+    const response = await worker.fetch(
+      new Request("https://bridge.example/webhooks/circleci", {
+        method: "POST",
+        headers: { "content-type": "application/json", "circleci-event-type": "workflow-completed" },
+        body,
+        duplex: "half"
+      } as RequestInit & { duplex: "half" }),
+      env,
+      ctx
+    );
+    expect(response.status).toBe(413);
+    expect(cancelled).toBe(true);
+  });
+
   it("ignores a correctly signed webhook for another project", async () => {
     const body = JSON.stringify({
       id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895",
