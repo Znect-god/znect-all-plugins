@@ -140,7 +140,8 @@ describe("project registry", () => {
       connections: []
     });
 
-    const configured = describeProjectStatus(forge);
+    const configuredProject = parseProjectRegistry(JSON.stringify({ version: 1, projects: [forge] })).projects[0];
+    const configured = describeProjectStatus(configuredProject);
     expect(configured.status).toBe("registered");
     expect(configured.ci_status).toBe("configured");
     expect(configured.connections).toEqual([{
@@ -149,10 +150,11 @@ describe("project registry", () => {
       status: "configured",
       provider_availability: "not_checked"
     }]);
-    const reserved = describeProjectStatus({
-      ...forge,
-      connections: [{ id: "build-main", provider: "znect-build" }]
-    });
+    const reservedProject = parseProjectRegistry(JSON.stringify({
+      version: 1,
+      projects: [{ ...forge, connections: [{ id: "build-main", provider: "znect-build" }] }]
+    })).projects[0];
+    const reserved = describeProjectStatus(reservedProject);
     expect(reserved.connections[0].provider_availability).toBe("not_implemented");
   });
 
