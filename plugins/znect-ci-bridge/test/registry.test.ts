@@ -3,7 +3,8 @@ import {
   findCircleCiProject,
   findProject,
   parseProjectRegistry,
-  loadProjectRegistry
+  loadProjectRegistry,
+  selectProjectConnection
 } from "../src/registry";
 
 const forge = {
@@ -117,6 +118,28 @@ describe("project registry", () => {
     expect(parsed.projects[0].repositories).toHaveLength(2);
     expect(parsed.projects[0].connections.map((connection) => connection.id))
       .toEqual(["circleci-main", "build-main"]);
+  });
+  it("requires explicit connection selection when a project has multiple CircleCI connections", () => {
+    const parsed = parseProjectRegistry(JSON.stringify({
+      version: 1,
+      projects: [{
+        id: "znect-ai",
+        name: "Znect AI",
+        repositories: [{ fullName: "Znect-god/znect-ai" }],
+        components: [],
+        connections: [
+          { id: "circleci-main", provider: "circleci", projectSlug: "gh/Znect-god/znect-ai" },
+          { id: "circleci-tools", provider: "circleci", projectSlug: "gh/Znect-god/znect-ai-tools" }
+        ]
+      }]
+    }));
+    const project = parsed.projects[0];
+    expect(selectProjectConnection(project, "circleci", "circleci-tools").projectSlug)
+      .toBe("gh/Znect-god/znect-ai-tools");
+    expect(() => selectProjectConnection(project, "circleci"))
+      .toThrow(/multiple circleci connections.*connection_id/i);
+    expect(() => selectProjectConnection(project, "circleci", "missing"))
+      .toThrow(/no circleci connection named missing/i);
   });
 
 });
