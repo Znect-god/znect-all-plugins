@@ -274,6 +274,10 @@ export async function listCircleCiRuns(
       `/api/v3/runs?${query.toString()}`
     );
     if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid runs collection.");
+    const requestedPageSize = Math.min(20, limit - runs.length);
+    if (page.data.length > requestedPageSize) {
+      throw new Error("CircleCI API v3 returned more runs than the requested page limit.");
+    }
     for (const run of page.data) {
       assertUuid(run.id, "run ID");
       assertCircleCiRunOwnership(run, projectId);
@@ -327,6 +331,9 @@ async function listCircleCiCollection(
     );
     if (!Array.isArray(page.data)) {
       throw new Error(`CircleCI API v3 returned an invalid ${resourceLabel}s collection.`);
+    }
+    if (page.data.length > COLLECTION_PAGE_SIZE) {
+      throw new Error(`CircleCI API v3 returned more ${resourceLabel}s than the requested page limit.`);
     }
     for (const resource of page.data) assertUuid(resource.id, `${resourceLabel} ID`);
     resources.push(...page.data);
