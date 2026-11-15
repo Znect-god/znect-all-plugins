@@ -66,7 +66,7 @@ The registry is non-secret routing metadata. Never place API tokens, webhook sig
 - `znect-build` is a reserved provider type for the planned native Build adapter. Registry support alone does not implement its API client, event signature, credentials, or diagnostics mapping.
 - Unknown providers, duplicate project IDs, duplicate CircleCI slugs, invalid component references, unsafe path prefixes, malformed JSON, and oversized configuration are rejected.
 - If the variable is absent, an empty version-1 registry is loaded. No project or provider connection is injected implicitly.
-- A project may have an empty `connections[]) array; its CI configuration state is `not_configured`.
+- A project may have an empty `connections[]` array; its CI configuration state is `not_configured`.
 - A registered project is not proof that its provider is reachable. The catalog reports provider availability as `not_checked` until a read-only probe is performed.
 - A project may have several CircleCI connections. Callers must provide `connection_id` when more than one matching provider connection exists; the Bridge fails closed rather than selecting the first connection.
 
