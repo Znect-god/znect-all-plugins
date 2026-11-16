@@ -147,3 +147,20 @@ Do not create a second Cloudflare Worker. Extend the existing Preview Worker onl
 - [Assistant channel design](ASSISTANT_CHANNEL.md)
 - [CircleCI API migration](CIRCLECI_API_MIGRATION.md)
 - [Security review](SECURITY_REVIEW.md)
+
+
+## 8. Update — 2026-11-16: GitHub/Cloudflare build path
+
+- Confirmed that the GitHub integration can read and update the Bridge repository, create a private issue comment in Forge, inspect workflow runs/jobs, and request a failed-job rerun. Direct CircleCI CLI/failure-report access is still not available through this route.
+- Added a validation note on branch `feat/ci-bridge-circleci-webhooks`, commit `60ae65a1a41fae73da7495d0649f8fec046fbd16`.
+- Cloudflare automatically reported **Workers Builds: znect-ci-bridge — success** for that commit (build ID `445a50af-b97f-42fd-9226-a5a1bcb965e6`). This confirms the Cloudflare build check only; it does not establish GitHub Actions unit-test success, authenticated smoke-test success, or a real CircleCI webhook delivery.
+- The repository's GitHub Actions validation workflows are present on the feature branch, but no new GitHub Actions run was observed for the connector-created commit or the draft validation PR. Do not report the old 2026-11-14 Actions runs as validation of commit `60ae65a`.
+- Re-requested the private Forge report using issue #8 command `/znect-ci-bridge check` (comment ID `6911930494`). No new report run appeared. Retried the existing failed report job in run `43589116587`; GitHub accepted the retry, but the workflow remains queued and currently exposes no assigned job. The runner/queue cause remains unknown.
+- A temporary validation-only Draft PR #7 was opened to attempt to invoke the PR checks, then closed without merging after no new GitHub Actions runs appeared. The implementation branch remains intact.
+
+### Revised execution path
+
+1. Use Cloudflare Workers Builds as an available remote build signal for Preview changes; treat it as build validation only.
+2. Use GitHub Actions only when an actual run/job is created and reaches its steps; inspect run/job status and logs before claiming tests passed.
+3. Keep the private Forge report workflow as the preferred read-only diagnostics transport, but do not assume it is operational until its queued job starts and uploads an artifact.
+4. Continue source-level review and isolated Preview-only work without moving changes to `main`, Production, or changing CircleCI's read-only boundary.
