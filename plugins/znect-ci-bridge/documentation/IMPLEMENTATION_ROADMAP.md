@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** in-development; isolated Preview only.  
-**Updated:** 2026-11-14  
+**Updated:** 2026-11-16  
 **Target project:** CircleCI Cloud `gh/Znect-god/znect-forge`.  
 **Cost constraint:** free services and included quotas only; no paid add-ons, auto-refill, or Production deployment.
 
@@ -46,9 +46,11 @@ The Worker does not push unsolicited messages into an open ChatGPT conversation.
 
 - PR #9, “Add private on-demand Znect CI Bridge report channel”, is **merged into `main`** at `fb226fb25e414f4ce0f53d1b7a8f280b00b2c60a`. The issue-comment workflow is therefore present on the default branch.
 - Two requests were posted to private issue #8. GitHub Actions runs #43588698423 and #43589116587 both failed before any workflow step ran; their job summaries have no steps/logs. The failure reason is not established from the accessible GitHub response. Do not assume billing is the cause until the check-run annotation or account billing/usage state is verified.
-- PR #10, “ci(circleci): add free-tier Android CI fallback”, remains **open and unmerged**. It adds `.circleci/config.yml` to branch `ci/circleci-free-tier-pipeline-work`; it does not modify `main`.
-- CircleCI accepted the PR #10 branch pipeline, but the job failed. GitHub status points to CircleCI workflow `ae0ae4b7-3ad3-4323-b9b4-6f29544b155a` and job `7223c6d2-46aa-49fb-bc49-9f5e9a5ec7af`. The reported failure text recommends `circleci run get <workflow-id> --failure-report`. The actual failure cause has not yet been retrieved.
-- The current `main` branch has no `.circleci/config.yml`; CircleCI's “No configuration was found” status on the default-branch commit is expected until a CircleCI config is intentionally merged. Do not merge PR #10 without explicit approval.
+- PR #10, “ci(circleci): add free-tier Android CI fallback”, was **merged on 2026-11-14** into `work/0.7.0-finish-daedric-workshop` (merge commit `670503fe7c35839dee75b77c3874d373afa496e2`). It did not target `main`; `.circleci/config.yml` is therefore on the 0.7.0 work line, not the default branch.
+- The first PR #10 pipeline failure identifiers recorded earlier (`ae0ae4b7-3ad3-4323-b9b4-6f29544b155a` / `7223c6d2-46aa-49fb-bc49-9f5e9a5ec7af`) are historical and must not be used as the current failure.
+- The latest verified CircleCI status on merge commit `670503fe7c35839dee75b77c3874d373afa496e2` is **failure**. Its status description requests `circleci run get c9081783-3269-4ca1-8043-e3d3c777b52a --failure-report`; the linked CircleCI workflow is `9e7851cd-08a8-44ba-ae92-339207a47a08`, job `7a81f847-93c8-44de-b769-3cf8963f1adc`. The actual failure report/log has not yet been retrieved, so no root cause is established.
+- A separate GitHub Actions Android CI run `43610052025` on the same merge commit also failed before any job steps ran (job `132492925330`, zero steps, runner ID 0, no downloadable job log). This is not evidence of the CircleCI failure cause.
+- The current `main` branch still has no `.circleci/config.yml`; the CircleCI “No configuration was found” status on the default-branch commit is expected. Do not move the work-branch config into `main` without explicit approval.
 
 ## 4. Execution phases and acceptance gates
 
@@ -56,7 +58,7 @@ The Worker does not push unsolicited messages into an open ChatGPT conversation.
 
 - [x] Confirm the CircleCI project is connected to the private Forge repository.
 - [x] Add a free-tier Android pipeline on an isolated branch.
-- [ ] Retrieve the failure report and logs for workflow `ae0ae4b7-3ad3-4323-b9b4-6f29544b155a` / job `7223c6d2-46aa-49fb-bc49-9f5e9a5ec7af`.
+- [ ] Retrieve the failure report and logs for the current CircleCI workflow `9e7851cd-08a8-44ba-ae92-339207a47a08` / job `7a81f847-93c8-44de-b769-3cf8963f1adc` (CLI failure-report request ID `c9081783-3269-4ca1-8043-e3d3c777b52a`). The earlier `ae0ae4b7...` / `7223c6d2...` identifiers are superseded.
 - [ ] Fix only the demonstrated configuration/toolchain/test failure; do not guess.
 - [ ] Re-run on the same feature branch and confirm unit tests, APK build, test results and artifact upload.
 - [ ] Record the actual free-credit/resource-class usage; do not enable paid features or auto-refill.
@@ -132,7 +134,7 @@ Do not create a second Cloudflare Worker. Extend the existing Preview Worker onl
 
 ## 6. Current next actions
 
-1. Diagnose the failed CircleCI Android job using its workflow/job identifiers; fix only the observed cause.
+1. Diagnose the current failed CircleCI Android job (`9e7851cd-08a8-44ba-ae92-339207a47a08` / `7a81f847-93c8-44de-b769-3cf8963f1adc`) using its failure report; fix only the observed cause.
 2. Use that ordinary run to verify the registered CircleCI webhook reaches the existing Preview inbox.
 3. Complete representative live CircleCI diagnostics.
 4. Resolve the GitHub Actions runner allocation failure and verify the private artifact round-trip.
