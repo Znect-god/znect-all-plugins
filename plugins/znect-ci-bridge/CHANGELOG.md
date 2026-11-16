@@ -97,3 +97,11 @@
 - Clarified that CircleCI's successful Add Webhook ping/check verifies endpoint acknowledgement only; a real `workflow-completed` delivery is still pending.
 - Added an ordered launch and end-to-end verification procedure, including delivery-history correlation, durable inbox inspection, duplicate verification, and MCP retrieval.
 - Reaffirmed that the bridge remains in-development, Production is not deployed, and no PR merge or Production change is authorized.
+
+
+## [Unreleased] — 2026-11-16 GitHub Actions validation path
+
+- Resumed CI Bridge validation through the repository's isolated GitHub Actions Preview workflow on `feat/ci-bridge-circleci-webhooks`.
+- The workflow is expected to run dependency installation, TypeScript checks, unit/regression tests, Wrangler Preview deployment, Preview-only webhook-secret provisioning, and authenticated smoke checks when the required repository/Cloudflare secrets are available.
+- This is a Preview-only development path. It does not deploy Production, modify Forge pipelines, or grant the Bridge any CircleCI write capabilities.
+- Validation result is pending the GitHub Actions run; no test or deployment success is claimed by this entry.
