@@ -1,80 +1,77 @@
 # Znect CI Bridge
 
-<badge>prototype</badge> **Version:** 0.1.0
+**Status:** in-development · **Version:** 0.2.0
 
-Znect CI Bridge is an experimental bridge intended to expose read-only CircleCI build information through an MCP-compatible interface hosted on Cloudflare Workers.
+A free-first CI diagnostics channel for Znect projects. It receives signed CircleCI webhooks, stores bounded event history, and provides a browser dashboard plus a Markdown export that can be pasted into ChatGPT Free.
 
-**This repository entry currently documents the prototype. It does not yet contain the complete source project.** The initial project archive was prepared and type-checked locally in an Android/Termux environment, but deployment, end-to-end MCP behavior, CircleCI connectivity, and a full security review have not been verified.
+**MCP is not required or used by this free channel.** Paid MCP integrations, if offered, belong to a separate plugin and are not dependencies of this project.
 
-## Intended architecture
+## Free channel architecture
 
 ```text
-MCP-compatible client
-        |
-        v
-Cloudflare Worker — Znect CI Bridge
-        |
-        v
-CircleCI API
-        |
-        v
-Build metadata, details, and logs
+CircleCI ──signed webhook──> Cloudflare Worker (Free plan)
+                                  │
+                                  ├── Cloudflare KV event history
+                                  │
+Browser dashboard <── HTTPS ─────┤
+                                  │
+ChatGPT Free <── manual Markdown export
 ```
 
-GitHub is intended to hold source code and support cloud-based checks/deployment. CircleCI remains the build/test system for the separate Znect Forge project; this plugin must not change or trigger Forge pipelines without explicit authorization.
+The Worker verifies CircleCI's `circleci-signature` HMAC-SHA256 header. The browser dashboard uses a separate read-only bearer token. The read token is held in tab memory only and is not written to local storage.
 
-## Intended tools
+## Implemented in this branch
 
-The prototype is designed around three read-only MCP tools:
+- `POST /webhooks/circleci`: verify CircleCI v1 signature and accept events.
+- `GET /health`: public health check.
+- `GET /api/events`: authenticated recent event list.
+- `GET /api/export`: authenticated Markdown diagnostic export.
+- `/`: minimal Russian-language dashboard.
+- Redaction of common secret/token fields before storage.
+- 30-day event TTL and a bounded 100-event listing.
+- GitHub Actions workflow for typecheck and tests.
 
-- `list_recent_builds(limit)` — list recent builds, with a bounded limit.
-- `get_build_details(build_num)` — retrieve details for one build.
-- `get_build_logs(build_num, step_index?, max_actions?)` — retrieve bounded logs for a build step.
+## Cost model
 
-The initial prototype targets the CircleCI project `/project/github/Znect-god/znect-forge`. Its current adapter uses CircleCI API v1.1 because the available token was intended for read-only access; that API is deprecated and should be replaceable with a maintained adapter.
+The design targets Cloudflare Workers Free and Cloudflare KV Free allowances. Cloudflare currently documents 100,000 Worker requests/day on the Free plan; usage is subject to published quotas and limits. No paid MCP subscription, model API, paid database, or paid messaging provider is required for the basic channel.
 
-## Current verified state
+This does not make ChatGPT Free an automatically callable API. The free workflow is: open the dashboard, copy the diagnostic export, and paste it into ChatGPT Free. Automatic delivery into a ChatGPT Free conversation is not available through this architecture and must not be claimed.
 
-- The initial archive was unpacked in Termux on Android.
-- Dependency versions in the local package manifest were adjusted to resolve a peer-dependency mismatch and an unavailable package version.
-- `npm install` completed after those adjustments.
-- `npm run typecheck` completed successfully.
-- Wrangler/workerd could not run in the Android ARM64 Termux environment because the workerd binary reports an unsupported platform.
+## Deployment configuration
 
-These checks do **not** establish that the Worker builds, deploys, connects to CircleCI, or serves working MCP requests.
+1. Create a KV namespace in Cloudflare and replace the placeholder ID in `wrangler.toml`.
+2. Configure Worker secrets (never commit their values):
+   - `CIRCLECI_SIGNING_SECRET` — same secret configured on the CircleCI webhook.
+   - `BRIDGE_READ_TOKEN` — a separate high-entropy token for dashboard/API read access.
+3. Deploy from a supported Linux environment using Wrangler after installing dependencies. The Android ARM64 Termux environment previously used for the prototype could not run the current `workerd` binary; use GitHub Actions or another supported Linux environment.
+4. Create a CircleCI outbound webhook for the Forge project:
+   - URL: `https://<your-worker-host>/webhooks/circleci`
+   - Events: `workflow-completed`, `job-completed`
+   - Signing secret: the value stored as `CIRCLECI_SIGNING_SECRET`
+   - TLS verification: enabled.
 
-## Known limitations and risks
+Do not enable any build-trigger or write capability. This bridge is read-only with respect to CircleCI.
 
-- Status remains `prototype`; not production-ready.
-- Cloudflare deployment has not been verified.
-- MCP protocol behavior and all three tools have not been end-to-end tested.
-- CircleCI connectivity and log retrieval have not been verified.
-- CircleCI API v1.1 is deprecated; adapter migration is needed.
-- A full security audit and Worker-side rate limiting have not been completed.
-- CI logs and artifacts may contain sensitive information if upstream jobs print secrets.
-- Real credentials must be stored as Cloudflare Worker Secrets, never in source control.
-- Do not use with sensitive production logs or privileged credentials until security review and testing are complete.
-- The Android Termux environment cannot run the current Wrangler/workerd binary; use a supported Linux CI environment for build and deployment work.
+## Security and limitations
 
-## Configuration names
+- Event payloads are untrusted data.
+- Common credential-like keys and text patterns are redacted, but this is not a substitute for upstream secret hygiene.
+- This initial implementation stores event metadata/payloads only; it does not yet fetch full job logs or artifacts from CircleCI.
+- Event retention is 30 days; the dashboard currently lists at most 100 recent records.
+- The browser dashboard does not persist the read token.
+- No automatic push notification into ChatGPT Free is possible here; export is a deliberate manual handoff.
+- Configure usage monitoring and observe free-tier quotas.
+- Do not use with sensitive production CI data until security review and tests pass.
 
-The prototype expects secret values to be configured outside the repository:
-- `CIRCLECI_TOKEN`
-- `MCP_ACCESS_TOKEN`
+## Next milestones
 
-Only the names are documented here. Never commit or share their values.
+1. Pass Linux typecheck and unit/integration tests.
+2. Add GitHub Actions webhook ingestion with signature verification.
+3. Add authenticated on-demand CircleCI API v2 detail/log retrieval with bounded output.
+4. Deploy to a non-production Cloudflare Worker and verify a real signed CircleCI webhook.
+5. Validate redaction, deduplication, retention, and access control.
+6. Only after evidence, promote status to `testing`.
 
-## Next development milestones
+## Licensing
 
-1. Review dependency tree and resolve security advisories without unsafe force upgrades.
-2. Restore the complete source project into this plugin directory and review it.
-3. Run reproducible typecheck/build checks in supported Linux CI.
-4. Test Worker health endpoint and authenticated MCP endpoint.
-5. Verify each read-only tool against a safe CircleCI test context.
-6. Review authentication, authorization, rate limiting, input validation, redirects, output limits, and log redaction.
-7. Deploy to a non-production Cloudflare environment and record test evidence.
-8. Complete documentation and only then consider promotion to `testing`.
-
-## License
-
-Undecided. Do not assume reuse or redistribution permissions until licensing is explicitly selected.
+No license has been selected yet. Do not assume redistribution rights.
