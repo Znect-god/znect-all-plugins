@@ -793,7 +793,7 @@ function createServer(env: Env) {
   server.registerTool(
     "correlate_recent_events",
     {
-      description: "Correlate signed CircleCI webhook events with recent CircleCI API v3 runs using exact commit revision, compatible branch and a bounded time window. This is a heuristic: repeated candidates are marked ambiguous, and webhook pipeline IDs are never treated as API run IDs. Read-only.",
+      description: "Correlate signed CircleCI webhook events with recent CircleCI API v3 runs using exact commit revision, compatible branch and distance to the run execution interval. This is a heuristic: repeated candidates are marked ambiguous, and webhook pipeline IDs are never treated as API run IDs. Read-only.",
       annotations: { readOnlyHint: true },
       inputSchema: {
         project_id: z.string().min(2).max(63),
@@ -807,7 +807,13 @@ function createServer(env: Env) {
       if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
       const project = findProject(getProjectRegistry(env), project_id);
       if (!project) throw new Error("Unknown Znect project: " + project_id + ".");
-      const { connection, scope, adapter } = getCircleCiAdapter(env, project_id, connection_id);
+      let selected: ReturnType<typeof getCircleCiAdapter>;
+      try {
+        selected = getCircleCiAdapter(env, project_id, connection_id);
+      } catch {
+        throw new Error("CircleCI connection is unavailable or ambiguous.");
+      }
+      const { connection, scope, adapter } = selected;
       let page: Record<string, unknown>;
       try {
         const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
@@ -816,7 +822,12 @@ function createServer(env: Env) {
       } catch {
         throw new Error("CircleCI event storage is temporarily unavailable or returned invalid data.");
       }
-      const runs = await adapter.listRuns(scope, run_limit);
+      let runs: Awaited<ReturnType<typeof adapter.listRuns>>;
+      try {
+        runs = await adapter.listRuns(scope, run_limit);
+      } catch {
+        throw new Error("CircleCI run data is temporarily unavailable.");
+      }
       const events = Array.isArray(page.events) ? page.events : [];
       const correlations = correlateEventsWithRuns(events, runs);
       const payload = {
