@@ -1,3 +1,10 @@
+## 2026-11-17 — Durable Object append boundary hardening
+
+- Enforce an 8 KiB streaming request-body limit and JSON media type for internal event appends.
+- Validate canonical ISO timestamps, retention/future bounds, registered-slug syntax, optional field lengths, CircleCI workflow URLs and safe numeric fields before persistence.
+- Reject unrecognized fields at the storage boundary to preserve the normalized event privacy allowlist.
+- Added regression coverage for malformed timestamps, foreign slugs, oversized fields, unsafe URLs, unexpected personal-data fields, unsupported media types and oversized declared bodies. Tests/typecheck have not been run; no CI or deployment was started.
+
 ## 2026-11-17 — event-page ownership and pagination hardening
 
 - Validate every stored event page against the CircleCI project slugs registered to the owning Znect project.
