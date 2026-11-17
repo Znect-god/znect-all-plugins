@@ -44,6 +44,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 <div class="actions"><label for="project" style="margin:0">Project</label><select id="project" aria-label="Select Znect project"></select><label for="connection" style="margin:0">CI connection</label><select id="connection" aria-label="Select CircleCI connection"></select></div>
 <div id="runs" style="margin-top:12px"></div>
 </section>
+<section class="panel" id="events-panel" hidden>
+<div class="actions" style="justify-content:space-between;margin-top:0"><h2 style="font-size:1.05rem;margin:0">Recent webhook events</h2><button id="refresh-events" type="button">Refresh events</button></div>
+<div id="events" style="margin-top:12px"></div>
+</section>
 <section class="panel" id="details-panel" hidden>
 <div class="actions" style="justify-content:space-between;margin-top:0"><h2 style="font-size:1.05rem;margin:0">Run details</h2><button id="copy">Copy JSON</button></div>
 <div id="details"></div>
@@ -61,6 +65,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   var sessionVersion=0;
   var runsRequestId=0;
   var detailsRequestId=0;
+  var eventsRequestId=0;
   var tokenInput=document.getElementById("token");
   var projectSelect=document.getElementById("project");
   var connectionSelect=document.getElementById("connection");
@@ -68,8 +73,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   var message=document.getElementById("message");
   var runsPanel=document.getElementById("runs-panel");
   var detailsPanel=document.getElementById("details-panel");
+  var eventsPanel=document.getElementById("events-panel");
   var runsBox=document.getElementById("runs");
   var detailsBox=document.getElementById("details");
+  var eventsBox=document.getElementById("events");
   var rawBox=document.getElementById("raw");
   function setMessage(text,kind){message.textContent=text;message.className="status "+(kind||"");}
   function element(tag,className,text){var node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=String(text);return node;}
@@ -96,10 +103,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   }
   function connect(){
     var version=++sessionVersion;
-    runsRequestId++;detailsRequestId++;
+    runsRequestId++;detailsRequestId++;eventsRequestId++;
     token=tokenInput.value.trim();
-    runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
-    runsBox.replaceChildren();detailsBox.replaceChildren();rawBox.textContent="";
+    runsPanel.hidden=true;detailsPanel.hidden=true;eventsPanel.hidden=true;lastDetails=null;
+    runsBox.replaceChildren();detailsBox.replaceChildren();eventsBox.replaceChildren();rawBox.textContent="";
     if(!token){setMessage("Enter the Bridge access token.","error");return;}
     setMessage("Loading registered projects…");
     request("/api/v1/projects").then(function(data){
@@ -122,12 +129,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       if(version!==sessionVersion)return;
       if(data.provider_availability==="available"){
         setMessage("Connected to "+(data.project.name||"CircleCI project")+" via "+(data.connection.id||"selected connection")+". Read-only access confirmed.","good");
-        runsPanel.hidden=false;
-        loadRuns();
+        runsPanel.hidden=false;eventsPanel.hidden=false;
+        loadRuns();loadEventCorrelations();
       }else{
         setMessage("Project and connection are configured, but the CircleCI provider is currently unavailable.","error");
-        runsPanel.hidden=false;
+        runsPanel.hidden=false;eventsPanel.hidden=false;
         runsBox.replaceChildren(element("p","status error",data.error||"Provider availability could not be confirmed."));
+        eventsBox.replaceChildren(element("p","status error","CircleCI must be reachable to correlate webhook events."));
       }
     }).catch(function(error){
       if(version!==sessionVersion)return;
@@ -161,6 +169,41 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       runsBox.replaceChildren(element("p","status error",error.message));
     });
   }
+  function loadEventCorrelations(){
+    if(!token||!currentProject||!currentConnection)return;
+    var version=sessionVersion;
+    var requestId=++eventsRequestId;
+    eventsBox.replaceChildren(element("p","status","Loading webhook events…"));
+    request("/api/v1/event-correlations?event_limit=20&run_limit=20&"+scopeQuery()).then(function(data){
+      if(version!==sessionVersion||requestId!==eventsRequestId)return;
+      eventsBox.replaceChildren();
+      var items=Array.isArray(data.correlations)?data.correlations:[];
+      if(!items.length){eventsBox.appendChild(element("p","status","No recent webhook events were returned."));return;}
+      items.forEach(function(entry){
+        var event=entry.event||{};
+        var row=element("div","run");
+        var main=element("div","run-main");
+        main.appendChild(element("div","run-title",event.type||"CI event"));
+        var metadata=[event.branch||"branch unavailable",event.revision?String(event.revision).slice(0,12):"revision unavailable",event.happened_at||"time unavailable"].join(" · ");
+        main.appendChild(element("div","meta",metadata));
+        if(Array.isArray(entry.candidates)&&entry.candidates.length){
+          var candidateText=entry.candidates.map(function(candidate){
+            var run=candidate.run||{};
+            return "Run "+(run.id||"unknown")+" · "+(run.status||"unknown")+" · "+Math.round((candidate.time_delta_ms||0)/1000)+"s";
+          }).join("; ");
+          main.appendChild(element("div","meta",candidateText));
+        }
+        var status=entry.status==="candidate"?"Candidate":entry.status==="ambiguous"?"Ambiguous ("+((entry.candidates||[]).length)+")":"Unmatched";
+        row.appendChild(main);
+        row.appendChild(element("span","pill",status));
+        eventsBox.appendChild(row);
+      });
+    }).catch(function(error){
+      if(version!==sessionVersion||requestId!==eventsRequestId)return;
+      eventsBox.replaceChildren(element("p","status error",error.message));
+    });
+  }
+
   function loadDetails(id){
     var version=sessionVersion;
     var requestId=++detailsRequestId;
@@ -191,13 +234,14 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   }
   document.getElementById("connect").addEventListener("click",connect);
   document.getElementById("refresh").addEventListener("click",loadRuns);
+  document.getElementById("refresh-events").addEventListener("click",loadEventCorrelations);
   function refreshSelectedScope(){
     detailsPanel.hidden=true;lastDetails=null;rawBox.textContent="";
     setMessage("Switching CI connection…");
     request("/api/v1/status?"+scopeQuery()).then(function(data){
       if(data.provider_availability==="available"){
         setMessage("Connected to "+(data.project.name||"CircleCI project")+" via "+(data.connection.id||"selected connection")+".","good");
-        loadRuns();
+        loadRuns();loadEventCorrelations();
       }else{
         setMessage("Project and connection are configured, but the provider is unavailable.","error");
         runsBox.replaceChildren(element("p","status error",data.error||"Provider availability could not be confirmed."));
@@ -213,9 +257,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     refreshSelectedScope();
   });
   document.getElementById("disconnect").addEventListener("click",function(){
-    sessionVersion++;runsRequestId++;detailsRequestId++;
-    token="";tokenInput.value="";runsPanel.hidden=true;detailsPanel.hidden=true;lastDetails=null;
-    runsBox.replaceChildren();detailsBox.replaceChildren();rawBox.textContent="";
+    sessionVersion++;runsRequestId++;detailsRequestId++;eventsRequestId++;
+    token="";tokenInput.value="";runsPanel.hidden=true;detailsPanel.hidden=true;eventsPanel.hidden=true;lastDetails=null;
+    runsBox.replaceChildren();detailsBox.replaceChildren();eventsBox.replaceChildren();rawBox.textContent="";
     setMessage("Token cleared from this tab.","");
   });
   document.getElementById("copy").addEventListener("click",function(){
