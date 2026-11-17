@@ -9,6 +9,7 @@ const env = {
   CIRCLECI_TOKEN: CIRCLE_TOKEN,
   MCP_ACCESS_TOKEN: MCP_TOKEN,
   WEB_ACCESS_TOKEN: "web-test-token",
+  ZNECT_PROJECT_REGISTRY: TEST_REGISTRY,
   MCP_RATE_LIMITER: { limit: async () => ({ success: true }) }
 };
 const ctx = {} as ExecutionContext;
