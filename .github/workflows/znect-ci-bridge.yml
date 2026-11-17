@@ -1,0 +1,24 @@
+name: Znect CI Bridge checks
+on:
+  push:
+    paths:
+      - "plugins/znect-ci-bridge/**"
+  pull_request:
+    paths:
+      - "plugins/znect-ci-bridge/**"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugins/znect-ci-bridge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test
