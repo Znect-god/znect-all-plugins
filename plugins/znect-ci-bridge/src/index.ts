@@ -206,7 +206,7 @@ async function readEventPage(
     for (const [key, max] of Object.entries(EVENT_PAGE_STRING_LIMITS)) {
       const field = event[key];
       if (field !== undefined && (typeof field !== "string" || field.length === 0 ||
-          field.length > max || /[\\u0000-\\u001f\\u007f]/.test(field))) {
+          field.length > max || /[\u0000-\u001f\u007f]/.test(field))) {
         throw new Error("Event storage returned an invalid event page.");
       }
     }
