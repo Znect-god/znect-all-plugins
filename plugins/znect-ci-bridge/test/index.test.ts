@@ -4,6 +4,7 @@ import worker from "../src/index";
 const MCP_TOKEN = "bridge-test-token";
 const CIRCLE_TOKEN = "circle-test-token";
 const RUN_ID = "123e4567-e89b-42d3-a456-426614174001";
+const TEST_REGISTRY = JSON.stringify({ version: 1, projects: [{ id: "znect-forge", name: "Znect Forge", repositories: [{ fullName: "Znect-god/znect-forge" }], components: [], connections: [{ id: "forge-circleci", provider: "circleci", projectSlug: "gh/Znect-god/znect-forge" }] }] });
 const env = {
   CIRCLECI_TOKEN: CIRCLE_TOKEN,
   MCP_ACCESS_TOKEN: MCP_TOKEN,
@@ -110,7 +111,7 @@ describe("MCP tool schemas and error boundary", () => {
         name: "list_recent_events",
         arguments: { project_id: "znect-forge", after: 0, limit: 20 }
       }),
-      { ...env, EVENT_STORE: namespace } as Parameters<typeof worker.fetch>[1],
+      { ...env, ZNECT_PROJECT_REGISTRY: TEST_REGISTRY, EVENT_STORE: namespace } as Parameters<typeof worker.fetch>[1],
       ctx
     );
     expect(response.status).toBe(200);
@@ -118,6 +119,29 @@ describe("MCP tool schemas and error boundary", () => {
     expect(payload.result?.isError).toBe(true);
     expect(JSON.stringify(payload)).toContain("CircleCI event storage is temporarily unavailable or returned invalid data.");
     expect(JSON.stringify(payload)).not.toContain("private storage detail");
+  });
+
+  it("fails safely when correlation cannot read the event inbox", async () => {
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => { throw new Error("private storage detail"); } })
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(
+      rpcRequest(23, "tools/call", {
+        name: "correlate_recent_events",
+        arguments: { project_id: "znect-forge", event_limit: 20, run_limit: 20 }
+      }),
+      { ...env, ZNECT_PROJECT_REGISTRY: TEST_REGISTRY, EVENT_STORE: namespace } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(200);
+    const payload = await parseRpc(response);
+    expect(payload.result?.isError).toBe(true);
+    expect(JSON.stringify(payload)).toContain("CircleCI event storage is temporarily unavailable or returned invalid data.");
+    expect(JSON.stringify(payload)).not.toContain("private storage detail");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("rejects invalid tool arguments before making an upstream request", async () => {
