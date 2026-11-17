@@ -93,6 +93,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Correlation edge-case tests: event inside run interval, malformed timestamp fallback, inverted interval rejection and invalid time-window rejection **(разработано)**.
 - [x] Defensive validation of stored event-page records, UUIDs, timestamps and monotonic cursors **(разработано)**.
 - [x] Validate event-page ownership against registered CircleCI project slugs; reject duplicate, unordered or inconsistent cursors and invalid empty-page cursor advancement **(разработано)**.
+- [x] Enforce the normalized event privacy allowlist, optional field bounds, canonical timestamps, CircleCI workflow URL constraints and safe numeric values again at the Browser/MCP output boundary **(разработано)**.
 - [x] API regression test for malformed event-store page/cursor responses **(разработано)**.
 - [ ] Run correlation unit/API/MCP tests and typecheck on the current head (not yet run).
 - [ ] Verify correlation against real CircleCI webhook deliveries and corresponding API v3 runs.
@@ -185,6 +186,7 @@ For every meaningful feature or fix:
 - Hardened internal event-page parsing, project-slug ownership checks, duplicate/order/cursor consistency validation and empty-page cursor handling; malformed pages fail closed.
 - Hardened the Durable Object append boundary with an 8 KiB streaming body cap, JSON media-type enforcement, strict normalized-event validation and rejection of unknown fields.
 - Updated the security review with the new storage trust-boundary controls and explicit current-head validation limitations.
+- Added a second event-page output allowlist so legacy or corrupted stored rows cannot expose unknown fields through Browser API/MCP readers.
 - Added a focused Browser API regression test for a malformed event-store page. This test has been authored but not executed.
 
 ## 8. Next development priorities
