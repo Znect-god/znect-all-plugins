@@ -21,7 +21,7 @@ export function correlateEventsWithRuns(
   runs: CiRun[],
   maxTimeDeltaMs = 24 * 60 * 60 * 1000
 ): EventRunCorrelation[] {
-  return events.map((value) => {
+  return events.map((value): EventRunCorrelation => {
     const event = value !== null && typeof value === "object" && !Array.isArray(value)
       ? value as Record<string, unknown>
       : {};
