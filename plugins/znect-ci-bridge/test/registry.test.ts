@@ -41,6 +41,19 @@ describe("project registry", () => {
     expect(findCircleCiProject(registry, "gh/Znect-god/unknown")).toBeUndefined();
   });
 
+  it("accepts the explicitly supported GitHub OAuth and API v3 CircleCI slug aliases", () => {
+    const aliasProject = {
+      ...forge,
+      id: "znect-ai",
+      connections: [{ id: "circleci-api", provider: "circleci", projectSlug: "github/Znect-god/znect-ai" }]
+    };
+    const registry = parseProjectRegistry(JSON.stringify({ version: 1, projects: [aliasProject] }));
+    expect(findCircleCiProject(registry, "github/Znect-god/znect-ai")).toMatchObject({
+      project: { id: "znect-ai" },
+      connection: { projectSlug: "github/Znect-god/znect-ai" }
+    });
+  });
+
   it("rejects duplicate project IDs and duplicate CircleCI project mappings", () => {
     expect(() => parseProjectRegistry(JSON.stringify({
       version: 1,
