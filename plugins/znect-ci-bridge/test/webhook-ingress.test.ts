@@ -187,4 +187,62 @@ describe("CircleCI webhook ingress integration", () => {
     expect(response.status).toBe(415);
     expect(append).not.toHaveBeenCalled();
   });
+
+  it("acknowledges CircleCI test pings without storing them as build events", async () => {
+    const payload = { type: "ping", id: "not-a-build-event" };
+    const body = JSON.stringify(payload);
+    const append = vi.fn(async () => new Response(
+      JSON.stringify({ accepted: true, duplicate: false }), { status: 200 }
+    ));
+    const response = await postWebhook(body, await signBody(body), makeNamespace(append));
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toMatchObject({ accepted: true, ignored: true });
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it("rejects a mismatch between the signed payload event type and CircleCI header", async () => {
+    const body = JSON.stringify({ ...makePayload(), type: "job-completed" });
+    const append = vi.fn(async () => new Response("{}", { status: 200 }));
+    const response = await postWebhook(body, await signBody(body), makeNamespace(append));
+    expect(response.status).toBe(400);
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed JSON after verifying the raw-body signature", async () => {
+    const body = "{not-json";
+    const append = vi.fn(async () => new Response("{}", { status: 200 }));
+    const response = await postWebhook(body, await signBody(body), makeNamespace(append));
+    expect(response.status).toBe(400);
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized bodies before signature verification or storage", async () => {
+    const body = "x".repeat(65_537);
+    const append = vi.fn(async () => new Response("{}", { status: 200 }));
+    const response = await postWebhook(body, "invalid", makeNamespace(append));
+    expect(response.status).toBe(413);
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it("preserves CircleCI's duplicate acknowledgement without creating a second event", async () => {
+    const body = JSON.stringify(makePayload());
+    const append = vi.fn(async () => new Response(
+      JSON.stringify({ accepted: true, duplicate: true }), { status: 200 }
+    ));
+    const response = await postWebhook(body, await signBody(body), makeNamespace(append));
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toEqual({ accepted: true, duplicate: true });
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns a retryable response when storage returns an invalid acknowledgement", async () => {
+    const body = JSON.stringify(makePayload());
+    const append = vi.fn(async () => new Response(
+      JSON.stringify({ accepted: true }), { status: 200 }
+    ));
+    const response = await postWebhook(body, await signBody(body), makeNamespace(append));
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain("invalid acknowledgement");
+  });
+
 });
