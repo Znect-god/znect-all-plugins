@@ -34,7 +34,7 @@ See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the ch
 - Legacy CircleCI v1.1 compatibility API: `list_recent_builds`, `get_build_details`, `get_build_logs` (numeric build numbers; separate from v3 UUID run IDs).
 - Registry: `list_projects` — project registration, CI configuration, and connection catalog; provider availability remains `not_checked` until probed.
 - API v3: `check_connection`, `list_recent_runs`, `get_run_details`, `get_job_details`, `get_job_logs`, `get_job_test_results`, `list_job_artifacts`, `get_job_artifact`, `diagnose_run`.
-- Event inbox: `list_recent_events`.
+- Event inbox: `list_recent_events`, `correlate_recent_events`.
 
 All project-scoped CircleCI tools require `project_id` and accept an optional `connection_id`. If a project has exactly one CircleCI connection, it may be selected implicitly for compatibility; if it has multiple connections, `connection_id` is mandatory and ambiguous selection fails closed. Run lookups verify membership in the selected project's paginated runs collection (bounded to 400 recent runs); job operations verify the job detail's project reference, and run traversal also checks its workflow reference. Missing or mismatched ownership metadata fails closed. All tools are read-only; there are no pipeline trigger, retry, cancel, configuration-write or deployment tools.
 
@@ -55,7 +55,7 @@ All JSON API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
 
 CircleCI sends signed events to `POST /webhooks/circleci`. The Worker verifies the HMAC-SHA256 signature, accepts only CircleCI project slugs explicitly registered in `ZNECT_PROJECT_REGISTRY` (there is no implicit project default), normalizes a small field allowlist, deduplicates event IDs in a separate 30-day replay-key table, and stores the latest 500 event records in a project-specific SQLite-backed Durable Object. Replay protection therefore survives event-history eviction. MCP event reads accept `project_id`; the browser API accepts `project_id` as a query parameter. The inbox is readable through `list_recent_events` and `GET /api/v1/events`. Event records are capped at 500, while event IDs remain in the independent deduplication table for up to 30 days. Its initial `after=0` read returns the newest events first; the returned cursor then lets clients request only later arrivals.
 
-The inbox does **not** push unsolicited messages into an open ChatGPT conversation. A separate supported polling/delivery mechanism would be needed for proactive assistant notifications.
+`correlate_recent_events` enriches stored webhook events with candidate API v3 runs. It requires an exact commit SHA, rejects conflicting branches, and limits time distance to 24 hours. It does not assume CircleCI webhook pipeline IDs are API v3 run UUIDs. Multiple candidates are reported as `ambiguous`; a single candidate is a heuristic correlation, not proof of identity. Events without a revision remain unmatched. The tool reads at most 50 events and 30 recent runs per request.\n\nThe inbox does **not** push unsolicited messages into an open ChatGPT conversation. A separate supported polling/delivery mechanism would be needed for proactive assistant notifications.
 
 ## Project registry
 
