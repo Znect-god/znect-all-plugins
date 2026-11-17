@@ -2,15 +2,13 @@
 
 **The shared plugin library for the Znect ecosystem.**
 
-This repository is the central home for Znect plugins, integrations, developer tools, experiments, and reusable components. It intentionally keeps projects at different maturity levels in one place, while clearly identifying their status and limitations.
-
-> **Repository policy:** experimental work may be stored here, but it must never be presented as stable or production-ready until it has passed the documented review and testing process.
+This repository is the central home for Znect plugins, integrations, developer tools, experiments, and reusable components. Experimental work must be clearly identified and must not be presented as stable before review and testing.
 
 ## Repository map
 
 ```text
 plugins/                 Individual plugin projects
-  znect-ci-bridge/       Cloudflare Worker / MCP bridge for CircleCI (prototype)
+  znect-ci-bridge/       Free-first CircleCI diagnostics channel
 documentation/           Repository-wide standards and guides
 templates/               Starter files for new plugins
 ```
@@ -23,24 +21,19 @@ templates/               Starter files for new plugins
 | `in-development` | Actively being implemented; interfaces or behavior may change |
 | `testing` | Feature-complete candidate undergoing documented tests |
 | `stable` | Reviewed, tested, documented, and suitable for its declared use |
-| `deprecated` | Retained for reference but no longer recommended; migration guidance should be provided |
+| `deprecated` | Retained for reference but no longer recommended |
 
-A status describes maturity, not a guarantee of security. Each plugin must document its own risks and supported environments.
+A status describes maturity, not a guarantee of security.
 
 ## Plugin directory
 
 | Plugin | Status | Current version | Purpose |
 |---|---|---:|---|
-| [Znect CI Bridge](plugins/znect-ci-bridge/) | `prototype` | `0.1.0` | Read-only MCP bridge to CircleCI build information |
+| [Znect CI Bridge](plugins/znect-ci-bridge/) | `in-development` | `0.2.0` | Free signed-webhook diagnostics, dashboard, and manual ChatGPT Free export; no MCP dependency |
 
 ## Required information for every plugin
 
-Each plugin folder should contain:
-- `README.md` — purpose, setup, usage, support, limitations, and testing evidence.
-- `plugin.json` — machine-readable metadata and maturity status.
-- `CHANGELOG.md` — version history and notable changes.
-- Source code and tests, when available.
-- A license or an explicit note that licensing has not yet been decided.
+Each plugin folder should contain a README, machine-readable `plugin.json`, changelog, source/tests when available, and explicit licensing status.
 
 See [Plugin documentation](documentation/README.md), [the plugin standard](documentation/PLUGIN_STANDARD.md), and [the lifecycle guide](documentation/PLUGIN_LIFECYCLE.md).
 
@@ -54,4 +47,4 @@ Changes should be focused, documented, and reviewable. Do not silently promote a
 
 ## Licensing
 
-No repository-wide open-source license has been selected yet. Until a license is added, do not assume that the code may be reused, redistributed, or sublicensed merely because this repository is public. Each plugin's licensing terms must be made explicit before public release.
+No repository-wide open-source license has been selected yet. Until a license is added, do not assume that the code may be reused, redistributed, or sublicensed merely because this repository is public. Each plugin's licensing terms must be explicit before public release.
