@@ -22,7 +22,7 @@ const run = (overrides: Partial<CiRun> = {}): CiRun => ({
 describe("webhook event and CircleCI API run correlation", () => {
   it("matches an exact revision, branch and nearby completion time", () => {
     const [result] = correlateEventsWithRuns([event], [run()]);
-    expect(result.status).toBe("matched");
+    expect(result.status).toBe("candidate");
     expect(result.candidates[0]).toMatchObject({
       run: { id: "123e4567-e89b-42d3-a456-426614174001" },
       time_delta_ms: 60_000,
