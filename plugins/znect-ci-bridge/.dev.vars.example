@@ -1,0 +1,2 @@
+CIRCLECI_SIGNING_SECRET=replace-with-a-long-random-secret
+BRIDGE_READ_TOKEN=replace-with-a-different-long-random-secret
