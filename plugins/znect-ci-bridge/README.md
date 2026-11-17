@@ -27,6 +27,10 @@ Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and in
 
 See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks. The [provider adapter architecture](documentation/PROVIDER_ADAPTERS.md) describes the implemented CircleCI adapter and remaining migration. The proposed [Znect Build API contract](documentation/ZNECT_BUILD_API_CONTRACT.md) defines the future read-only integration boundary; it is a proposal, not an existing endpoint specification. The intended free ChatGPT access path is documented in [ASSISTANT_CHANNEL.md](documentation/ASSISTANT_CHANNEL.md).
 
+## Isolated development — 2026-11-17
+
+The branch [`test/ci-bridge-webhook-ingress-contract`](https://github.com/Znect-god/znect-all-plugins/tree/test/ci-bridge-webhook-ingress-contract) contains expanded signed-webhook regression coverage, bounded HMAC signature parsing, conservative webhook-to-run correlation through MCP and the authenticated Browser API, and a dashboard event panel. Correlation candidates require an exact commit SHA, no conflicting branch, and proximity to the run execution interval; a CircleCI pipeline ID is never assumed to be a v3 run UUID. This is isolated work based on `c72a67e33177985a57f4d9d6180e4e8d8a970edb`, not a merge or release. The current branch head has not been typechecked or tested, deployed, or verified with a real CircleCI delivery.
+
 ## Capabilities
 
 ### Read-only MCP tools
