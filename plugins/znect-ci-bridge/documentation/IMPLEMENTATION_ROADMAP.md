@@ -89,6 +89,8 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Bounded correlation API and MCP tool **(разработано)**.
 - [x] Browser API correlation endpoint with generic provider/storage error handling **(разработано)**.
 - [x] Correlation edge-case tests: event inside run interval, malformed timestamp fallback, inverted interval rejection and invalid time-window rejection **(разработано)**.
+- [x] Defensive validation of stored event-page records, UUIDs, timestamps and monotonic cursors **(разработано)**.
+- [x] API regression test for malformed event-store page/cursor responses **(разработано)**.
 - [ ] Run correlation unit/API/MCP tests and typecheck on the current head (not yet run).
 - [ ] Verify correlation against real CircleCI webhook deliveries and corresponding API v3 runs.
 - [ ] Tune matching thresholds only from observed provider behavior; preserve conservative ambiguity handling.
@@ -174,10 +176,16 @@ For every meaningful feature or fix:
 4. Record the exact commit/branch and any remaining limitations.
 5. Do not mark a feature deployed or operational merely because its source code exists.
 
-## 7. Next development priorities
+## 7. Development log — 2026-11-17
 
-1. Review and harden current webhook ingress, correlation and dashboard implementation; fix source-level issues found during review.
-2. Add any missing focused regression tests and update this roadmap in the same commits.
+- Added the living roadmap to the active engineering branch and linked it from the plugin README and Usage Guide.
+- Hardened internal event-page parsing so malformed event records, invalid UUIDs/timestamps and cursors that exceed the page cursor are rejected as unavailable storage data.
+- Added a focused Browser API regression test for a malformed event-store page. This test has been authored but not executed.
+
+## 8. Next development priorities
+
+1. Continue source-level review of webhook ingress, correlation and dashboard; fix any demonstrated authorization, parsing or output-boundary issues.
+2. Add focused regression tests for malformed Durable Object acknowledgements and pagination edge cases; update this roadmap in the same development cycle.
 3. Inspect the full Bridge implementation for security, authorization, bounded-output and provider-ownership gaps.
 4. Prepare the current branch for an authorized validation run, without starting any CI or deployment.
 5. After source validation is authorized and successful, proceed to isolated Preview and real CircleCI delivery verification.
