@@ -1,6 +1,6 @@
 # Security review notes
 
-**Review date:** 2026-11-11  
+**Review date:** 2026-11-17  
 **Scope:** source-level review of the prototype Worker and its security helpers  
 **Result:** targeted hardening applied; not a complete security audit
 
@@ -86,13 +86,25 @@ The feature branch adds `POST /webhooks/circleci` with the following controls:
 - Rejects unknown/newer signature versions instead of accepting a v1 downgrade when a higher version is present.
 - Requires `application/json`, caps the body at 64 KiB, and rate-limits failed signatures using the existing hashed client-IP limiter.
 - Requires the webhook event type header to match the JSON payload type.
-- Accepts only workflow/job completion events for the fixed Forge project; supports the CircleCI GitHub OAuth and API v3 slug spellings for that same repository.
+- Accepts only workflow/job completion events whose CircleCI project slug is present in the configured Znect project registry; supports the CircleCI GitHub OAuth and API v3 slug spellings when explicitly registered.
 - Extracts only a small allowlist of fields. It does not store the raw payload, author emails, arbitrary URLs, or webhook signing secret.
 - Restricts workflow links to HTTPS `app.circleci.com` URLs.
 - Deduplicates by CircleCI event ID in a SQLite-backed Durable Object, retains at most 500 events, and prunes records older than 30 days.
 - Exposes the inbox through a read-only MCP tool and the authenticated browser API.
 
 The signing secret must be configured independently as Cloudflare Preview/Production Worker Secret `CIRCLECI_WEBHOOK_SECRET` and as the CircleCI project webhook's Secret token. The Bridge does not create or mutate CircleCI webhook settings; that is a deliberate read-only boundary.
+
+### 2026-11-17 source review — event-store trust boundary hardened
+
+The current isolated engineering branch adds a second validation boundary inside the Durable Object, rather than relying exclusively on the webhook Worker to normalize input:
+
+- Internal append requests require JSON and are streamed with an 8 KiB maximum body size; declared oversize or malformed content lengths are rejected.
+- Stored records must have a valid UUID, supported event type, registered-slug syntax, canonical ISO timestamp within the accepted age/future window, and bounded optional fields.
+- Workflow URLs are revalidated as HTTPS `app.circleci.com` URLs and numeric fields must be non-negative safe integers.
+- An explicit stored-field allowlist rejects unknown properties, including accidental personal-data fields such as `author_email`.
+- Browser/MCP event-page readers independently validate registered project ownership, UUID/type/timestamp fields, cursor uniqueness/order, page cursor consistency and empty-page cursor stability.
+
+Focused regression tests have been authored for these cases. They have **not** been executed on the current branch head; no typecheck, CI workflow, Preview deployment or live provider verification was performed for these changes. This is source-level hardening only, not a claim of validated or deployed behavior.
 
 ### Remaining webhook/notification verification
 
