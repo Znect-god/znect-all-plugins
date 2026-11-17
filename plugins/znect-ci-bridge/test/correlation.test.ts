@@ -48,6 +48,20 @@ describe("webhook event and CircleCI API run correlation", () => {
     expect(result.candidates).toHaveLength(2);
   });
 
+  it("caps displayed candidates while preserving the total ambiguous count", () => {
+    const runs = [
+      run({ id: "123e4567-e89b-42d3-a456-426614174011" }),
+      run({ id: "123e4567-e89b-42d3-a456-426614174012", completedAt: "2026-11-17T18:02:00.000Z" }),
+      run({ id: "123e4567-e89b-42d3-a456-426614174013", completedAt: "2026-11-17T18:03:00.000Z" }),
+      run({ id: "123e4567-e89b-42d3-a456-426614174014", completedAt: "2026-11-17T18:04:00.000Z" })
+    ];
+    const [result] = correlateEventsWithRuns([event], runs);
+    expect(result.status).toBe("ambiguous");
+    expect(result.candidate_count).toBe(4);
+    expect(result.candidates_truncated).toBe(true);
+    expect(result.candidates).toHaveLength(3);
+  });
+
   it("reports missing revisions without matching by branch alone", () => {
     const [result] = correlateEventsWithRuns([{ ...event, revision: undefined }], [run()]);
     expect(result).toMatchObject({
