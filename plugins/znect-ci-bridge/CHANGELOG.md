@@ -2,7 +2,7 @@
 
 - Validate every stored event page against the CircleCI project slugs registered to the owning Znect project.
 - Reject duplicate or incorrectly ordered cursors, a next_cursor that does not equal the page's maximum cursor, and empty pages that unexpectedly advance the cursor.
-- Added Browser API regression coverage for foreign project slugs and duplicate cursors. Tests and typecheck have not been executed; no CI, Preview or deployment was started.
+- Added Browser API regression coverage for foreign project slugs, duplicate and out-of-order cursors, and empty-page cursor advancement. Tests and typecheck have not been executed; no CI, Preview or deployment was started.
 
 ## 2026-11-17 — roadmap and event-page hardening
 
