@@ -62,6 +62,31 @@ describe("webhook event and CircleCI API run correlation", () => {
     expect(result.candidates).toHaveLength(3);
   });
 
+  it("treats events inside the run execution interval as zero-distance candidates", () => {
+    const [result] = correlateEventsWithRuns([{ ...event, happened_at: "2026-11-17T18:00:30.000Z" }], [run({
+      startedAt: "2026-11-17T17:50:00.000Z",
+      completedAt: "2026-11-17T18:05:00.000Z"
+    })]);
+    expect(result.status).toBe("candidate");
+    expect(result.candidates[0].time_delta_ms).toBe(0);
+  });
+
+  it("falls back to a valid start time when the completion timestamp is malformed", () => {
+    const [result] = correlateEventsWithRuns([event], [run({
+      startedAt: "2026-11-17T18:00:00.000Z",
+      completedAt: "not-a-date"
+    })]);
+    expect(result.status).toBe("candidate");
+    expect(result.candidates[0].time_delta_ms).toBe(0);
+  });
+
+  it("rejects runs whose start time is later than their completion time", () => {
+    const [result] = correlateEventsWithRuns([event], [run({
+      startedAt: "2026-11-17T18:10:00.000Z",
+      completedAt: "2026-11-17T18:00:00.000Z"
+    })]);
+    expect(result.status).toBe("unmatched");
+  });
   it("reports missing revisions without matching by branch alone", () => {
     const [result] = correlateEventsWithRuns([{ ...event, revision: undefined }], [run()]);
     expect(result).toMatchObject({
