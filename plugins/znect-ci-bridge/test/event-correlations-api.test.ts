@@ -43,6 +43,7 @@ describe("read-only browser event correlation API", () => {
               id: EVENT_ID,
               type: "workflow-completed",
               happened_at: "2026-11-17T18:00:30.000Z",
+              project_slug: "gh/Znect-god/znect-forge",
               branch: "work/bridge",
               revision: REVISION
             }],
@@ -153,6 +154,58 @@ describe("read-only browser event correlation API", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: "Event storage is temporarily unavailable or returned invalid data."
     });
+  });
+
+  it("rejects event records owned by a different registered project slug", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => new Response(JSON.stringify({
+          events: [{
+            cursor: 1,
+            id: EVENT_ID,
+            type: "workflow-completed",
+            project_slug: "gh/attacker/foreign-repo",
+            happened_at: "2026-11-17T18:00:30.000Z"
+          }],
+          next_cursor: 1
+        }), { status: 200 })
+      })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Event storage is temporarily unavailable or returned invalid data."
+    });
+  });
+
+  it("rejects duplicate or incorrectly ordered pagination cursors", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => new Response(JSON.stringify({
+          events: [
+            { cursor: 3, id: EVENT_ID, type: "workflow-completed", project_slug: "gh/Znect-god/znect-forge", happened_at: "2026-11-17T18:00:30.000Z" },
+            { cursor: 3, id: "4888f21b-eaa7-4383-8f3d-75a63bba0001", type: "job-completed", project_slug: "gh/Znect-god/znect-forge", happened_at: "2026-11-17T18:00:31.000Z" }
+          ],
+          next_cursor: 3
+        }), { status: 200 })
+      })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(503);
   });
 
   it("rejects out-of-range event and run limits before contacting CircleCI", async () => {
