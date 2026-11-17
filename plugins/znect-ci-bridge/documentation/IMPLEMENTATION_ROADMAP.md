@@ -74,6 +74,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 
 - [x] CircleCI webhook receiver with raw-body HMAC-SHA256 verification **(разработано)**.
 - [x] Project allowlist and payload normalization using a field allowlist **(разработано)**.
+- [x] Project registry accepts the explicitly supported `gh/` and `github/` CircleCI slug forms and resolves both through the same registered-project boundary **(разработано)**.
 - [x] Event ID replay protection/deduplication **(разработано)**.
 - [x] Durable Object-backed bounded event history and retention policy **(разработано)**.
 - [x] Bound internal event append bodies and validate canonical timestamps, field lengths, CircleCI URLs and an explicit stored-field allowlist before persistence **(разработано)**.
@@ -187,6 +188,7 @@ For every meaningful feature or fix:
 - Hardened the Durable Object append boundary with an 8 KiB streaming body cap, JSON media-type enforcement, strict normalized-event validation and rejection of unknown fields.
 - Updated the security review with the new storage trust-boundary controls and explicit current-head validation limitations.
 - Added a second event-page output allowlist so legacy or corrupted stored rows cannot expose unknown fields through Browser API/MCP readers.
+- Aligned project-registry validation with the two CircleCI GitHub slug forms already accepted by webhook normalization; added a registry regression test.
 - Added a focused Browser API regression test for a malformed event-store page. This test has been authored but not executed.
 
 ## 8. Next development priorities
