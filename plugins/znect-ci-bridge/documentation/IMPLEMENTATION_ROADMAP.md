@@ -55,7 +55,8 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Provider-neutral read-only adapter contract **(разработано)**.
 - [x] CircleCI provider adapter for core API v3 operations **(разработано)**.
 - [x] Project/run/job/workflow ownership checks and bounded run traversal **(разработано)**.
-- [ ] Add and verify a native Znect Build provider adapter after the Build API is actually implemented and documented.
+- [ ] Define a narrow read-only Bridge integration with Znect Build only after its supported result/status retrieval interface is explicitly established; the current Build repository documents request/result schemas and GitHub Actions orchestration, not a confirmed public read API.
+- [ ] If Build results are exposed through private artifacts or repository status records rather than an API, integrate through that supported mechanism without duplicating build execution.
 - [ ] Verify multi-project and multi-connection behavior against live, authorized projects.
 
 ### 3.3 CircleCI diagnostics
@@ -163,7 +164,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - Keep changes isolated. Do not merge, open a PR, or update `main` without explicit approval.
 - Older branches (`feat/ci-bridge-circleci-webhooks`, `feature/ci-bridge-test-reports`, `feature/znect-ci-bridge-source`, `work/znect-ci-bridge-free-channel-v0.2.0`, `work/znect-ci-bridge-mcp-v0.2.0`) are historical work lines/prototypes; do not develop them in parallel unless a specific recovery or comparison requires it.
 - The `docs/ci-bridge-implementation-roadmap` branch contains the earlier roadmap source; this living copy is maintained alongside the active engineering branch so implementation status and future work stay together.
-- Znect Build remains a separate repository for centralized application builds. Do not move Bridge plugin source into Build.
+- Znect Build remains a separate repository for centralized application builds, with GitHub Actions as its central execution engine. Its current README/implementation status says the request validator and orchestration are implemented, but live execution is gated by hosted-runner availability, source credentials and the disabled Forge target. Its current contracts describe build requests/results; no dedicated Bridge-facing read API was confirmed during the 2026-11-17 repository review. Do not move Bridge plugin source into Build.
 - Do not trigger GitHub Actions, CircleCI, builds, deployments, Preview refreshes or Production changes without explicit authorization.
 - Do not request already-configured credentials again. Never put secret values in code, docs, commits, chat or logs.
 
@@ -189,4 +190,11 @@ For every meaningful feature or fix:
 3. Inspect the full Bridge implementation for security, authorization, bounded-output and provider-ownership gaps.
 4. Prepare the current branch for an authorized validation run, without starting any CI or deployment.
 5. After source validation is authorized and successful, proceed to isolated Preview and real CircleCI delivery verification.
-6. Implement the native Znect Build adapter only against a real, versioned Build API contract; keep it read-only.
+6. Design the Bridge-to-Build read-only result integration against the actual Znect Build result transport (API if one is added, otherwise the supported private artifact/status mechanism); do not invent an API or make Bridge a build executor.
+
+
+## 9. Repository alignment review — 2026-11-17
+
+- Reviewed all nine CI Bridge-related branches in `Znect-god/znect-all-plugins`. The active engineering branch is `test/ci-bridge-webhook-ingress-contract`; `feature/ci-bridge-test-reports` is its ancestor, while the older webhook, smoke-test, free-channel and prototype branches are historical/diverged work lines. No branch was merged or deleted.
+- Reviewed `Znect-god/znect-build` and its main README, implementation status, architecture, request/result contracts and project inventory. Confirmed that it is the central application build/orchestration repository; GitHub Actions executes central recipes, while project repositories retain source ownership. The current Build implementation is not a general Bridge diagnostics API, and live execution remains gated.
+- The Bridge remains in `znect-all-plugins` for plugin source development. It must not be relocated into `znect-build` or duplicate application build recipes.
