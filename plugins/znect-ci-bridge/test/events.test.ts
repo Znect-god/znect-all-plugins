@@ -180,6 +180,8 @@ describe("Durable event inbox storage contract", () => {
 
     expect((await post(JSON.stringify({ ...valid, happened_at: "yesterday" }))).status).toBe(400);
     expect((await post(JSON.stringify({ ...valid, project_slug: "gh/attacker/foreign" }))).status).toBe(400);
+    expect((await post(JSON.stringify({ ...valid, project_slug: "gh/" + "a".repeat(260) + "/repo" }))).status).toBe(400);
+    expect((await post(JSON.stringify({ ...valid, branch: "" }))).status).toBe(400);
     expect((await post(JSON.stringify({ ...valid, workflow_name: "x".repeat(257) }))).status).toBe(400);
     expect((await post(JSON.stringify({ ...valid, workflow_url: "https://attacker.example/run" }))).status).toBe(400);
     expect((await post(JSON.stringify({ ...valid, author_email: "private@example.invalid" }))).status).toBe(400);
