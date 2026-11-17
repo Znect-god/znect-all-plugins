@@ -16,7 +16,7 @@ export interface EventRunCorrelation {
 /**
  * Correlate webhook events to API v3 runs conservatively.
  * CircleCI webhook pipeline IDs are deliberately not treated as API v3 run IDs.
- * A candidate requires the same commit SHA and a nearby run completion/start time.
+ * A candidate requires the same commit SHA and a nearby run execution interval.
  */
 export function correlateEventsWithRuns(
   events: unknown[],
@@ -40,9 +40,22 @@ export function correlateEventsWithRuns(
       if (!run.commitSha || run.commitSha.toLowerCase() !== revision) return [];
       const eventBranch = typeof event.branch === "string" ? event.branch : undefined;
       if (eventBranch && run.branch && eventBranch !== run.branch) return [];
-      const runTime = Date.parse(run.completedAt ?? run.startedAt ?? "");
-      if (!Number.isFinite(runTime)) return [];
-      const delta = Math.abs(happenedAt - runTime);
+      const startedAt = typeof run.startedAt === "string" ? Date.parse(run.startedAt) : NaN;
+      const completedAt = typeof run.completedAt === "string" ? Date.parse(run.completedAt) : NaN;
+      const validStart = Number.isFinite(startedAt) ? startedAt : NaN;
+      const validEnd = Number.isFinite(completedAt) ? completedAt : NaN;
+      if (!Number.isFinite(validStart) && !Number.isFinite(validEnd)) return [];
+      // Compare the event to the run's whole execution interval. Events emitted
+      // while a run is active have zero distance; malformed/missing endpoints
+      // fall back to the valid endpoint instead of hiding an otherwise useful match.
+      const intervalStart = Number.isFinite(validStart) ? validStart : validEnd;
+      const intervalEnd = Number.isFinite(validEnd) ? validEnd : validStart;
+      if (intervalEnd < intervalStart) return [];
+      const delta = happenedAt < intervalStart
+        ? intervalStart - happenedAt
+        : happenedAt > intervalEnd
+          ? happenedAt - intervalEnd
+          : 0;
       if (delta > maxTimeDeltaMs) return [];
       return [{
         run,
