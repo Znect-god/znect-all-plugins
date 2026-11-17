@@ -13,6 +13,10 @@
 
 Статусы независимы: проект — `registered`; CI configuration — `configured` или `not_configured`; provider availability — `not_checked` до read-only probe, затем `available` или `unavailable`. Для этого добавлены MCP `list_projects`, выбор connection в dashboard, `connection_id` в project-scoped MCP/browser reads и тест на неоднозначный выбор. Коммит на новом HEAD ещё не проверен typecheck/unit tests/live smoke; CI, Preview и deploy не запускались.
 
+### Изолированная разработка — 17 ноября 2026
+
+Для проверки новых изменений используется отдельная ветка [`test/ci-bridge-webhook-ingress-contract`](https://github.com/Znect-god/znect-all-plugins/tree/test/ci-bridge-webhook-ingress-contract), основанная на зафиксированном commit `c72a67e33177985a57f4d9d6180e4e8d8a970edb`. В неё добавлены regression-тесты signed webhook ingress, ограничение разбора HMAC signature header, read-only корреляция inbox events с CircleCI API v3 runs (MCP и Browser API), а также панель событий в dashboard. Корреляция возвращает только кандидатов: точный commit SHA, совместимая branch и расстояние до интервала выполнения run; pipeline ID не трактуется как API v3 run UUID. Эта ветка не объединена с feature branch и не является релизом. После последних изменений typecheck/unit tests не запускались, Preview/deployment и реальные CircleCI webhook deliveries не выполнялись.
+
 ## 1. Назначение и архитектура
 
 Znect CI Bridge — read-only сервис Znect для просмотра и диагностики CircleCI Forge. Он состоит из:
