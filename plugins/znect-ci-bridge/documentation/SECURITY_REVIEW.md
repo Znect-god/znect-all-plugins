@@ -86,7 +86,7 @@ The feature branch adds `POST /webhooks/circleci` with the following controls:
 - Rejects unknown/newer signature versions instead of accepting a v1 downgrade when a higher version is present.
 - Requires `application/json`, caps the body at 64 KiB, and rate-limits failed signatures using the existing hashed client-IP limiter.
 - Requires the webhook event type header to match the JSON payload type.
-- Accepts only workflow/job completion events whose CircleCI project slug is present in the configured Znect project registry; supports the CircleCI GitHub OAuth and API v3 slug spellings when explicitly registered.
+- Accepts only workflow/job completion events whose CircleCI project slug is present in the configured Znect project registry; supports the CircleCI GitHub OAuth and API v3 slug spellings when explicitly registered. Registry validation now explicitly accepts both supported `gh/` and `github/` forms; each exact slug must still be uniquely registered.
 - Extracts only a small allowlist of fields. It does not store the raw payload, author emails, arbitrary URLs, or webhook signing secret.
 - Restricts workflow links to HTTPS `app.circleci.com` URLs.
 - Deduplicates by CircleCI event ID in a SQLite-backed Durable Object, retains at most 500 events, and prunes records older than 30 days.
