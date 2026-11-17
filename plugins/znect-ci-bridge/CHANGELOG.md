@@ -4,6 +4,7 @@
 - Validate canonical ISO timestamps, retention/future bounds, registered-slug syntax, optional field lengths, CircleCI workflow URLs and safe numeric fields before persistence.
 - Reject unrecognized fields at the storage boundary to preserve the normalized event privacy allowlist.
 - Independently enforce the same event field allowlist, size/type constraints, canonical timestamps, CircleCI URL checks and safe numeric bounds on Browser API/MCP event-page reads.
+- Align project-registry slug validation with the supported `gh/` and `github/` CircleCI project slug forms.
 - Added regression coverage for malformed timestamps, foreign and oversized project slugs, empty/oversized fields, unsafe URLs, unexpected personal-data fields, unsupported media types and oversized declared bodies. Tests/typecheck have not been run; no CI or deployment was started.
 
 ## 2026-11-17 — event-page ownership and pagination hardening
