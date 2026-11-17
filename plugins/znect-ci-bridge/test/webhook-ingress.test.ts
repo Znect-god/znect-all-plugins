@@ -260,7 +260,7 @@ describe("CircleCI webhook ingress integration", () => {
         id: "123e4567-e89b-42d3-a456-426614174003",
         name: "unit-tests",
         status: "failed",
-        job_number: 73
+        number: 73
       }
     });
     const append = vi.fn(async () => new Response(
