@@ -128,6 +128,16 @@ function boundedJson(serialized: string, maxChars: number): Response {
 
 const MAX_EVENT_PAGE_BYTES = 60_000;
 const EVENT_PAGE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EVENT_PAGE_FIELDS = new Set([
+  "cursor", "id", "type", "happened_at", "project_slug", "pipeline_id", "pipeline_number",
+  "branch", "revision", "commit_subject", "workflow_id", "workflow_name",
+  "workflow_status", "workflow_url", "job_id", "job_name", "job_status", "job_number"
+]);
+const EVENT_PAGE_STRING_LIMITS: Record<string, number> = {
+  project_slug: 256, pipeline_id: 64, branch: 256, revision: 128, commit_subject: 512,
+  workflow_id: 64, workflow_name: 256, workflow_status: 64, workflow_url: 2048,
+  job_id: 64, job_name: 256, job_status: 64
+};
 
 async function readEventPage(
   response: Response,
@@ -182,13 +192,38 @@ async function readEventPage(
       throw new Error("Event storage returned an invalid event page.");
     }
     const event = item as Record<string, unknown>;
-    if (!Number.isSafeInteger(event.cursor) || (event.cursor as number) < 1 ||
+    if (Object.keys(event).some((key) => !EVENT_PAGE_FIELDS.has(key)) ||
+        !Number.isSafeInteger(event.cursor) || (event.cursor as number) < 1 ||
         (event.cursor as number) > (page.next_cursor as number) ||
         typeof event.id !== "string" || !EVENT_PAGE_ID_RE.test(event.id) ||
         (event.type !== "workflow-completed" && event.type !== "job-completed") ||
-        typeof event.project_slug !== "string" || !acceptedProjectSlugs.has(event.project_slug) ||
-        typeof event.happened_at !== "string" || !Number.isFinite(Date.parse(event.happened_at))) {
+        typeof event.project_slug !== "string" || event.project_slug.length > 256 ||
+        !acceptedProjectSlugs.has(event.project_slug) ||
+        typeof event.happened_at !== "string" || !Number.isFinite(Date.parse(event.happened_at)) ||
+        new Date(event.happened_at).toISOString() !== event.happened_at) {
       throw new Error("Event storage returned an invalid event page.");
+    }
+    for (const [key, max] of Object.entries(EVENT_PAGE_STRING_LIMITS)) {
+      const field = event[key];
+      if (field !== undefined && (typeof field !== "string" || field.length === 0 ||
+          field.length > max || /[\\u0000-\\u001f\\u007f]/.test(field))) {
+        throw new Error("Event storage returned an invalid event page.");
+      }
+    }
+    if (event.workflow_url !== undefined) {
+      let workflowUrl: URL;
+      try { workflowUrl = new URL(String(event.workflow_url)); }
+      catch { throw new Error("Event storage returned an invalid event page."); }
+      if (workflowUrl.protocol !== "https:" || workflowUrl.hostname !== "app.circleci.com" ||
+          workflowUrl.username || workflowUrl.password || workflowUrl.toString() !== event.workflow_url) {
+        throw new Error("Event storage returned an invalid event page.");
+      }
+    }
+    for (const key of ["pipeline_number", "job_number"]) {
+      const field = event[key];
+      if (field !== undefined && (typeof field !== "number" || !Number.isSafeInteger(field) || field < 0)) {
+        throw new Error("Event storage returned an invalid event page.");
+      }
     }
     const cursor = event.cursor as number;
     if (cursors.has(cursor)) throw new Error("Event storage returned duplicate cursors.");
