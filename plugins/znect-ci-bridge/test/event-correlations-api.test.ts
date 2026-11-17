@@ -93,7 +93,7 @@ describe("read-only browser event correlation API", () => {
       project: { id: "znect-forge" },
       correlations: [{
         event: { id: EVENT_ID, cursor: 1 },
-        status: "matched",
+        status: "candidate",
         candidates: [{
           run: { id: RUN_UUID, commitSha: REVISION, branch: "work/bridge" },
           time_delta_ms: 30_000,
