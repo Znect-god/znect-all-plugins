@@ -236,6 +236,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   document.getElementById("refresh").addEventListener("click",loadRuns);
   document.getElementById("refresh-events").addEventListener("click",loadEventCorrelations);
   function refreshSelectedScope(){
+    eventsRequestId++;
     detailsPanel.hidden=true;lastDetails=null;rawBox.textContent="";
     setMessage("Switching CI connection…");
     request("/api/v1/status?"+scopeQuery()).then(function(data){
@@ -245,8 +246,12 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       }else{
         setMessage("Project and connection are configured, but the provider is unavailable.","error");
         runsBox.replaceChildren(element("p","status error",data.error||"Provider availability could not be confirmed."));
+        eventsBox.replaceChildren(element("p","status error","CircleCI must be reachable to correlate webhook events."));
       }
-    }).catch(function(error){setMessage(error.message,"error");});
+    }).catch(function(error){
+      eventsBox.replaceChildren(element("p","status error",error.message));
+      setMessage(error.message,"error");
+    });
   }
   projectSelect.addEventListener("change",function(){
     selectProject(projectSelect.value);
