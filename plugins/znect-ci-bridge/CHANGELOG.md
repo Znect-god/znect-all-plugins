@@ -1,8 +1,9 @@
 ## [0.1.0] - 2026-11-17 webhook-to-run correlation
 ### Diagnostics
 - Added the read-only `correlate_recent_events` MCP tool to enrich signed webhook inbox events with candidate CircleCI API v3 runs.
+- Added the authenticated read-only browser endpoint `/api/v1/event-correlations` with the same matching rules and explicit event/run limits.
 - Correlation requires an exact commit revision, rejects conflicting branches, and uses a bounded 24-hour event/run time window. Multiple candidates remain explicitly ambiguous; webhook pipeline IDs are never assumed to be API v3 run UUIDs.
-- Added bounded request limits, unit coverage for matching/ambiguity/no-match cases, and MCP schema/error-boundary coverage. Tests and typecheck have not yet been run on this branch.
+- Added bounded request limits, unit coverage for matching/ambiguity/no-match cases, and MCP/browser API schema, error-boundary and integration coverage. Tests and typecheck have not yet been run on this branch.
 
 ## [0.1.0] - 2026-11-17 webhook ingress regression coverage
 ### Reliability and security
