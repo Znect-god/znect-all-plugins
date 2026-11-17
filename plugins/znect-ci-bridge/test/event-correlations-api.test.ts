@@ -208,6 +208,46 @@ describe("read-only browser event correlation API", () => {
     expect(response.status).toBe(503);
   });
 
+  it("rejects an event page whose initial snapshot cursors are not newest-first", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => new Response(JSON.stringify({
+          events: [
+            { cursor: 1, id: EVENT_ID, type: "workflow-completed", project_slug: "gh/Znect-god/znect-forge", happened_at: "2026-11-17T18:00:30.000Z" },
+            { cursor: 3, id: "4888f21b-eaa7-4383-8f3d-75a63bba0001", type: "job-completed", project_slug: "gh/Znect-god/znect-forge", happened_at: "2026-11-17T18:00:31.000Z" }
+          ],
+          next_cursor: 3
+        }), { status: 200 })
+      })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(503);
+  });
+
+  it("rejects an empty event page that advances beyond the requested cursor", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => new Response(JSON.stringify({ events: [], next_cursor: 1 }), { status: 200 })
+      })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge&after=0", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(503);
+  });
+
   it("rejects out-of-range event and run limits before contacting CircleCI", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
