@@ -63,8 +63,9 @@ export async function verifyCircleCiSignature(
   signatureHeader: string | null,
   secret: string
 ): Promise<boolean> {
-  if (!signatureHeader || !secret) return false;
+  if (!signatureHeader || signatureHeader.length > 1024 || !secret) return false;
   const signatures = signatureHeader.split(",").map((part) => part.trim());
+  if (signatures.length > 8) return false;
   const parsed: Array<{ version: number; digest: string }> = [];
   for (const part of signatures) {
     const separator = part.indexOf("=");
