@@ -31,7 +31,7 @@
   "security_controls": [
     "Bearer authentication for /mcp with fixed-length digest comparison",
     "Streamable HTTP Origin validation delegated to Cloudflare Agents SDK v2; rejects malformed, opaque, and untrusted browser origins",
-    "Fixed CircleCI project path and read-only GET requests",
+    "Registry-scoped CircleCI project paths and read-only GET requests",
     "CircleCI redirect rejection and 15-second outbound request timeouts; artifact redirects are manually revalidated",
     "HTTPS artifact URL allowlist and default-port restriction",
     "Streaming log body byte ceiling",
