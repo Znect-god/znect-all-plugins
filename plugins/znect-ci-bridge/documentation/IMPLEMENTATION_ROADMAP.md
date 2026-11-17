@@ -76,6 +76,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Project allowlist and payload normalization using a field allowlist **(разработано)**.
 - [x] Event ID replay protection/deduplication **(разработано)**.
 - [x] Durable Object-backed bounded event history and retention policy **(разработано)**.
+- [x] Bound internal event append bodies and validate canonical timestamps, field lengths, CircleCI URLs and an explicit stored-field allowlist before persistence **(разработано)**.
 - [x] Signature input bounds and duplicate-v1-signature rejection **(разработано)**.
 - [x] Ingress regression tests for valid signatures, invalid signatures, unknown projects, storage failures and unsupported content types **(разработано)**.
 - [ ] Run the current ingress test suite and typecheck on the exact current head (not yet run).
@@ -182,6 +183,7 @@ For every meaningful feature or fix:
 
 - Added the living roadmap to the active engineering branch and linked it from the plugin README and Usage Guide.
 - Hardened internal event-page parsing, project-slug ownership checks, duplicate/order/cursor consistency validation and empty-page cursor handling; malformed pages fail closed.
+- Hardened the Durable Object append boundary with an 8 KiB streaming body cap, JSON media-type enforcement, strict normalized-event validation and rejection of unknown fields.
 - Added a focused Browser API regression test for a malformed event-store page. This test has been authored but not executed.
 
 ## 8. Next development priorities
