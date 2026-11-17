@@ -34,6 +34,7 @@ describe("browser dashboard security", () => {
     expect(DASHBOARD_HTML).toContain('id="refresh-events"');
     expect(DASHBOARD_HTML).toContain('request("/api/v1/event-correlations?event_limit=20&run_limit=20&"+scopeQuery())');
     expect(DASHBOARD_HTML).toContain('entry.status==="candidate"?"Candidate"');
+    expect(DASHBOARD_HTML).toContain('entry.reason==="missing_revision"?"Webhook event has no commit revision.":"No recent run met the correlation criteria."');
     expect(DASHBOARD_HTML).toContain('eventsBox.replaceChildren(element("p","status error",error.message))');
   });
   it("sends the token only in an authenticated same-origin GET without ambient credentials", () => {
