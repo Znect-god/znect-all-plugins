@@ -186,6 +186,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         main.appendChild(element("div","run-title",event.type||"CI event"));
         var metadata=[event.branch||"branch unavailable",event.revision?String(event.revision).slice(0,12):"revision unavailable",event.happened_at||"time unavailable"].join(" · ");
         main.appendChild(element("div","meta",metadata));
+        if(entry.reason){
+          main.appendChild(element("div","meta",entry.reason==="missing_revision"?"Webhook event has no commit revision.":"No recent run met the correlation criteria."));
+        }
         if(Array.isArray(entry.candidates)&&entry.candidates.length){
           var candidateText=entry.candidates.map(function(candidate){
             var run=candidate.run||{};
