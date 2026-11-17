@@ -23,6 +23,9 @@ export function correlateEventsWithRuns(
   runs: CiRun[],
   maxTimeDeltaMs = 24 * 60 * 60 * 1000
 ): EventRunCorrelation[] {
+  if (!Number.isFinite(maxTimeDeltaMs) || maxTimeDeltaMs < 0) {
+    throw new RangeError("Correlation time window must be a finite non-negative number.");
+  }
   return events.map((value): EventRunCorrelation => {
     const event = value !== null && typeof value === "object" && !Array.isArray(value)
       ? value as Record<string, unknown>
