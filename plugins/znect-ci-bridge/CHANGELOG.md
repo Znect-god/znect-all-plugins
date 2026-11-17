@@ -1,6 +1,7 @@
 ## [0.1.0] - 2026-11-17 correlation reliability hardening
 ### Reliability and security
 - Measure webhook event distance against the full CircleCI run execution interval, with safe fallback when one timestamp is missing or malformed; reject inverted run intervals.
+- Reject non-finite or negative correlation time-window configuration before evaluating events.
 - Return bounded generic errors for CircleCI provider failures in both MCP and Browser API correlation paths instead of exposing upstream exception details.
 - Added regression tests for in-interval events, malformed timestamps, inverted intervals, and MCP/Browser API provider-error privacy. Tests and typecheck have not yet been run on this branch.
 
