@@ -903,8 +903,15 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       } catch {
         return json({ error: "CircleCI event storage is temporarily unavailable or returned invalid data." }, 503);
       }
-      const { connection, scope, adapter } = getCircleCiAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
-      const runs = await adapter.listRuns(scope, runLimit);
+      let connection: ReturnType<typeof getCircleCiAdapter>["connection"];
+      let runs: Awaited<ReturnType<ReturnType<typeof getCircleCiAdapter>["adapter"]["listRuns"]>>;
+      try {
+        const selected = getCircleCiAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
+        connection = selected.connection;
+        runs = await selected.adapter.listRuns(selected.scope, runLimit);
+      } catch {
+        return json({ error: "CircleCI run data is temporarily unavailable or the selected connection is invalid." }, 502);
+      }
       const events = Array.isArray(page.events) ? page.events : [];
       const payload = {
         project: { id: project.id, name: project.name },
