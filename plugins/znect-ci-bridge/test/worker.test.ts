@@ -225,7 +225,7 @@ describe("Worker HTTP boundary", () => {
   });
 
   it("serves the authenticated event inbox through the browser API", async () => {
-    const event = { id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895", type: "workflow-completed", workflow_status: "failed" };
+    const event = { id: "3888f21b-eaa7-38e3-8f3d-75a63bba8895", type: "workflow-completed", project_slug: "gh/Znect-god/znect-forge", happened_at: "2026-11-17T18:00:30.000Z", workflow_status: "failed" };
     const storeFetch = vi.fn().mockResolvedValue(Response.json({ events: [{ cursor: 7, ...event }], next_cursor: 7 }));
     const namespace = { idFromName: vi.fn(() => "forge"), get: vi.fn(() => ({ fetch: storeFetch })) };
     const response = await worker.fetch(
