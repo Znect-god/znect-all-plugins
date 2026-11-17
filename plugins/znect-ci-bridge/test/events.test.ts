@@ -182,6 +182,7 @@ describe("Durable event inbox storage contract", () => {
     expect((await post(JSON.stringify({ ...valid, project_slug: "gh/attacker/foreign" }))).status).toBe(400);
     expect((await post(JSON.stringify({ ...valid, workflow_name: "x".repeat(257) }))).status).toBe(400);
     expect((await post(JSON.stringify({ ...valid, workflow_url: "https://attacker.example/run" }))).status).toBe(400);
+    expect((await post(JSON.stringify({ ...valid, author_email: "private@example.invalid" }))).status).toBe(400);
     expect((await post(JSON.stringify(valid), { "content-type": "text/plain" })).status).toBe(415);
     expect((await post("{}", { "content-type": "application/json", "content-length": "9000" })).status).toBe(413);
     expect(sql.rows).toHaveLength(0);
