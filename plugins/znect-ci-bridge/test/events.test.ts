@@ -34,6 +34,9 @@ describe("CircleCI webhook verification", () => {
     expect(await verifyCircleCiSignature(body, "v1=not-a-valid-signature", "secret")).toBe(false);
     expect(await verifyCircleCiSignature(body, "v1=" + "a".repeat(64) + ",v2=" + "b".repeat(64), "secret")).toBe(false);
     expect(await verifyCircleCiSignature(body, "v2=" + "a".repeat(64), "secret")).toBe(false);
+    expect(await verifyCircleCiSignature(body, Array(9).fill("v1=" + "a".repeat(64)).join(","), "secret")).toBe(false);
+    expect(await verifyCircleCiSignature(body, "v1=" + "a".repeat(1024), "secret")).toBe(false);
+    expect(await verifyCircleCiSignature(body, "v1=" + "a".repeat(64) + ",v1=" + "b".repeat(64), "secret")).toBe(false);
   });
 
   it("normalizes only Forge workflow completion events", () => {
