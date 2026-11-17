@@ -884,7 +884,6 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       }
     }
     if (url.pathname === "/api/v1/event-correlations") {
-      if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
       const projectId = url.searchParams.get("project_id");
       if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const after = Number(url.searchParams.get("after") ?? "0");
@@ -893,6 +892,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(eventLimit) || eventLimit < 1 || eventLimit > 50 || !Number.isInteger(runLimit) || runLimit < 1 || runLimit > 30) {
         return json({ error: "after must be non-negative; event_limit must be 1–50 and run_limit must be 1–30." }, 400);
       }
+      if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
       const project = findProject(getProjectRegistry(env), projectId);
       if (!project) return json({ error: "Unknown Znect project." }, 404);
       let page: Record<string, unknown>;
