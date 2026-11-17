@@ -8,6 +8,7 @@
 - Added the authenticated read-only browser endpoint `/api/v1/event-correlations` with the same matching rules and explicit event/run limits.
 - Added a dashboard panel for recent webhook events, correlation status and bounded candidate run summaries; rendering remains text-only and refreshes are invalidated when the selected project/connection changes.
 - Correlation requires an exact commit revision, rejects conflicting branches, and uses a bounded 24-hour event/run time window. Multiple candidates remain explicitly ambiguous; webhook pipeline IDs are never assumed to be API v3 run UUIDs.
+- Candidate lists are capped at three per event while preserving the full candidate count and an explicit truncation flag.
 - Added bounded request limits, unit coverage for matching/ambiguity/no-match cases, and MCP/browser API schema, error-boundary and integration coverage. Tests and typecheck have not yet been run on this branch.
 
 ## [0.1.0] - 2026-11-17 webhook ingress regression coverage
