@@ -1,3 +1,9 @@
+## 2026-11-17 — roadmap and event-page hardening
+
+- Added the living implementation roadmap and linked it from the README and Usage Guide; implemented source work is marked **(разработано)** separately from validation, live verification and release gates.
+- Hardened internal event-page parsing against malformed records, invalid event UUIDs/timestamps and cursors that exceed the page cursor.
+- Added a Browser API regression test for malformed event-store pages. This test has not been executed; no typecheck, CI run, Preview deployment or live CircleCI delivery was performed.
+
 ## [0.1.0] - 2026-11-17 correlation reliability hardening
 ### Reliability and security
 - Measure webhook event distance against the full CircleCI run execution interval, with safe fallback when one timestamp is missing or malformed; reject inverted run intervals.
