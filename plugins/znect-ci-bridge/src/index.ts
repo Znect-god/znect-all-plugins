@@ -129,7 +129,12 @@ function boundedJson(serialized: string, maxChars: number): Response {
 const MAX_EVENT_PAGE_BYTES = 60_000;
 const EVENT_PAGE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-async function readEventPage(response: Response, limit: number): Promise<Record<string, unknown>> {
+async function readEventPage(
+  response: Response,
+  limit: number,
+  after: number,
+  acceptedProjectSlugs: ReadonlySet<string>
+): Promise<Record<string, unknown>> {
   if (!response.ok) throw new Error("Event storage is unavailable.");
   const declaredLength = response.headers.get("content-length");
   if (declaredLength !== null && Number(declaredLength) > MAX_EVENT_PAGE_BYTES) {
@@ -166,17 +171,41 @@ async function readEventPage(response: Response, limit: number): Promise<Record<
   const page = parsed as Record<string, unknown>;
   if (!Array.isArray(page.events) || page.events.length > limit ||
       !Number.isSafeInteger(page.next_cursor) || (page.next_cursor as number) < 0 ||
-      page.events.some((item) => {
-        if (item === null || typeof item !== "object" || Array.isArray(item)) return true;
-        const event = item as Record<string, unknown>;
-        return !Number.isSafeInteger(event.cursor) || (event.cursor as number) < 1 ||
-          (event.cursor as number) > (page.next_cursor as number) ||
-          typeof event.id !== "string" || !EVENT_PAGE_ID_RE.test(event.id) ||
-          (event.type !== "workflow-completed" && event.type !== "job-completed") ||
-          typeof event.project_slug !== "string" ||
-          typeof event.happened_at !== "string" || !Number.isFinite(Date.parse(event.happened_at));
-      })) {
+      (page.events.length === 0 && page.next_cursor !== after)) {
     throw new Error("Event storage returned an invalid event page.");
+  }
+
+  const cursors = new Set<number>();
+  const parsedCursors: number[] = [];
+  for (const item of page.events) {
+    if (item === null || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error("Event storage returned an invalid event page.");
+    }
+    const event = item as Record<string, unknown>;
+    if (!Number.isSafeInteger(event.cursor) || (event.cursor as number) < 1 ||
+        (event.cursor as number) > (page.next_cursor as number) ||
+        typeof event.id !== "string" || !EVENT_PAGE_ID_RE.test(event.id) ||
+        (event.type !== "workflow-completed" && event.type !== "job-completed") ||
+        typeof event.project_slug !== "string" || !acceptedProjectSlugs.has(event.project_slug) ||
+        typeof event.happened_at !== "string" || !Number.isFinite(Date.parse(event.happened_at))) {
+      throw new Error("Event storage returned an invalid event page.");
+    }
+    const cursor = event.cursor as number;
+    if (cursors.has(cursor)) throw new Error("Event storage returned duplicate cursors.");
+    cursors.add(cursor);
+    parsedCursors.push(cursor);
+  }
+
+  if (parsedCursors.length > 0) {
+    const expectedCursor = Math.max(...parsedCursors);
+    if (page.next_cursor !== expectedCursor) throw new Error("Event storage cursor does not match its page.");
+    for (let index = 1; index < parsedCursors.length; index++) {
+      const previous = parsedCursors[index - 1];
+      const current = parsedCursors[index];
+      if (after === 0 ? current >= previous : current <= previous) {
+        throw new Error("Event storage returned cursors in an invalid order.");
+      }
+    }
   }
   return page;
 }
@@ -789,7 +818,7 @@ function createServer(env: Env) {
       try {
         const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
           .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
-        result = await readEventPage(response, limit);
+        result = await readEventPage(response, limit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
       } catch {
         throw new Error("CircleCI event storage is temporarily unavailable or returned invalid data.");
       }
@@ -825,7 +854,7 @@ function createServer(env: Env) {
       try {
         const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
           .fetch("https://event-store/events?after=" + after + "&limit=" + event_limit);
-        page = await readEventPage(response, event_limit);
+        page = await readEventPage(response, event_limit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
       } catch {
         throw new Error("CircleCI event storage is temporarily unavailable or returned invalid data.");
       }
@@ -895,7 +924,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       try {
         const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
           .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
-        const result = await readEventPage(response, limit);
+        const result = await readEventPage(response, limit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
         return boundedJson(JSON.stringify(result), 60_000);
       } catch {
         return json({ error: "Event storage is temporarily unavailable or returned invalid data." }, 503);
@@ -917,7 +946,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       try {
         const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
           .fetch("https://event-store/events?after=" + after + "&limit=" + eventLimit);
-        page = await readEventPage(response, eventLimit);
+        page = await readEventPage(response, eventLimit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
       } catch {
         return json({ error: "CircleCI event storage is temporarily unavailable or returned invalid data." }, 503);
       }
