@@ -33,7 +33,7 @@ function isNormalizedStoredEvent(value: unknown): value is BridgeEvent {
   const event = value as Record<string, unknown>;
   if (typeof event.id !== "string" || !UUID_RE.test(event.id) ||
       (event.type !== "workflow-completed" && event.type !== "job-completed") ||
-      typeof event.project_slug !== "string" || !PROJECT_SLUG_RE.test(event.project_slug) ||
+      typeof event.project_slug !== "string" || event.project_slug.length > 256 || !PROJECT_SLUG_RE.test(event.project_slug) ||
       typeof event.happened_at !== "string") return false;
   const timestamp = Date.parse(event.happened_at);
   if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== event.happened_at ||
@@ -53,7 +53,7 @@ function isNormalizedStoredEvent(value: unknown): value is BridgeEvent {
   };
   for (const [key, max] of Object.entries(stringLimits)) {
     const field = event[key];
-    if (field !== undefined && (typeof field !== "string" || field.length > max || /[\u0000-\u001f\u007f]/.test(field))) return false;
+    if (field !== undefined && (typeof field !== "string" || field.length === 0 || field.length > max || /[\u0000-\u001f\u007f]/.test(field))) return false;
   }
   if (event.workflow_url !== undefined && safeCircleCiUrl(event.workflow_url) !== event.workflow_url) return false;
   for (const key of ["pipeline_number", "job_number"]) {
