@@ -20,6 +20,11 @@ const run = (overrides: Partial<CiRun> = {}): CiRun => ({
 });
 
 describe("webhook event and CircleCI API run correlation", () => {
+  it("rejects invalid correlation time windows", () => {
+    expect(() => correlateEventsWithRuns([event], [run()], -1)).toThrow("finite non-negative number");
+    expect(() => correlateEventsWithRuns([event], [run()], Number.NaN)).toThrow("finite non-negative number");
+  });
+
   it("matches an exact revision, branch and nearby completion time", () => {
     const [result] = correlateEventsWithRuns([event], [run()]);
     expect(result.status).toBe("candidate");
