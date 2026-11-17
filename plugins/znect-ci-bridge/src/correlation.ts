@@ -4,6 +4,8 @@ export interface EventRunCorrelation {
   event: Record<string, unknown>;
   status: "candidate" | "ambiguous" | "unmatched";
   reason?: "missing_revision" | "no_matching_run";
+  candidate_count: number;
+  candidates_truncated: boolean;
   candidates: Array<{
     run: CiRun;
     time_delta_ms: number;
@@ -27,11 +29,11 @@ export function correlateEventsWithRuns(
       : {};
     const revision = typeof event.revision === "string" ? event.revision.toLowerCase() : "";
     if (!revision) {
-      return { event, status: "unmatched", reason: "missing_revision", candidates: [] };
+      return { event, status: "unmatched", reason: "missing_revision", candidate_count: 0, candidates_truncated: false, candidates: [] };
     }
     const happenedAt = typeof event.happened_at === "string" ? Date.parse(event.happened_at) : NaN;
     if (!Number.isFinite(happenedAt)) {
-      return { event, status: "unmatched", reason: "no_matching_run", candidates: [] };
+      return { event, status: "unmatched", reason: "no_matching_run", candidate_count: 0, candidates_truncated: false, candidates: [] };
     }
 
     const candidates = runs.flatMap((run) => {
@@ -55,6 +57,8 @@ export function correlateEventsWithRuns(
       event,
       status: candidates.length === 1 ? "candidate" : candidates.length > 1 ? "ambiguous" : "unmatched",
       ...(candidates.length === 0 ? { reason: "no_matching_run" as const } : {}),
+      candidate_count: candidates.length,
+      candidates_truncated: candidates.length > 3,
       candidates: candidates.slice(0, 3)
     };
   });
