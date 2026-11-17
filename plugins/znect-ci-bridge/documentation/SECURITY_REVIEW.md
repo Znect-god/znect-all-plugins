@@ -103,6 +103,7 @@ The current isolated engineering branch adds a second validation boundary inside
 - Workflow URLs are revalidated as HTTPS `app.circleci.com` URLs and numeric fields must be non-negative safe integers.
 - An explicit stored-field allowlist rejects unknown properties, including accidental personal-data fields such as `author_email`.
 - Browser/MCP event-page readers independently validate registered project ownership, UUID/type/timestamp fields, cursor uniqueness/order, page cursor consistency and empty-page cursor stability.
+- Browser/MCP readers also enforce an explicit output-field allowlist, optional string/number bounds and CircleCI-only workflow URLs. Unknown stored properties are rejected rather than serialized, protecting against legacy or corrupted rows that contain unapproved personal data.
 
 Focused regression tests have been authored for these cases. They have **not** been executed on the current branch head; no typecheck, CI workflow, Preview deployment or live provider verification was performed for these changes. This is source-level hardening only, not a claim of validated or deployed behavior.
 
