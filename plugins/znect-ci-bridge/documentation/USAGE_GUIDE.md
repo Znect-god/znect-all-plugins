@@ -17,7 +17,7 @@
 
 ## Актуальное уточнение — 15 ноября 2026
 
-Этот документ сохраняет исторический журнал проверок 11–14 ноября; старые результаты не подтверждают текущий SHA. Актуальная рабочая ветка — `feature/ci-bridge-test-reports`. Реестр больше не подставляет Forge: при отсутствии `ZNECT_PROJECT_REGISTRY` загружается пустой реестр. Проект может существовать без CI connections. Для нескольких CircleCI connections требуется явный `connection_id`; первый connection автоматически не выбирается.
+Этот документ сохраняет исторический журнал проверок 11–14 ноября; старые результаты не подтверждают текущий SHA. На тот момент рабочей интеграционной веткой была `feature/ci-bridge-test-reports`; актуальная изолированная линия описана в разделе от 17 ноября выше. Реестр больше не подставляет Forge: при отсутствии `ZNECT_PROJECT_REGISTRY` загружается пустой реестр. Проект может существовать без CI connections. Для нескольких CircleCI connections требуется явный `connection_id`; первый connection автоматически не выбирается.
 
 Статусы независимы: проект — `registered`; CI configuration — `configured` или `not_configured`; provider availability — `not_checked` до read-only probe, затем `available` или `unavailable`. Для этого добавлены MCP `list_projects`, выбор connection в dashboard, `connection_id` в project-scoped MCP/browser reads и тест на неоднозначный выбор. Коммит на новом HEAD ещё не проверен typecheck/unit tests/live smoke; CI, Preview и deploy не запускались.
 
