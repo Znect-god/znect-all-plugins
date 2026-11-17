@@ -883,6 +883,43 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         return json({ error: "Event storage is temporarily unavailable or returned invalid data." }, 503);
       }
     }
+    if (url.pathname === "/api/v1/event-correlations") {
+      if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
+      const after = Number(url.searchParams.get("after") ?? "0");
+      const eventLimit = Number(url.searchParams.get("event_limit") ?? "20");
+      const runLimit = Number(url.searchParams.get("run_limit") ?? "20");
+      if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(eventLimit) || eventLimit < 1 || eventLimit > 50 || !Number.isInteger(runLimit) || runLimit < 1 || runLimit > 30) {
+        return json({ error: "after must be non-negative; event_limit must be 1–50 and run_limit must be 1–30." }, 400);
+      }
+      const project = findProject(getProjectRegistry(env), projectId);
+      if (!project) return json({ error: "Unknown Znect project." }, 404);
+      let page: Record<string, unknown>;
+      try {
+        const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
+          .fetch("https://event-store/events?after=" + after + "&limit=" + eventLimit);
+        page = await readEventPage(response, eventLimit);
+      } catch {
+        return json({ error: "CircleCI event storage is temporarily unavailable or returned invalid data." }, 503);
+      }
+      const { connection, scope, adapter } = getCircleCiAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
+      const runs = await adapter.listRuns(scope, runLimit);
+      const events = Array.isArray(page.events) ? page.events : [];
+      const payload = {
+        project: { id: project.id, name: project.name },
+        connection: { id: connection.id, provider: "circleci", project_slug: connection.projectSlug },
+        correlations: correlateEventsWithRuns(events, runs),
+        next_cursor: page.next_cursor,
+        matching: {
+          strategy: "exact commit SHA + compatible branch + completion/start time within 24 hours",
+          max_candidates_per_event: 3,
+          note: "Correlations are heuristic candidates; webhook pipeline IDs are not assumed to be API v3 run IDs."
+        }
+      };
+      return boundedJson(redactedBoundedJson(payload, env, 100_000), 100_000);
+    }
+
     if (url.pathname === "/api/v1/status") {
       const projectId = url.searchParams.get("project_id");
       if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
