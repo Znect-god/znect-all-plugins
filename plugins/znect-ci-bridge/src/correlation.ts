@@ -2,7 +2,7 @@ import type { CiRun } from "./providers/contract";
 
 export interface EventRunCorrelation {
   event: Record<string, unknown>;
-  status: "matched" | "ambiguous" | "unmatched";
+  status: "candidate" | "ambiguous" | "unmatched";
   reason?: "missing_revision" | "no_matching_run";
   candidates: Array<{
     run: CiRun;
@@ -53,7 +53,7 @@ export function correlateEventsWithRuns(
 
     return {
       event,
-      status: candidates.length === 1 ? "matched" : candidates.length > 1 ? "ambiguous" : "unmatched",
+      status: candidates.length === 1 ? "candidate" : candidates.length > 1 ? "ambiguous" : "unmatched",
       ...(candidates.length === 0 ? { reason: "no_matching_run" as const } : {}),
       candidates: candidates.slice(0, 3)
     };
