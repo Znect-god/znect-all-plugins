@@ -1,51 +1,26 @@
 {
   "id": "znect-ci-bridge",
   "name": "Znect CI Bridge",
-  "version": "0.1.0",
-  "status": "prototype",
-  "description": "Experimental read-only MCP bridge between a compatible client, Cloudflare Workers, and CircleCI build information.",
+  "version": "0.2.0",
+  "status": "in-development",
+  "description": "Free-first CircleCI diagnostics channel using signed webhooks, Cloudflare Workers, KV, a browser dashboard, and manual ChatGPT Free export.",
   "platforms": {
-    "intended": ["Cloudflare Workers", "MCP-compatible clients"],
-    "tested": ["Android Termux: TypeScript typecheck only"]
+    "intended": ["Cloudflare Workers Free", "Cloudflare KV Free", "Browser"],
+    "tested": []
   },
   "permissions": [
-    "Network access to the configured Cloudflare Worker and approved CircleCI API endpoints",
-    "Read-only CircleCI project/build data using a secret token",
-    "Bearer authentication for the MCP endpoint"
+    "Receive signed CircleCI webhook events",
+    "Store bounded CI event history in Cloudflare KV",
+    "Expose authenticated read-only diagnostic data to the dashboard"
   ],
-  "dependencies": [
-    "Node.js toolchain for development",
-    "Cloudflare Workers runtime",
-    "MCP server libraries",
-    "CircleCI API (initial prototype uses deprecated v1.1)"
-  ],
+  "capabilities": ["circleci-webhooks", "event-history", "diagnostic-dashboard", "markdown-export"],
+  "excluded_capabilities": ["MCP-required-free-channel", "build-triggering", "CI-write-access", "automatic-chatgpt-free-api-delivery"],
+  "secrets": ["CIRCLECI_SIGNING_SECRET", "BRIDGE_READ_TOKEN"],
   "limitations": [
-    "Prototype only; not production-ready",
-    "Cloudflare deployment and end-to-end MCP behavior not verified",
-    "CircleCI connectivity and log retrieval not verified",
-    "CircleCI API v1.1 adapter requires replacement",
-    "Full security audit and Worker-side rate limiting not completed",
-    "Wrangler/workerd unsupported in the current Android ARM64 Termux environment"
-  ],
-  "testing": {
-    "performed": [
-      "Local archive extraction in Termux",
-      "npm install completed after local dependency version adjustments",
-      "npm run typecheck completed successfully"
-    ],
-    "not_yet_verified": [
-      "Linux production build",
-      "Cloudflare Worker deployment",
-      "Health endpoint",
-      "Authenticated MCP endpoint",
-      "CircleCI API integration",
-      "Build details and log retrieval",
-      "Security audit and rate-limit behavior"
-    ]
-  },
-  "secrets": [
-    "CIRCLECI_TOKEN",
-    "MCP_ACCESS_TOKEN"
+    "Deployment and end-to-end verification pending",
+    "Full job log and artifact retrieval not yet implemented",
+    "ChatGPT Free handoff is manual Markdown export",
+    "Free-tier quotas apply"
   ],
   "license": "undecided"
 }
