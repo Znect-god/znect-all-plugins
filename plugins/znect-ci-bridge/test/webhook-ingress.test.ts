@@ -245,4 +245,51 @@ describe("CircleCI webhook ingress integration", () => {
     expect(await response.text()).toContain("invalid acknowledgement");
   });
 
+
+  it("normalizes job-completed events and excludes non-CircleCI workflow URLs", async () => {
+    const body = JSON.stringify({
+      ...makePayload(),
+      type: "job-completed",
+      workflow: {
+        id: WORKFLOW_ID,
+        name: "build-and-test",
+        status: "success",
+        url: "https://attacker.example/collect"
+      },
+      job: {
+        id: "123e4567-e89b-42d3-a456-426614174003",
+        name: "unit-tests",
+        status: "failed",
+        job_number: 73
+      }
+    });
+    const append = vi.fn(async () => new Response(
+      JSON.stringify({ accepted: true, duplicate: false }), { status: 200 }
+    ));
+    const response = await postWebhook(body, await signBody(body), makeNamespace(append), {
+      "circleci-event-type": "job-completed"
+    });
+    expect(response.status).toBe(202);
+    const stored = JSON.parse(String(append.mock.calls[0][1]?.body));
+    expect(stored).toMatchObject({
+      type: "job-completed",
+      job_id: "123e4567-e89b-42d3-a456-426614174003",
+      job_name: "unit-tests",
+      job_status: "failed",
+      job_number: 73
+    });
+    expect(stored).not.toHaveProperty("workflow_url");
+  });
+
+  it("rejects supported events with timestamps too far in the future", async () => {
+    const body = JSON.stringify({
+      ...makePayload(),
+      happened_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    });
+    const append = vi.fn(async () => new Response("{}", { status: 200 }));
+    const response = await postWebhook(body, await signBody(body), makeNamespace(append));
+    expect(response.status).toBe(400);
+    expect(append).not.toHaveBeenCalled();
+  });
+
 });
