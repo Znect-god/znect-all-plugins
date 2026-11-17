@@ -29,6 +29,7 @@ Znect CI Bridge — read-only сервис Znect для просмотра и д
 3. Worker проверяет HMAC-подпись и проект, нормализует событие.
 4. Durable Object сохраняет событие с дедупликацией по event ID.
 5. Событие читается через MCP `list_recent_events` или Browser API `GET /api/v1/events`.
+6. Для сопоставления с API v3 runs используются MCP `correlate_recent_events` или Browser API `GET /api/v1/event-correlations`; совпадение строится по точному commit SHA, совместимой branch и временному окну 24 часа. Это кандидат корреляции, не доказательство тождества pipeline ID и run UUID.
 
 Webhook inbox не отправляет самопроизвольные сообщения в открытый диалог ChatGPT. Для этого отдельно потребуется поддерживаемый канал polling/delivery.
 
@@ -44,6 +45,7 @@ Webhook inbox не отправляет самопроизвольные соо�
 | Browser API и synthetic event inbox | Подтверждены smoke test |
 | Synthetic HMAC webhook, deduplication, durable storage и retrieval | Подтверждены в Preview |
 | Реальная регистрация CircleCI webhook | Выполнена пользователем; CircleCI принял автоматическую Add Webhook ping/check с 2xx |
+| Сопоставление webhook events с API v3 runs и dashboard panel | Реализовано в изолированной development branch 2026-11-17; typecheck/tests и deployment ещё не выполнялись |
 | Реальное `workflow-completed` событие от CircleCI | **Ожидает проверки** |
 | Полная проверка run/job/log/test/artifact на реальных CI данных | **Частично/не проверено** |
 | Автоматическая доставка событий в открытый ChatGPT диалог | **Не реализована/не проверена** |
@@ -194,9 +196,11 @@ CircleCI project webhook уже добавлен пользователем дл
 4. Найти запись с тем же workflow/project и временем. Проверить event ID, тип `workflow-completed`, workflow status, timestamp и cursor.
 5. Повторно прочитать inbox и убедиться, что повторная доставка того же event ID не создала дубликат.
 6. Проверить получение той же записи через MCP `list_recent_events`.
+7. После появления доступных API v3 runs вызвать `correlate_recent_events` либо `GET /api/v1/event-correlations`; проверить, что точное совпадение SHA/branch/time возвращает `candidate`, несколько совпадений — `ambiguous`, а отсутствие revision — `unmatched`.
+8. Проверить ту же корреляцию в панели Recent webhook events браузерного dashboard.
 7. Зафиксировать результат как **real CircleCI delivery verified** только после сопоставления с CircleCI delivery history и содержимым inbox.
 
-До выполнения этих пунктов реальная webhook доставка остаётся **pending / not yet verified**. Синтетическое событие из smoke test не засчитывается.
+До выполнения этих пунктов реальная webhook доставка остаётся **pending / not yet verified**. Синтетическое событие из smoke test не засчитывается. Корреляционный код и dashboard panel на 2026-11-17 существуют только в изолированной development branch и не считаются развёрнутой или проверенной функцией.
 
 ### Шаг 6 — проверить API диагностики на реальном run
 
@@ -247,6 +251,7 @@ JSON API:
 - `list_job_artifacts(job_id)` / `get_job_artifact(...)` — метаданные и точный текстовый артефакт.
 - `diagnose_run(run_id)` — ограниченная диагностика failed run.
 - `list_recent_events(after, limit)` — webhook inbox.
+- `correlate_recent_events(project_id, after, event_limit, run_limit)` — bounded candidate matching webhook events to recent API v3 runs; never assumes pipeline ID equals run UUID.
 - Legacy v1.1: `list_recent_builds`, `get_build_details`, `get_build_logs`.
 
 Лимиты и неполнота диагностических ответов описаны в README и отражаются в diagnostics metadata. Если указан `incomplete=true`, результат не исчерпывающий.
