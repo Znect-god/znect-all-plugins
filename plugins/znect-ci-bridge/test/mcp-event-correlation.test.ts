@@ -61,6 +61,26 @@ async function parseRpc(response: Response) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("MCP event correlation tool", () => {
+  it("does not expose upstream CircleCI failures through MCP correlation", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => new Response(JSON.stringify({ events: [], next_cursor: 0 }), { status: 200 }) })
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("upstream private token detail"); }));
+    const response = await worker.fetch(
+      rpcRequest(2),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(200);
+    const payload = await parseRpc(response);
+    expect(payload.result?.isError).toBe(true);
+    const output = JSON.stringify(payload.result?.content ?? []);
+    expect(output).toContain("CircleCI run data is temporarily unavailable.");
+    expect(output).not.toContain("upstream private token detail");
+    expect(output).not.toContain("circle-test-token");
+  });
+
   it("returns candidate API v3 runs for a signed webhook inbox event", async () => {
     const eventStore = {
       idFromName: () => "forge",
