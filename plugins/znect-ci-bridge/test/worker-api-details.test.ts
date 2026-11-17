@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
 
+const TEST_REGISTRY = JSON.stringify({ version: 1, projects: [{ id: "znect-forge", name: "Znect Forge", repositories: [{ fullName: "Znect-god/znect-forge" }], components: [], connections: [{ id: "forge-circleci", provider: "circleci", projectSlug: "gh/Znect-god/znect-forge" }] }] });
 const env = {
   CIRCLECI_TOKEN: "circle-test-token",
   MCP_ACCESS_TOKEN: "bridge-test-token",
   WEB_ACCESS_TOKEN: "web-test-token",
+  ZNECT_PROJECT_REGISTRY: TEST_REGISTRY,
   MCP_RATE_LIMITER: { limit: async () => ({ success: true }) }
 };
 const ctx = {} as ExecutionContext;
