@@ -184,6 +184,7 @@ For every meaningful feature or fix:
 - Added the living roadmap to the active engineering branch and linked it from the plugin README and Usage Guide.
 - Hardened internal event-page parsing, project-slug ownership checks, duplicate/order/cursor consistency validation and empty-page cursor handling; malformed pages fail closed.
 - Hardened the Durable Object append boundary with an 8 KiB streaming body cap, JSON media-type enforcement, strict normalized-event validation and rejection of unknown fields.
+- Updated the security review with the new storage trust-boundary controls and explicit current-head validation limitations.
 - Added a focused Browser API regression test for a malformed event-store page. This test has been authored but not executed.
 
 ## 8. Next development priorities
