@@ -1,0 +1,12 @@
+{
+  "name": "@znect/znect-ci-bridge",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20261117.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  }
+}
