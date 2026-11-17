@@ -87,6 +87,16 @@ describe("MCP tool schemas and error boundary", () => {
       type: "string",
       format: "uuid"
     });
+    expect(byName.correlate_recent_events.inputSchema?.properties?.event_limit).toMatchObject({
+      type: "integer",
+      minimum: 1,
+      maximum: 50
+    });
+    expect(byName.correlate_recent_events.inputSchema?.properties?.run_limit).toMatchObject({
+      type: "integer",
+      minimum: 1,
+      maximum: 30
+    });
     expect(tools.some((tool) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(tool.name))).toBe(false);
   });
 
