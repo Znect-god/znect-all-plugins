@@ -185,6 +185,35 @@ describe("read-only browser event correlation API", () => {
     });
   });
 
+  it("rejects event pages containing fields outside the privacy allowlist", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => new Response(JSON.stringify({
+          events: [{
+            cursor: 1,
+            id: EVENT_ID,
+            type: "workflow-completed",
+            project_slug: "gh/Znect-god/znect-forge",
+            happened_at: "2026-11-17T18:00:30.000Z",
+            author_email: "private@example.invalid"
+          }],
+          next_cursor: 1
+        }), { status: 200 })
+      })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(503);
+    const body = await response.text();
+    expect(body).not.toContain("private@example.invalid");
+  });
+
   it("rejects duplicate or incorrectly ordered pagination cursors", async () => {
     const eventStore = {
       idFromName: () => "forge",
