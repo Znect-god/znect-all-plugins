@@ -1,0 +1,184 @@
+# Znect CI Bridge — implementation roadmap
+
+**Status:** `in-development`; isolated engineering branch only.  
+**Updated:** 2026-11-17  
+**Development repository:** `Znect-god/znect-all-plugins`  
+**Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
+**Active working branch:** `test/ci-bridge-webhook-ingress-contract`  
+**Base:** `c72a67e33177985a57f4d9d6180e4e8d8a970edb`  
+**Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
+
+This is the living implementation roadmap. Update it with every meaningful implementation change. When code for an item is added, mark it **(разработано)** even if tests or live operation are still pending. Do not confuse implementation with verification, deployment, or operational readiness.
+
+## 1. Project boundaries
+
+- **Znect All Plugins** is the source-development home for CI Bridge: code, tests, docs, plugin metadata, experiments and release preparation.
+- **Znect Build** is the centralized build system for producing applications from pinned source revisions and build recipes. It is not the Bridge source repository.
+- **Znect CI Bridge** is a read-only diagnostics/integration plugin. It observes CI systems and exposes reports; it does not become the build executor.
+- **CircleCI** remains the configured CI executor for Forge. Do not replace it with GitHub Actions.
+- Bridge-to-Build integration is a separate provider integration. A registry entry or written API contract does not mean that the Build API exists or is operational.
+
+No PR merge, default-branch update, CI pipeline run, build, deployment, Preview refresh, Production change, or CircleCI action is authorized by this roadmap alone.
+
+## 2. Intended result
+
+ChatGPT and authorized users should be able to inspect current Znect project build health through a private, bounded report containing:
+- registered projects, repositories and CI connections;
+- CI runs, workflows and jobs;
+- failed-step metadata and bounded/redacted logs;
+- structured test results and allowlisted artifacts when the provider exposes them;
+- signed webhook events and conservative event-to-run correlation;
+- a browser dashboard and read-only MCP/API access;
+- eventually, a free request/response handoff that can deliver a private report for ChatGPT to inspect.
+
+The Bridge must remain read-only with respect to CI execution and project source/configuration: no trigger, retry, cancel, deployment, configuration-write or source-modification operations.
+
+## 3. Current implementation inventory
+
+### 3.1 Core Worker and access control
+
+- [x] Cloudflare Worker project scaffold and Wrangler configuration **(разработано)**.
+- [x] Health endpoint and read-only HTTP API structure **(разработано)**.
+- [x] Separate Bearer authentication for MCP and browser API **(разработано)**.
+- [x] Request rate limiting and bounded request/response handling **(разработано)**.
+- [x] Secret redaction and safe error responses **(разработано)**.
+- [x] Preview/Production secret separation documented **(разработано)**.
+- [ ] Independent security review and operational threat-model sign-off.
+- [ ] Re-validate all controls on the current branch head; latest isolated changes have not been typechecked or tested.
+
+### 3.2 Project registry and provider architecture
+
+- [x] Versioned multi-project registry with explicit project/repository/component registration **(разработано)**.
+- [x] No implicit Forge default; empty registry is allowed **(разработано)**.
+- [x] Multiple provider connections per project and explicit connection selection where ambiguous **(разработано)**.
+- [x] Separate registration, CI configuration and provider-availability states **(разработано)**.
+- [x] Provider-neutral read-only adapter contract **(разработано)**.
+- [x] CircleCI provider adapter for core API v3 operations **(разработано)**.
+- [x] Project/run/job/workflow ownership checks and bounded run traversal **(разработано)**.
+- [ ] Add and verify a native Znect Build provider adapter after the Build API is actually implemented and documented.
+- [ ] Verify multi-project and multi-connection behavior against live, authorized projects.
+
+### 3.3 CircleCI diagnostics
+
+- [x] CircleCI API v3 connection probe and recent-run listing **(разработано)**.
+- [x] Run, workflow and job details **(разработано)**.
+- [x] Bounded job logs, structured test results and artifact listing/retrieval **(разработано)**.
+- [x] Bounded failed-run diagnostic report **(разработано)**.
+- [x] Legacy CircleCI API v1.1 tools retained as a separate compatibility path **(разработано)**.
+- [ ] Re-verify representative successful and failed live runs on a current authorized Preview.
+- [ ] Verify real failed-step log, test-report and artifact round-trips, including truncation and redaction behavior.
+- [ ] Decide whether to deprecate legacy v1.1 tools after v3 coverage is proven; do not silently mix build numbers with v3 run UUIDs.
+
+### 3.4 Signed webhook inbox
+
+- [x] CircleCI webhook receiver with raw-body HMAC-SHA256 verification **(разработано)**.
+- [x] Project allowlist and payload normalization using a field allowlist **(разработано)**.
+- [x] Event ID replay protection/deduplication **(разработано)**.
+- [x] Durable Object-backed bounded event history and retention policy **(разработано)**.
+- [x] Signature input bounds and duplicate-v1-signature rejection **(разработано)**.
+- [x] Ingress regression tests for valid signatures, invalid signatures, unknown projects, storage failures and unsupported content types **(разработано)**.
+- [ ] Run the current ingress test suite and typecheck on the exact current head (not yet run).
+- [ ] Verify a real ordinary CircleCI workflow-completed delivery against CircleCI delivery history and the Preview inbox.
+- [ ] Verify real-event retrieval through both MCP and Browser API and confirm duplicate delivery behavior end-to-end.
+- [ ] Keep synthetic webhook tests clearly distinguished from real provider deliveries.
+
+### 3.5 Webhook-to-run correlation
+
+- [x] Conservative correlation module using exact commit SHA, branch conflict checks and execution-time interval proximity **(разработано)**.
+- [x] Candidate, ambiguous and unmatched outcomes; no assumption that webhook pipeline ID equals API v3 run UUID **(разработано)**.
+- [x] Bounded correlation API and MCP tool **(разработано)**.
+- [x] Browser API correlation endpoint with generic provider/storage error handling **(разработано)**.
+- [x] Correlation edge-case tests: event inside run interval, malformed timestamp fallback, inverted interval rejection and invalid time-window rejection **(разработано)**.
+- [ ] Run correlation unit/API/MCP tests and typecheck on the current head (not yet run).
+- [ ] Verify correlation against real CircleCI webhook deliveries and corresponding API v3 runs.
+- [ ] Tune matching thresholds only from observed provider behavior; preserve conservative ambiguity handling.
+
+### 3.6 Browser dashboard
+
+- [x] Project and connection selection, read-only status/run/diagnostics views **(разработано)**.
+- [x] Recent webhook events panel and refresh action **(разработано)**.
+- [x] Correlation candidate/status display **(разработано)**.
+- [x] Loading, empty and error states plus stale-response protection **(разработано)**.
+- [ ] Run UI tests and browser smoke checks against the current head (not yet run).
+- [ ] Verify dashboard behavior using real inbox events and live correlation results.
+- [ ] Accessibility, narrow-screen/mobile layout and broader usability review.
+
+### 3.7 MCP and assistant access
+
+- [x] Streamable HTTP MCP endpoint and read-only tool surface **(разработано)**.
+- [x] Project catalog, CircleCI diagnostics and event inbox tools **(разработано)**.
+- [x] `correlate_recent_events` MCP tool **(разработано)**.
+- [ ] Verify MCP initialization, tool discovery, auth and all relevant tools against current Preview/head.
+- [ ] Implement and verify a supported polling/request-response mechanism for proactive report retrieval; the inbox itself does not push unsolicited messages into an open ChatGPT conversation.
+- [ ] Keep paid MCP distribution separate from the free/manual access channel.
+
+### 3.8 Free report handoff
+
+- [x] Free-channel architecture documented: private request/inbox → report workflow → private short-lived artifact → ChatGPT reads report **(разработано как архитектура/документация)**.
+- [x] Companion private Forge report workflow was previously merged to Forge main, according to the earlier implementation record **(разработано)**.
+- [ ] Diagnose the historical GitHub Actions runner failures using current run evidence; do not assume billing or runner cause.
+- [ ] Confirm required private secrets by presence only; never retrieve or expose values.
+- [ ] Prove one fresh request produces a private artifact with intended retention and no secret leakage.
+- [ ] Prove ChatGPT can retrieve and analyse that artifact; repeat once to prove freshness.
+- [ ] If GitHub-hosted report execution remains blocked, evaluate a CircleCI read-only poller as a separate design decision. Any webhook-driven pipeline trigger changes the read-only boundary and requires explicit approval.
+
+## 4. Validation and release gates
+
+### Gate A — source validation
+- [ ] Dependency install, typecheck and complete unit/integration test suite on the exact candidate SHA.
+- [ ] Static/syntax checks and Wrangler dry-run on a supported Linux environment.
+- [ ] Review test failures and security findings; record exact SHA and evidence.
+- **Current state:** the active isolated branch has not been typechecked or tested. Earlier green runs apply only to older SHAs and must not be presented as validation of this branch.
+
+### Gate B — isolated Preview
+- [ ] Deploy only to the named non-production Preview after explicit authorization.
+- [ ] Verify health, authenticated Browser API, MCP initialization and read-only tool behavior.
+- [ ] Verify Durable Object persistence, webhook signature handling and correlation.
+- [ ] Confirm Preview secrets/configuration by presence and behavior without revealing values.
+- **Current state:** a prior Preview existed for an earlier branch. The current branch changes have not been deployed or smoke-tested.
+
+### Gate C — real CircleCI integration
+- [ ] Confirm real workflow-completed delivery in CircleCI delivery history.
+- [ ] Match the delivery to a durable inbox record and retrieve through MCP and Browser API.
+- [ ] Verify representative run/job/log/test/artifact diagnostics.
+- **Current state:** earlier webhook registration ping was accepted, but this is not proof of a real workflow delivery. Real end-to-end delivery remains pending.
+
+### Gate D — private assistant report
+- [ ] Resolve report workflow runner/queue issue.
+- [ ] Complete private artifact upload, retention, secret-leakage and retrieval checks.
+- **Current state:** workflow implementation exists; operational round-trip is not verified.
+
+### Gate E — release readiness
+- [ ] Independent security review.
+- [ ] All critical validation gates complete with evidence on exact SHAs.
+- [ ] License selected and documented.
+- [ ] User approval for PR/merge/release and separately for any Production deployment.
+- **Current state:** not release-ready; no Production deployment is authorized.
+
+## 5. Branch and repository policy
+
+- Continue source work in `Znect-god/znect-all-plugins`, currently on `test/ci-bridge-webhook-ingress-contract`.
+- Keep changes isolated. Do not merge, open a PR, or update `main` without explicit approval.
+- Older branches (`feat/ci-bridge-circleci-webhooks`, `feature/ci-bridge-test-reports`, `feature/znect-ci-bridge-source`, `work/znect-ci-bridge-free-channel-v0.2.0`, `work/znect-ci-bridge-mcp-v0.2.0`) are historical work lines/prototypes; do not develop them in parallel unless a specific recovery or comparison requires it.
+- The `docs/ci-bridge-implementation-roadmap` branch contains the earlier roadmap source; this living copy is maintained alongside the active engineering branch so implementation status and future work stay together.
+- Znect Build remains a separate repository for centralized application builds. Do not move Bridge plugin source into Build.
+- Do not trigger GitHub Actions, CircleCI, builds, deployments, Preview refreshes or Production changes without explicit authorization.
+- Do not request already-configured credentials again. Never put secret values in code, docs, commits, chat or logs.
+
+## 6. Operating rule for roadmap updates
+
+For every meaningful feature or fix:
+1. Update the code and relevant tests/docs.
+2. Mark the corresponding roadmap item **(разработано)** in the same development cycle.
+3. Keep validation status separate: mark tested/verified only when the exact check actually ran and its result is available.
+4. Record the exact commit/branch and any remaining limitations.
+5. Do not mark a feature deployed or operational merely because its source code exists.
+
+## 7. Next development priorities
+
+1. Review and harden current webhook ingress, correlation and dashboard implementation; fix source-level issues found during review.
+2. Add any missing focused regression tests and update this roadmap in the same commits.
+3. Inspect the full Bridge implementation for security, authorization, bounded-output and provider-ownership gaps.
+4. Prepare the current branch for an authorized validation run, without starting any CI or deployment.
+5. After source validation is authorized and successful, proceed to isolated Preview and real CircleCI delivery verification.
+6. Implement the native Znect Build adapter only against a real, versioned Build API contract; keep it read-only.
