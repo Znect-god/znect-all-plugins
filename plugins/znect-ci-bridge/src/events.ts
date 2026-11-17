@@ -26,6 +26,35 @@ const PROJECT_SLUG_RE = /^(?:gh|github)\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_EVENT_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_EVENTS = 500;
+const MAX_STORED_EVENT_BYTES = 8 * 1024;
+
+function isNormalizedStoredEvent(value: unknown): value is BridgeEvent {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const event = value as Record<string, unknown>;
+  if (typeof event.id !== "string" || !UUID_RE.test(event.id) ||
+      (event.type !== "workflow-completed" && event.type !== "job-completed") ||
+      typeof event.project_slug !== "string" || !PROJECT_SLUG_RE.test(event.project_slug) ||
+      typeof event.happened_at !== "string") return false;
+  const timestamp = Date.parse(event.happened_at);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== event.happened_at ||
+      timestamp > Date.now() + 5 * 60 * 1000 || timestamp < Date.now() - MAX_EVENT_AGE_MS) return false;
+
+  const stringLimits: Record<string, number> = {
+    pipeline_id: 64, branch: 256, revision: 128, commit_subject: 512,
+    workflow_id: 64, workflow_name: 256, workflow_status: 64, workflow_url: 2048,
+    job_id: 64, job_name: 256, job_status: 64
+  };
+  for (const [key, max] of Object.entries(stringLimits)) {
+    const field = event[key];
+    if (field !== undefined && (typeof field !== "string" || field.length > max || /[\\u0000-\\u001f\\u007f]/.test(field))) return false;
+  }
+  if (event.workflow_url !== undefined && safeCircleCiUrl(event.workflow_url) !== event.workflow_url) return false;
+  for (const key of ["pipeline_number", "job_number"]) {
+    const field = event[key];
+    if (field !== undefined && (typeof field !== "number" || !Number.isSafeInteger(field) || field < 0)) return false;
+  }
+  return true;
+}
 
 function record(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -192,17 +221,42 @@ export class BuildEventStore {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/append") {
-      let event: BridgeEvent;
-      try {
-        event = await request.json() as BridgeEvent;
-      } catch {
-        return Response.json({ error: "Invalid event JSON." }, { status: 400 });
+      if (!/^application\\/json(?:;|$)/i.test(request.headers.get("content-type") ?? "")) {
+        return Response.json({ error: "Unsupported media type." }, { status: 415 });
       }
-      if (!event || typeof event.id !== "string" || !UUID_RE.test(event.id) ||
-          (event.type !== "workflow-completed" && event.type !== "job-completed") ||
-          typeof event.project_slug !== "string" || !PROJECT_SLUG_RE.test(event.project_slug) || !Number.isFinite(Date.parse(event.happened_at))) {
+      const declaredLength = request.headers.get("content-length");
+      if (declaredLength !== null && (!/^\\d+$/.test(declaredLength) || Number(declaredLength) > MAX_STORED_EVENT_BYTES)) {
+        try { await request.body?.cancel(); } catch { /* request is rejected */ }
+        return Response.json({ error: "Event payload exceeds the storage limit." }, { status: 413 });
+      }
+      if (!request.body) return Response.json({ error: "Invalid event JSON." }, { status: 400 });
+      const reader = request.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value.byteLength > MAX_STORED_EVENT_BYTES - total) {
+            try { await reader.cancel(); } catch { /* request is rejected */ }
+            return Response.json({ error: "Event payload exceeds the storage limit." }, { status: 413 });
+          }
+          chunks.push(value);
+          total += value.byteLength;
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      const bytes = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+      let parsed: unknown;
+      try { parsed = JSON.parse(new TextDecoder().decode(bytes)); }
+      catch { return Response.json({ error: "Invalid event JSON." }, { status: 400 }); }
+      if (!isNormalizedStoredEvent(parsed)) {
         return Response.json({ error: "Invalid normalized event." }, { status: 400 });
       }
+      const event = parsed;
       const existing = this.sql.exec(
         "SELECT event_id FROM seen_event_ids WHERE event_id = ? UNION SELECT event_id FROM build_events WHERE event_id = ?",
         event.id,
