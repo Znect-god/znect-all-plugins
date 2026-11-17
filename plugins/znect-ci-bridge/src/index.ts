@@ -7,6 +7,7 @@ import { describeProjectStatus, findCircleCiProject, findProject, loadProjectReg
 export { BuildEventStore };
 import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
+import { correlateEventsWithRuns } from "./correlation";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
@@ -786,6 +787,50 @@ function createServer(env: Env) {
         throw new Error("CircleCI event storage is temporarily unavailable or returned invalid data.");
       }
       return { content: [{ type: "text", text: stringifyBoundedJson(result, 60_000) }] };
+    }
+  );
+
+  server.registerTool(
+    "correlate_recent_events",
+    {
+      description: "Correlate signed CircleCI webhook events with recent CircleCI API v3 runs using exact commit revision, compatible branch and a bounded time window. This is a heuristic: repeated candidates are marked ambiguous, and webhook pipeline IDs are never treated as API run IDs. Read-only.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        project_id: z.string().min(2).max(63),
+        connection_id: z.string().min(2).max(63).optional(),
+        after: z.number().int().min(0).default(0),
+        event_limit: z.number().int().min(1).max(50).default(20),
+        run_limit: z.number().int().min(1).max(30).default(20)
+      }
+    },
+    async ({ project_id, connection_id, after, event_limit, run_limit }) => {
+      if (!env.EVENT_STORE) throw new Error("CircleCI event storage is not configured.");
+      const project = findProject(getProjectRegistry(env), project_id);
+      if (!project) throw new Error("Unknown Znect project: " + project_id + ".");
+      const { connection, scope, adapter } = getCircleCiAdapter(env, project_id, connection_id);
+      let page: Record<string, unknown>;
+      try {
+        const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
+          .fetch("https://event-store/events?after=" + after + "&limit=" + event_limit);
+        page = await readEventPage(response, event_limit);
+      } catch {
+        throw new Error("CircleCI event storage is temporarily unavailable or returned invalid data.");
+      }
+      const runs = await adapter.listRuns(scope, run_limit);
+      const events = Array.isArray(page.events) ? page.events : [];
+      const correlations = correlateEventsWithRuns(events, runs);
+      const payload = {
+        project: { id: project.id, name: project.name },
+        connection: { id: connection.id, provider: "circleci", project_slug: connection.projectSlug },
+        correlations,
+        next_cursor: page.next_cursor,
+        matching: {
+          strategy: "exact commit SHA + compatible branch + completion/start time within 24 hours",
+          max_candidates_per_event: 3,
+          note: "A match is a correlation candidate, not proof that a webhook pipeline ID equals an API v3 run ID."
+        }
+      };
+      return { content: [{ type: "text", text: redactedBoundedJson(payload, env, 100_000) }] };
     }
   );
 
