@@ -39,6 +39,13 @@ function isNormalizedStoredEvent(value: unknown): value is BridgeEvent {
   if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== event.happened_at ||
       timestamp > Date.now() + 5 * 60 * 1000 || timestamp < Date.now() - MAX_EVENT_AGE_MS) return false;
 
+  const allowedFields = new Set([
+    "id", "type", "happened_at", "project_slug", "pipeline_id", "pipeline_number",
+    "branch", "revision", "commit_subject", "workflow_id", "workflow_name",
+    "workflow_status", "workflow_url", "job_id", "job_name", "job_status", "job_number"
+  ]);
+  if (Object.keys(event).some((key) => !allowedFields.has(key))) return false;
+
   const stringLimits: Record<string, number> = {
     pipeline_id: 64, branch: 256, revision: 128, commit_subject: 512,
     workflow_id: 64, workflow_name: 256, workflow_status: 64, workflow_url: 2048,
