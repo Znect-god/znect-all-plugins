@@ -101,6 +101,8 @@ export default {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/health") return response({ ok: true, service: "znect-ci-bridge", channel: "free-web" });
     if (request.method === "POST" && url.pathname === "/webhooks/circleci") {
+      const declaredLength = Number(request.headers.get("content-length") ?? "0");
+      if (declaredLength > 256_000) return response({ error: "payload_too_large" }, 413);
       const body = await request.text();
       if (body.length > 256_000) return response({ error: "payload_too_large" }, 413);
       if (!(await verifyCircleCiSignature(body, request.headers.get("circleci-signature"), env.CIRCLECI_SIGNING_SECRET))) {
@@ -109,9 +111,14 @@ export default {
       let payload: any;
       try { payload = JSON.parse(body); } catch { return response({ error: "invalid_json" }, 400); }
       const event = eventSummary(payload, request.headers.get("circleci-event-type"));
-      const key = `event:${event.received_at}:${event.id}`;
+      const safeId = encodeURIComponent(event.id);
+      const dedupeKey = `seen:${safeId}`;
+      if (await env.EVENTS.get(dedupeKey)) return response({ accepted: true, duplicate: true, event_id: event.id }, 202);
+      const reverseTime = String(9_999_999_999_999 - Date.now()).padStart(13, "0");
+      const key = `event:${reverseTime}:${safeId}`;
       await env.EVENTS.put(key, JSON.stringify(event), { expirationTtl: EVENT_TTL_SECONDS });
-      return response({ accepted: true, event_id: event.id }, 202);
+      await env.EVENTS.put(dedupeKey, key, { expirationTtl: EVENT_TTL_SECONDS });
+      return response({ accepted: true, duplicate: false, event_id: event.id }, 202);
     }
     if (url.pathname.startsWith("/api/")) {
       if (!(await authorized(request, env))) return response({ error: "unauthorized" }, 401);
