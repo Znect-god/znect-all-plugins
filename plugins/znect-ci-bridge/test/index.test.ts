@@ -65,7 +65,7 @@ describe("MCP tool schemas and error boundary", () => {
         properties?: Record<string, { type?: string; maximum?: number; minimum?: number; enum?: string[] }>;
       };
     }>;
-    expect(tools).toHaveLength(14);
+    expect(tools).toHaveLength(15);
     expect(tools.every((tool) => tool.annotations?.readOnlyHint === true)).toBe(true);
     expect(tools.map((tool) => tool.name)).toContain("list_recent_events");
     expect(tools.map((tool) => tool.name)).toContain("correlate_recent_events");
