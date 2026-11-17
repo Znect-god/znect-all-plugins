@@ -48,7 +48,7 @@
     "Authenticated rate-limit keys are SHA-256 digests of their respective access tokens; raw tokens are not used as keys",
     "Failed MCP and browser API authentication attempts use a separate SHA-256 client-IP digest bucket",
     "CircleCI outbound webhook ingress verifies v1 HMAC-SHA256 signatures against the exact raw request body",
-    "Webhook events are correlated to API v3 runs only by exact commit revision, compatible branch, and bounded event/run time; ambiguous candidates are not silently selected",
+    "Webhook events are correlated to API v3 runs only by exact commit revision, compatible branch, and bounded event/run execution interval; ambiguous candidates are not silently selected",
     "Webhook payloads are capped at 64 KiB, filtered to CircleCI project slugs explicitly registered in the project registry, normalized to allowlisted fields, and deduplicated by CircleCI event ID",
     "SQLite-backed Durable Object stores at most 500 normalized events and prunes events older than 30 days"
   ],
