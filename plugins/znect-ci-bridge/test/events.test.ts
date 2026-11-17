@@ -171,6 +171,23 @@ describe("Durable event inbox storage contract", () => {
     }
   }
 
+  it("rejects malformed, stale, oversized and non-JSON event-store append requests", async () => {
+    const sql = new FakeSql();
+    const store = new BuildEventStore({ storage: { sql } } as unknown as DurableObjectState);
+    const valid = normalizeCircleCiWebhook(workflowPayload, "workflow-completed")!;
+    const post = (body: string, headers: Record<string, string> = { "content-type": "application/json" }) =>
+      store.fetch(new Request("https://event-store/append", { method: "POST", headers, body }));
+
+    expect((await post(JSON.stringify({ ...valid, happened_at: "yesterday" }))).status).toBe(400);
+    expect((await post(JSON.stringify({ ...valid, project_slug: "gh/attacker/foreign" }))).status).toBe(400);
+    expect((await post(JSON.stringify({ ...valid, workflow_name: "x".repeat(257) }))).status).toBe(400);
+    expect((await post(JSON.stringify({ ...valid, workflow_url: "https://attacker.example/run" }))).status).toBe(400);
+    expect((await post(JSON.stringify(valid), { "content-type": "text/plain" })).status).toBe(415);
+    expect((await post("{}", { "content-type": "application/json", "content-length": "9000" })).status).toBe(413);
+    expect(sql.rows).toHaveLength(0);
+    expect(sql.seen).toHaveLength(0);
+  });
+
   it("retains replay protection after older events leave the 500-event history window", async () => {
     const sql = new FakeSql();
     const store = new BuildEventStore({ storage: { sql } } as unknown as DurableObjectState);
