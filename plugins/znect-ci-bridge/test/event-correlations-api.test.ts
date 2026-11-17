@@ -105,6 +105,26 @@ describe("read-only browser event correlation API", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("does not expose CircleCI provider errors or credentials from the correlation endpoint", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => new Response(JSON.stringify({ events: [], next_cursor: 0 }), { status: 200 }) })
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("upstream secret token detail"); }));
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/event-correlations?project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(502);
+    const body = await response.text();
+    expect(body).toContain("CircleCI run data is temporarily unavailable");
+    expect(body).not.toContain("upstream secret token detail");
+    expect(body).not.toContain("circle-test-token");
+  });
+
   it("rejects out-of-range event and run limits before contacting CircleCI", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
