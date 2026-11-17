@@ -1,3 +1,7 @@
+## [0.1.0] - 2026-11-17 webhook signature parser hardening
+### Security
+- Bound the CircleCI signature header to 1 KiB and at most eight version entries before parsing; reject duplicate v1 signatures and malformed multi-version headers. Added regression coverage for oversized, excessive and duplicate signature entries.
+
 ## [0.1.0] - 2026-11-17 webhook-to-run correlation
 ### Diagnostics
 - Added the read-only `correlate_recent_events` MCP tool to enrich signed webhook inbox events with candidate CircleCI API v3 runs.
