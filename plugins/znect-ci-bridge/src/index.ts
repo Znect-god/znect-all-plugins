@@ -127,6 +127,7 @@ function boundedJson(serialized: string, maxChars: number): Response {
 }
 
 const MAX_EVENT_PAGE_BYTES = 60_000;
+const EVENT_PAGE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 async function readEventPage(response: Response, limit: number): Promise<Record<string, unknown>> {
   if (!response.ok) throw new Error("Event storage is unavailable.");
@@ -165,10 +166,16 @@ async function readEventPage(response: Response, limit: number): Promise<Record<
   const page = parsed as Record<string, unknown>;
   if (!Array.isArray(page.events) || page.events.length > limit ||
       !Number.isSafeInteger(page.next_cursor) || (page.next_cursor as number) < 0 ||
-      page.events.some((item) => item === null || typeof item !== "object" || Array.isArray(item) ||
-        !Number.isSafeInteger((item as Record<string, unknown>).cursor) ||
-        ((item as Record<string, unknown>).cursor as number) < 1 ||
-        typeof (item as Record<string, unknown>).id !== "string")) {
+      page.events.some((item) => {
+        if (item === null || typeof item !== "object" || Array.isArray(item)) return true;
+        const event = item as Record<string, unknown>;
+        return !Number.isSafeInteger(event.cursor) || (event.cursor as number) < 1 ||
+          (event.cursor as number) > (page.next_cursor as number) ||
+          typeof event.id !== "string" || !EVENT_PAGE_ID_RE.test(event.id) ||
+          (event.type !== "workflow-completed" && event.type !== "job-completed") ||
+          typeof event.project_slug !== "string" ||
+          typeof event.happened_at !== "string" || !Number.isFinite(Date.parse(event.happened_at));
+      })) {
     throw new Error("Event storage returned an invalid event page.");
   }
   return page;
