@@ -193,7 +193,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
           }).join("; ");
           main.appendChild(element("div","meta",candidateText));
         }
-        var status=entry.status==="candidate"?"Candidate":entry.status==="ambiguous"?"Ambiguous ("+((entry.candidates||[]).length)+")":"Unmatched";
+        var status=entry.status==="candidate"?"Candidate":entry.status==="ambiguous"?"Ambiguous ("+(entry.candidate_count||((entry.candidates||[]).length))+")":"Unmatched";
         row.appendChild(main);
         row.appendChild(element("span","pill",status));
         eventsBox.appendChild(row);
