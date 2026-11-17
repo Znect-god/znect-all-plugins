@@ -53,7 +53,7 @@ function isNormalizedStoredEvent(value: unknown): value is BridgeEvent {
   };
   for (const [key, max] of Object.entries(stringLimits)) {
     const field = event[key];
-    if (field !== undefined && (typeof field !== "string" || field.length > max || /[\\u0000-\\u001f\\u007f]/.test(field))) return false;
+    if (field !== undefined && (typeof field !== "string" || field.length > max || /[\u0000-\u001f\u007f]/.test(field))) return false;
   }
   if (event.workflow_url !== undefined && safeCircleCiUrl(event.workflow_url) !== event.workflow_url) return false;
   for (const key of ["pipeline_number", "job_number"]) {
@@ -228,11 +228,11 @@ export class BuildEventStore {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/append") {
-      if (!/^application\\/json(?:;|$)/i.test(request.headers.get("content-type") ?? "")) {
+      if (!/^application\/json(?:;|$)/i.test(request.headers.get("content-type") ?? "")) {
         return Response.json({ error: "Unsupported media type." }, { status: 415 });
       }
       const declaredLength = request.headers.get("content-length");
-      if (declaredLength !== null && (!/^\\d+$/.test(declaredLength) || Number(declaredLength) > MAX_STORED_EVENT_BYTES)) {
+      if (declaredLength !== null && (!/^\d+$/.test(declaredLength) || Number(declaredLength) > MAX_STORED_EVENT_BYTES)) {
         try { await request.body?.cancel(); } catch { /* request is rejected */ }
         return Response.json({ error: "Event payload exceeds the storage limit." }, { status: 413 });
       }
