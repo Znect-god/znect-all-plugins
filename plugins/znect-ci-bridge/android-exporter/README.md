@@ -64,6 +64,8 @@ The `ci-bridge-android-exporter` CircleCI job runs the JVM unit tests and assemb
 
 Bearer credentials are validated against the RFC 6750 `b64token` character set (including underscore), with a 4096-character upper bound. The policy has focused JVM tests for accepted token characters, whitespace/CRLF rejection and length bounds.
 
+The Android module currently contains 40 authored JVM test cases: 8 origin-policy, 18 report-schema/privacy, 3 Bearer-token-policy and 11 CircleCI connection-status tests. They are source-only until the CircleCI job executes successfully; no passing result is claimed.
+
 The report validator also checks strict JSON primitive types (not numeric strings), requested limits, returned counts, failed-run counts, JSON item types, JSON-safe event cursor and completeness flags are mutually consistent before the file can be shared.
 
 Event-cursor integer bounds use exact decimal comparisons, avoiding floating-point rounding at JavaScript's maximum safe-integer boundary.
