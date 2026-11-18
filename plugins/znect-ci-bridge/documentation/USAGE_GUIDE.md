@@ -24,7 +24,7 @@ Bridge не запускает, не отменяет, не перезапуск
 - Browser API `GET /api/v1/report` возвращает ограниченный private JSON report.
 - Android app проверяет оба endpoint: сначала status, затем report. Успех означает, что Android → Bridge → CircleCI read path и report endpoint доступны; это **не** означает, что ChatGPT conversation автоматически аутентифицирован.
 - Android использует HTTPS, Bearer credential, локальное Keystore-backed encrypted storage, bounded response validation и ручной Android Sharesheet export.
-- Написано 40 Android JVM test cases: 8 origin + 18 report/privacy + 3 Bearer policy + 11 CircleCI status validator. Ни один из этих тестов на текущей ветке ещё не подтверждён как выполненный.
+- Написано 48 Android JVM test cases: 8 origin + 21 report/privacy + 3 Bearer policy + 11 CircleCI status validator + 5 report-file expiry. Ни один из этих тестов на текущей ветке ещё не подтверждён как выполненный.
 - CircleCI workflow описан, но успешный запуск для текущего HEAD не получен. APK artifact не подтверждён; устройство не проверено.
 - Автоматическая ChatGPT authentication к приватному Browser API не подтверждена и остаётся открытым platform limitation. Текущий handoff — ручной.
 
@@ -85,7 +85,7 @@ Bridge не запускает, не отменяет, не перезапуск
 ## 7. Известные ограничения
 
 1. Live CircleCI run для текущего engineering HEAD не подтверждён.
-2. Worker test suite и 40 Android JVM tests не исполнены на текущем HEAD.
+2. Worker test suite и 48 Android JVM tests не исполнены на текущем HEAD.
 3. Debug APK не собран/не получен как CircleCI artifact.
 4. Android app не проверено на реальном устройстве.
 5. Автоматический ChatGPT authentication к private Browser API не реализован/не подтверждён; handoff ручной.
