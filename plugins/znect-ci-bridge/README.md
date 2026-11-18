@@ -103,7 +103,7 @@ npx wrangler deploy --dry-run
 
 These commands are local validation steps, not a project build or deployment. Android ARM64 Termux is not a supported Wrangler/workerd deployment environment. **All Znect project builds must be orchestrated through `Znect-god/znect-build`; GitHub Actions is the central executor used by Znect Build.** Do not create or trigger an independent CircleCI workflow for CI Bridge. CircleCI is used here only as a read-only external CI diagnostics provider for projects that already use it.
 
-CI Bridge is not currently an enabled Znect Build target: the central registry currently contains only Forge, its Android debug execution is disabled, and the available central recipe catalog does not yet include this Node.js/Cloudflare Worker package. Before any central validation/build can be run for CI Bridge, Znect Build needs an explicitly reviewed Node/Worker recipe and project onboarding entry. No central workflow or CircleCI pipeline should be triggered as a workaround.
+A validation-only CI Bridge target (`znect-ci-bridge/worker-validation`) and centrally maintained Node/Cloudflare Worker recipe have been added on the isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`. That branch is not merged into Build main and target execution remains disabled. The recipe performs `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run only; it has no deployment step. Do not trigger a central workflow or CircleCI pipeline until the central branch, hosted-runner availability, source-read permissions and script trust boundary have been reviewed.
 
 ## Safety and limitations
 
