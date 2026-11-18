@@ -1169,3 +1169,16 @@ For every meaningful feature or fix:
 1. **Validation:** execute focused and full source checks through the explicitly authorized opt-in CircleCI workflow; resolve failures and record exact-SHA provenance.
 2. **Free ChatGPT handoff:** verify the private authenticated Browser JSON API report round-trip and report format without making MCP mandatory or exposing public unauthenticated data.
 3. **Readiness:** perform authorized read-only live CircleCI checks, review security/limits, and prepare Reporting / Diagnostics v1; no merge or Production deployment without separate approval.
+
+
+### Stage 78 — Make the free assistant report handoff explicit and self-describing — 2026-11-18
+- [x] Add an `assistant_handoff` contract to the aggregate Browser JSON API report: user-reviewed JSON attachment, no automatic API access claim, no mandatory MCP and no Bearer token in the report.
+- [x] Preserve normalized per-job `test_summary` data when the dashboard bundles the aggregate report with up to three failed-run diagnostics.
+- [x] Label test counts as observed records and expose source coverage so ChatGPT does not infer project-wide completeness from a partial job report.
+- [x] Extend Browser API regression-test source to assert the normalized summary and handoff metadata.
+- [x] Update README, assistant-channel guidance and usage documentation to describe the manual handoff accurately.
+- [ ] Execute the report/API/UI tests and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
+- [ ] Verify a real export from an authorized Preview and review the resulting JSON for completeness and redaction.
+- [ ] Establish a supported automatic ChatGPT Free authentication path only if the platform provides one without sharing secrets or weakening authentication.
+
+**Verification boundary:** report metadata, Browser diagnostics output, regression-test source and documentation are committed. This does not establish direct automatic ChatGPT-to-API connectivity; the current supported fallback remains a user-reviewed JSON attachment. No tests, CircleCI pipeline, Preview/Production deployment, credential or runtime configuration change was performed.
