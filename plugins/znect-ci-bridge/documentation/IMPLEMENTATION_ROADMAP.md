@@ -1166,8 +1166,8 @@ For every meaningful feature or fix:
 **Verification boundary:** normalizer source, both diagnostics call sites and focused regression-test source are committed on the isolated feature branch. Tests and TypeScript checks have not been executed. No CircleCI API requests, pipeline trigger, deployment, credential change or runtime configuration change was performed.
 
 ## Remaining delivery in two controlled stages
-1. **Validation:** execute focused and full source checks through the explicitly authorized opt-in CircleCI workflow; resolve failures and record exact-SHA provenance.
-2. **Readiness:** verify the private authenticated Browser JSON API report/export round-trip in an authorized Preview, perform read-only live CircleCI checks, review security/limits, and prepare Reporting / Diagnostics v1. No merge or Production deployment without separate approval.
+1. **Stage 80 — Validation:** the user has now explicitly requested execution. Run focused and full source checks through the opt-in CircleCI workflow; resolve failures and record exact-SHA provenance. Execution is currently blocked because this ChatGPT session has no CircleCI control/API connector or authenticated CircleCI action. Do not substitute GitHub Actions or claim validation succeeded.
+2. **Stage 81 — Readiness:** verify the private authenticated Browser JSON API report/export round-trip in the authorized Preview, perform read-only live CircleCI checks, review security/limits, and prepare Reporting / Diagnostics v1. Live execution is currently blocked because this session has no Preview/Cloudflare access or configured smoke-test secrets. No merge or Production deployment without separate approval.
 
 
 ### Stage 78 — Make the free assistant report handoff explicit and self-describing — 2026-11-18
@@ -1206,4 +1206,4 @@ For every meaningful feature or fix:
 - [ ] Verify live CircleCI read-only connectivity and representative successful/failed run, logs, JSONL/JUnit and artifact retrieval.
 - [ ] Confirm the private ChatGPT Free access/handoff path without MCP or manual secret sharing; do not claim automatic access unless the supported authentication path is proven.
 
-**Verification boundary:** source and regression-test updates are committed. Static contract inspection only; no Vitest, typecheck, CircleCI API request, CircleCI pipeline, Preview request/deployment, secret access or Production change was performed. Stage 81 remains incomplete pending the live checks above.
+**Verification boundary:** source and regression-test updates are committed. Static contract inspection only; no Vitest, typecheck, CircleCI API request, CircleCI pipeline, Preview request/deployment, secret access or Production change was performed. Stage 81 remains incomplete pending the live checks above. The required CircleCI and Preview/Cloudflare control integrations are not available in the current execution session; the user has authorized the stages, but no live request can be issued from the available tools.
