@@ -121,7 +121,7 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
     expect(artifacts[0].jobId).toBeUndefined();
   });
 
-  it("verifies job parent run before returning job diagnostics", async () => {
+  it("rejects a job when its parent run cannot be verified for the selected project", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({
         id: 401,
@@ -132,10 +132,10 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
         steps: []
       }))
       .mockResolvedValueOnce(response({ ...runRecord(), id: 999 }))
-      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(undefined, "999")] }));
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact("znect-build-request-znect-forge-invalid-999")] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(adapter().getJob(scope, "401")).rejects.toThrow(/not belong/i);
+    await expect(adapter().getJob(scope, "401")).rejects.toThrow(/ownership cannot be verified/i);
   });
 
   it("does not fabricate per-step logs or job-scoped artifacts for GitHub Actions", async () => {
