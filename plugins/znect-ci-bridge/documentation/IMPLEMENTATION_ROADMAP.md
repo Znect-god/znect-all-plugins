@@ -1155,9 +1155,9 @@ For every meaningful feature or fix:
 - [x] Add a dedicated bounded normalizer for CircleCI job JSONL and collected JUnit XML reports; emit one shared per-job summary with total, passed, failed, skipped and unknown counts.
 - [x] Parse the documented JSONL identity/status fields and a strict JUnit testcase subset; reject DTD/entity declarations, malformed XML, oversized inputs and excessive testcase/token/depth counts.
 - [x] Preserve parallel-execution indexes from JUnit artifacts and optional JSONL execution metadata.
-- [x] Deduplicate only unambiguous one-to-one JSONL/JUnit matches. Keep repeated test identities when they may represent retries or parallel shards; flag ambiguous groups rather than silently collapsing them.
+- [x] Deduplicate only unambiguous one-to-one JSONL/JUnit matches using shared classname/name identity; use file and execution as conflict guards when both sources provide them. Keep repeated identities that may represent retries or parallel shards; flag ambiguous groups rather than silently collapsing them.
 - [x] Prefer CircleCI JSONL when a one-to-one cross-source status conflict occurs, expose the conflict count and mark the summary incomplete.
-- [x] Attach the same `test_summary` contract to MCP diagnostics and the private Browser JSON API diagnostics; propagate summary incompleteness to the overall diagnostic report. Include explicit source coverage and label counts as observed records, not inferred project-wide totals.
+- [x] Attach the same `test_summary` contract to MCP diagnostics and the private Browser JSON API diagnostics; propagate JSONL retrieval failures, JUnit collector limits and summary incompleteness to the overall diagnostic report. Include explicit source coverage and label counts as observed records, not inferred project-wide totals.
 - [x] Add focused regression-test source for status normalization, JUnit XML, safe entity handling, malformed/truncated inputs, one-to-one deduplication, status conflicts, retries and parallel execution ambiguity.
 - [ ] Execute the focused Vitest file and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
 - [ ] Review test/typecheck results and fix any implementation or type errors.
