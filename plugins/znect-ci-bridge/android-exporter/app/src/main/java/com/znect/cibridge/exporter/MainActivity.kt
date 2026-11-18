@@ -39,6 +39,7 @@ class MainActivity : Activity() {
     private lateinit var connectionInput: EditText
     private lateinit var tokenInput: EditText
     private lateinit var statusText: TextView
+    private lateinit var checkConnectionButton: Button
     private lateinit var fetchButton: Button
     private lateinit var shareButton: Button
 
@@ -99,6 +100,8 @@ class MainActivity : Activity() {
 
         root.addView(actionButton("Save configuration") { saveConfiguration() })
         root.addView(actionButton("Disconnect and clear local data") { disconnectCredential() })
+        checkConnectionButton = actionButton("Check CircleCI ↔ ChatGPT handoff") { checkConnection() }
+        root.addView(checkConnectionButton)
         fetchButton = actionButton("Fetch report") { fetchReport() }
         root.addView(fetchButton)
         shareButton = actionButton("Share report") { shareReport() }
@@ -231,6 +234,118 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) {
             statusText.text = "Could not clear local configuration. Review app storage before reconnecting."
+        }
+    }
+
+    /**
+     * Verifies the authenticated assistant-facing API path and performs a live,
+     * read-only CircleCI probe. This confirms the Bridge handoff path, not that
+     * a separate ChatGPT conversation currently has an authenticated session.
+     */
+    private fun checkConnection() {
+        if (fetching) return
+        val origin = normalizeOrigin(prefs.getString(ORIGIN, "").orEmpty())
+        val project = prefs.getString(PROJECT, "").orEmpty()
+        val connection = prefs.getString(CONNECTION, "").orEmpty()
+        if (origin == null || !SAFE_ID.matches(project) || !prefs.contains(TOKEN_CIPHERTEXT)) {
+            statusText.text = "Save a valid API origin, project ID and credential first."
+            return
+        }
+
+        fetching = true
+        checkConnectionButton.isEnabled = false
+        fetchButton.isEnabled = false
+        shareButton.isEnabled = false
+        statusText.text = "Checking the authenticated ChatGPT handoff and CircleCI read connection…"
+
+        executor.execute {
+            try {
+                if (destroyed || Thread.currentThread().isInterrupted) return@execute
+                val token = decryptToken(prefs.getString(TOKEN_CIPHERTEXT, "") ?: "")
+                if (!isValidBearerToken(token)) throw IllegalStateException("Stored credential is invalid. Re-enter it in the app.")
+                val status = requestConnectionStatus(origin, project, connection, token)
+                if (!status.connected) throw IllegalStateException(status.message)
+                // The report endpoint is the same bounded private endpoint intended
+                // for the no-MCP ChatGPT handoff; fetching it proves that path works.
+                requestReport(origin, project, connection, token)
+                if (destroyed || Thread.currentThread().isInterrupted) return@execute
+                runOnUiThread {
+                    if (!destroyed) {
+                        statusText.text = "Connection check successful. Android → CI Bridge → CircleCI read probe is available; the private ChatGPT report endpoint also returned a valid report. This does not prove a separate ChatGPT conversation is currently authenticated."
+                        checkConnectionButton.isEnabled = true
+                        fetchButton.isEnabled = true
+                        fetching = false
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    if (!destroyed) {
+                        statusText.text = safeErrorMessage(e)
+                        checkConnectionButton.isEnabled = true
+                        fetchButton.isEnabled = true
+                        shareButton.isEnabled = false
+                        fetching = false
+                    }
+                }
+            }
+        }
+    }
+
+    private data class ConnectionStatus(val connected: Boolean, val message: String)
+
+    private fun requestConnectionStatus(
+        origin: String,
+        project: String,
+        connection: String,
+        token: String
+    ): ConnectionStatus {
+        val query = StringBuilder().append("project_id=").append(enc(project))
+        if (connection.isNotBlank()) query.append("&connection_id=").append(enc(connection))
+        val conn = (URL("$origin/api/v1/status?$query").openConnection() as HttpsURLConnection).apply {
+            requestMethod = "GET"
+            instanceFollowRedirects = false
+            connectTimeout = 12_000
+            readTimeout = 15_000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("Authorization", "Bearer $token")
+            useCaches = false
+        }
+        activeConnection = conn
+        if (destroyed || Thread.currentThread().isInterrupted) {
+            activeConnection = null
+            conn.disconnect()
+            throw InterruptedException("Activity is no longer active.")
+        }
+        try {
+            val code = conn.responseCode
+            if (code in 300..399) throw IllegalStateException("The API redirected the connection check; redirects are blocked.")
+            if (code != HttpsURLConnection.HTTP_OK) {
+                throw IllegalStateException("Connection check failed with HTTP $code. Check the local configuration and API availability.")
+            }
+            val mediaType = conn.contentType?.substringBefore(';')?.trim()?.lowercase()
+            if (mediaType != "application/json" && mediaType?.endsWith("+json") != true) {
+                throw IllegalStateException("Connection check returned an unexpected content type; JSON was required.")
+            }
+            val body = conn.inputStream.use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(2048)
+                var total = 0
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    if (total > MAX_STATUS_BYTES) throw IllegalStateException("Connection status exceeded the 8 KB safety limit.")
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
+            }
+            val raw = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(body)).toString()
+            if (raw.contains(token)) throw IllegalStateException("The connection response unexpectedly contained credential material.")
+            val status = CircleCiConnectionValidator.validate(JSONObject(raw), project, connection.takeIf { it.isNotBlank() })
+            return ConnectionStatus(status.connected, status.message)
+        } finally {
+            if (activeConnection === conn) activeConnection = null
+            conn.disconnect()
         }
     }
 
@@ -505,6 +620,7 @@ class MainActivity : Activity() {
         private const val TOKEN_CIPHERTEXT = "token_ciphertext"
         private const val KEY_ALIAS = "znect_ci_bridge_report_token_v1"
         private const val MAX_REPORT_BYTES = 100 * 1024
+        private const val MAX_STATUS_BYTES = 8 * 1024
         private const val REPORT_TTL_MS = 30 * 60 * 1000L
         private val SAFE_ID = Regex("^[A-Za-z0-9._:-]{1,128}$")
     }
