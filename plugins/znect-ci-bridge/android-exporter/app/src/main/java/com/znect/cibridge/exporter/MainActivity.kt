@@ -147,6 +147,10 @@ class MainActivity : Activity() {
     }
 
     private fun saveConfiguration() {
+        if (fetching) {
+            statusText.text = "Wait for the current connection or report request to finish before changing the saved configuration."
+            return
+        }
         val origin = normalizeOrigin(originInput.text.toString())
         val project = projectInput.text.toString().trim()
         val connection = connectionInput.text.toString().trim()
