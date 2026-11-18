@@ -148,17 +148,14 @@ describe("CircleCI read-only provider adapter", () => {
             outcome: "failed",
             started_at: "2026-11-15T10:01:00Z",
             ended_at: "2026-11-15T10:04:00Z",
-            parallel_executions: [{
-              steps: [{
-                name: "Run tests",
-                num: 4,
-                phase: "completed",
-                type: "run",
-                is_insignificant: false,
-                outcome: "failed",
-                exit_code: 1
-              }]
-            }]
+            parallel_executions: [[{
+              name: "Run tests",
+              num: 4,
+              phase: "completed",
+              type: "run",
+              outcome: "failed",
+              exit_code: 1
+            }]]
           }
         }
       })));
@@ -212,7 +209,7 @@ describe("CircleCI read-only provider adapter", () => {
     expect(job).not.toHaveProperty("completedAt");
   });
 
-  it("uses the parallel-execution array index and API v3 step num", async () => {
+  it("maps API v3 nested step arrays to zero-based parallel execution indexes", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(projectResponse())
       .mockResolvedValueOnce(response({
@@ -222,11 +219,11 @@ describe("CircleCI read-only provider adapter", () => {
           attributes: {
             name: "parallel-tests",
             parallel_executions: [
-              { steps: [{ name: "worker zero", num: 0, phase: "completed", type: "run", is_insignificant: false, outcome: "success" }] },
-              { steps: [
+              [{ name: "worker zero", num: 0, phase: "completed", type: "run", outcome: "success" }],
+              [
                 { name: "worker one", num: 7, phase: "completed", type: "run", is_insignificant: false, outcome: "failed", exit_code: 1 },
                 { name: "allowed cleanup", num: 8, phase: "completed", type: "run", is_insignificant: true, outcome: "failed", exit_code: 1 }
-              ] }
+              ]
             ]
           }
         }
@@ -251,9 +248,7 @@ describe("CircleCI read-only provider adapter", () => {
           id: JOB_ID,
           references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
           attributes: {
-            parallel_executions: [{
-              steps: [{ name: "missing step number", phase: "completed", type: "run", is_insignificant: false }]
-            }]
+            parallel_executions: [[{ name: "missing step number", phase: "completed", type: "run" }]]
           }
         }
       })));
