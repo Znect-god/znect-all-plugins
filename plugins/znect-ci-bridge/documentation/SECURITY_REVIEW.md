@@ -11,6 +11,8 @@
 **Scope:** source-level review of the prototype Worker and its security helpers  
 **Result:** targeted hardening applied; not a complete security audit
 
+
+**Canonical source status (2026-11-18):** the single permanent development branch is `ci-bridge` in `Znect-god/znect-all-plugins`. The ten obsolete CI Bridge branches have been removed. `main` remains unchanged. The latest source-audit corrections add an event-store response-envelope allowlist and a regression test; these changes have not yet been executed by the test suite.
 ## Findings and decisions
 
 ### Artifact host allowlist was broader than necessary — addressed
