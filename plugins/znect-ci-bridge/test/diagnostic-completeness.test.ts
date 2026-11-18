@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDiagnosticsSummary,
+  failedStepLogsStatus,
   reportArtifactsStatus,
   testResultsStatus
 } from "../src/diagnostic-completeness";
@@ -74,5 +75,15 @@ describe("diagnostic source completeness", () => {
     expect(summary.report_artifact_limit_reached).toBe(true);
     expect(summary.report_data_incomplete).toBe(true);
     expect(summary.incomplete).toBe(true);
+  });
+});
+
+describe("failed-step log completeness", () => {
+  it("distinguishes not-applicable, available, partial and unavailable logs", () => {
+    expect(failedStepLogsStatus({ failedActionsCount: 0, logsCount: 0, incomplete: false })).toBe("not_applicable");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, incomplete: false })).toBe("available");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 1, incomplete: false })).toBe("partial");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, incomplete: true })).toBe("partial");
+    expect(failedStepLogsStatus({ failedActionsCount: 1, logsCount: 0, incomplete: true })).toBe("unavailable");
   });
 });
