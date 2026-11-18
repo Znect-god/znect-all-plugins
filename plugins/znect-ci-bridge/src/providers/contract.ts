@@ -20,6 +20,7 @@ export interface CiRun {
   branch?: string;
   commitSha?: string;
   commitMessage?: string;
+  createdAt?: string;
   startedAt?: string;
   completedAt?: string;
   url?: string;
