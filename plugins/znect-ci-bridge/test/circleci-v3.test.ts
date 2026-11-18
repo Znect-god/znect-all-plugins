@@ -464,6 +464,20 @@ describe("CircleCI API v3 client", () => {
     });
   });
 
+  it("rejects invalid response byte budgets before making network requests", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(circleV3GetText("token", `/api/v3/jobs/${JOB_ID}/stdout`, -1))
+      .rejects.toThrow("maxBytes must be a non-negative safe integer.");
+    await expect(circleV3GetText("token", `/api/v3/jobs/${JOB_ID}/stdout`, Number.MAX_SAFE_INTEGER + 1))
+      .rejects.toThrow("maxBytes must be a non-negative safe integer.");
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "report.xml", -1))
+      .rejects.toThrow("maxBytes must be a non-negative safe integer.");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("returns an empty test result when CircleCI has no test data", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
     await expect(getCircleCiJobTests("token", JOB_ID))
