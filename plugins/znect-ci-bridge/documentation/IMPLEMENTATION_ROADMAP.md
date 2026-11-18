@@ -1047,3 +1047,14 @@ For every meaningful feature or fix:
 - [ ] Verify the private Browser API and dashboard export end-to-end against an isolated authorized runtime; do not claim ChatGPT Free direct authentication until supported and tested.
 
 **Verification boundary:** this stage corrects an active assistant-channel document that contradicted the already-retired source implementation. The correction is committed on the isolated engineering branch. This was a static source/documentation audit only: no tests, CircleCI API request, pipeline, Preview/Production deployment, secret access or runtime change was performed.
+
+## Stage 68 — Respect CircleCI's authoritative current Run outcome — 2026-11-18
+
+- [x] Compare the adapter's shared status normalization with the API v3 Run contract; identify that generic `outcome` could override the authoritative `current_outcome` on a Run **(выполнено — source audit against official API reference)**.
+- [x] Add Run-specific status normalization that prefers `current_outcome` and keeps workflow/job normalization separate **(выполнено — adapter source update)**.
+- [x] Add a regression fixture where `outcome: success` conflicts with `current_outcome: failed`; expected Run status remains `failed` **(выполнено — test source update; execution pending)**.
+- [x] Document why Run outcomes must use `current_outcome` **(выполнено — API migration guide update)**.
+- [ ] Run focused CircleCI adapter tests and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
+- [ ] Inspect a real authorized CircleCI Run containing rerun history and confirm the returned current outcome against the live API.
+
+**Verification boundary:** the authoritative field rule is confirmed in CircleCI's current API v3 reference and the source/test fixture are updated. No test command, CircleCI API request, pipeline execution, deployment or runtime credential access was performed in this stage.
