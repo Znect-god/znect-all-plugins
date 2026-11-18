@@ -190,15 +190,17 @@ function cachedPromise<T>(cache: Map<string, Promise<T>>, key: string, load: () 
 function mapArtifact(artifact: CircleCiArtifact, jobId: string): CiArtifact | undefined {
   const path = text(artifact.attributes?.path);
   if (!path) return undefined;
+  const execution = artifact.attributes?.execution;
+  if (execution !== undefined && (!Number.isInteger(execution) || (execution as number) < 0)) {
+    throw new Error("CircleCI API v3 returned an invalid artifact execution index.");
+  }
   return {
     id: text(artifact.id) ?? path,
     jobId,
     path,
     ...(typeof artifact.attributes?.size === "number" && Number.isFinite(artifact.attributes.size)
       ? { size: artifact.attributes.size } : {}),
-    ...(typeof artifact.attributes?.execution === "number" &&
-      Number.isInteger(artifact.attributes.execution) && artifact.attributes.execution >= 0
-      ? { execution: artifact.attributes.execution } : {})
+    ...(typeof execution === "number" ? { execution } : {})
   };
 }
 
