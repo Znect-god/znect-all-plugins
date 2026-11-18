@@ -40,7 +40,7 @@ The machine-readable CircleCI API v3 response schema for `GET /api/v3/runs/:id` 
 - `commit.body`
 - `commit.url`
 
-The adapter now maps branch, revision and commit message only from those documented nested fields. It does not consume top-level `attributes.branch`, `attributes.vcs_revision` or `attributes.subject` aliases. The adapter fixture models the documented nested shape and includes a regression-test source rejecting those undocumented aliases.
+The adapter now maps branch, revision and commit message only from those documented nested fields. It does not consume top-level `attributes.branch`, `attributes.vcs_revision` or `attributes.subject` aliases. The Run schema exposes `attributes.created_at` but does not define run-level start/end timestamps or a run `web_url`; the adapter therefore reports `createdAt` rather than mislabelling creation as execution start, and does not fabricate a run URL. Event correlation uses the actual execution interval when a provider supplies one, otherwise it compares against the CircleCI run's creation timestamp as a point in time. The adapter fixture models the documented nested shape and includes regression-test source rejecting undocumented aliases.
 
 **Verification boundary:** the field path is confirmed against CircleCI's published machine-readable OpenAPI schema. The actual live API response for the configured Znect Build project remains unobserved; do not mark runtime mapping as verified until an authorized read-only response is inspected.
 
