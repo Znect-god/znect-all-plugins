@@ -571,3 +571,11 @@ For every meaningful feature or fix:
 - [x] Keep `.circleci/config.yml` as the only CI Bridge validation workflow definition; it contains Worker validation and Android test/APK jobs and no deployment command **(выполнено — source inspection)**.
 - [ ] Confirm CircleCI project integration recognizes this repository and branch, then retrieve actual CircleCI job/test/artifact results. No CircleCI run result is currently available.
 - Note: externally configured Cloudflare Workers Builds may still react to repository commits independently; such activity is not CI Bridge validation and must not be treated as CircleCI evidence. Do not change Cloudflare account settings from this workflow.
+
+
+## 27. Android action recovery and CircleCI status API test correction — 2026-11-18
+
+- [x] Restore the Android connection-check button after a failed report fetch; previously it could remain disabled until Activity recreation **(выполнено — source fix)**.
+- [x] Remove duplicate button-state restoration in the connection-check error handler **(выполнено — source cleanup)**.
+- [x] Fix the Worker CircleCI status API test to provide its required `project_id=znect-forge` query parameter. The previous test invoked the endpoint without required project scope and expected a success response, inconsistent with the handler's 400 validation **(выполнено — test source fix)**.
+- [ ] Execute Worker and Android test suites in CircleCI. Source corrections are not evidence of passing tests.
