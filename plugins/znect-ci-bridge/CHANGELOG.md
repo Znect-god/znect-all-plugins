@@ -433,3 +433,12 @@
 - Enforces a 500,000-byte aggregate retrieval budget per job; later downloads are limited to the remaining byte budget.
 - Marks reports incomplete and surfaces the artifact-limit indicator when count or byte limits prevent full collection. Individual artifact failures are retained alongside successfully retrieved reports.
 - Static source review only. Focused regression tests and TypeScript checks remain pending; no CircleCI API calls or pipeline executions were performed.
+
+
+## 2026-11-18 — Extracted bounded diagnostic artifact collector
+
+- Moved JUnit/test-results collection into a standalone typed module shared by MCP and Browser JSON API diagnostics.
+- Preserved the four-artifact and 500,000-byte per-job limits, including remaining-budget propagation for artifacts without known sizes.
+- Added a fail-closed guard for adapter responses that exceed the remaining byte budget.
+- Added focused regression-test source for parallel execution identity, duplicate paths, count/byte caps, unknown sizes, oversized artifacts, partial failures, truncation and filtering.
+- Tests and typecheck were not executed. No CircleCI API calls, pipeline execution, deployment or runtime configuration changes were performed.
