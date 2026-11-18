@@ -120,15 +120,16 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Core CircleCI diagnostics are also available independently through the authenticated Browser JSON API **(выполнено)**.
 - [x] Free ChatGPT access does not depend on MCP, a custom MCP server, or a paid MCP distribution channel **(выполнено — architecture decision)**.
 - [ ] Remove MCP from the supported product/runtime path and prune its dependencies after confirming no non-MCP route or test relies on MCP-specific modules.
-- [ ] Keep all user-facing ChatGPT access on the private GitHub report handoff and authenticated Browser API.
+- [x] Keep the user-facing ChatGPT access on the authenticated Browser JSON API; the direct `/api/v1/report` endpoint is the primary aggregate report. **(выполнено — source implementation)**
 
 ### 3.8 Free ChatGPT report handoff (primary assistant channel)
 
 - [x] Authenticated Browser JSON API provides direct read-only access to registered CircleCI projects, runs, diagnostics and events. **(выполнено)**
 - [x] Separate `WEB_ACCESS_TOKEN`, Bearer authentication, rate limiting, bounded responses and redaction are implemented for Browser API access. **(выполнено — source implementation; current-head validation pending)**
 - [x] MCP is optional legacy functionality and is not required for the ChatGPT channel. **(выполнено)**
-- [ ] Implement a bounded assistant report endpoint (or equivalent direct private handoff) that aggregates only allowlisted CircleCI status, recent runs, diagnostics and event data.
-- [ ] Ensure report handoff is private, authenticated, project/connection-scoped, rate-limited, bounded, redacted and read-only.
+- [x] Implement `GET /api/v1/report` as a bounded direct CircleCI assistant report: registered project/connection, recent runs, failed-run diagnostic links, webhook event page, correlation candidates, freshness timestamp and completeness indicators. **(выполнено — source implementation; regression execution pending)**
+- [x] Protect the report with the existing Browser API Bearer authentication, rate limiter, GET-only guard, project/connection scope, secret redaction and response-size limit. **(выполнено — static source inspection)**
+- [ ] Add focused API regression tests for report authorization, bounds, event-store failures, redaction and correlation output.
 - [ ] Verify ChatGPT can consume the report without MCP, GitHub Actions, paid intermediaries or manual secret sharing.
 - [ ] Verify freshness, pagination/truncation indicators and failure behavior; stale reports must not be presented as current.
 - [ ] Confirm operation stays within CircleCI and Cloudflare free/included quotas; quotas are finite.
@@ -162,9 +163,9 @@ The Bridge must remain read-only with respect to CI execution and project source
 - **Current state:** earlier webhook registration ping was accepted, but this is not proof of a real workflow delivery. Real end-to-end delivery remains pending.
 
 ### Gate D — private assistant report
-- [ ] Resolve report workflow runner/queue issue.
-- [ ] Complete private artifact upload, retention, secret-leakage and retrieval checks.
-- **Current state:** workflow implementation exists; operational round-trip is not verified.
+- [ ] Verify direct `/api/v1/report` retrieval by ChatGPT without MCP or a GitHub Actions artifact intermediary.
+- [ ] Verify report freshness, pagination, truncation indicators and secret redaction against a live CircleCI project.
+- **Current state:** direct report endpoint source implementation exists; tests and live retrieval are not yet verified.
 
 ### Gate E — release readiness
 - [ ] Independent security review.
