@@ -1,0 +1,30 @@
+version: 2.1
+
+jobs:
+  ci-bridge-validation:
+    docker:
+      - image: cimg/node:24.11.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install CI Bridge dependencies
+          command: cd plugins/znect-ci-bridge && npm ci
+          no_output_timeout: 10m
+      - run:
+          name: Typecheck and unit tests
+          command: cd plugins/znect-ci-bridge && npm run check
+          no_output_timeout: 10m
+      - run:
+          name: Validate smoke-test script syntax
+          command: cd plugins/znect-ci-bridge && node --check scripts/preview-smoke-test.mjs
+      - run:
+          name: Validate Cloudflare Worker bundle without deploying
+          command: cd plugins/znect-ci-bridge && npx --no-install wrangler deploy --dry-run
+          no_output_timeout: 10m
+
+workflows:
+  ci-bridge-validation:
+    jobs:
+      - ci-bridge-validation
