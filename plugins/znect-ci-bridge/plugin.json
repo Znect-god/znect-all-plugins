@@ -146,6 +146,15 @@
       "Znect Build"
     ],
     "assistant_access": "Read-only status, logs and artifacts only; no pipeline/job mutation or manual triggering",
-    "current_state": "CircleCI configuration is committed; execution result remains unverified."
+    "current_state": "CircleCI configuration is committed; execution result remains unverified.",
+    "checks": [
+      "npm ci",
+      "npm audit --audit-level=high",
+      "npm run check",
+      "smoke-test script syntax validation",
+      "Wrangler deploy --dry-run",
+      "Android JVM unit tests",
+      "Android debug APK assembly"
+    ]
   }
 }
