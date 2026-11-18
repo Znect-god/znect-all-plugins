@@ -4,7 +4,7 @@
  * This is the adapter boundary for CircleCI and central Znect Build via GitHub Actions.
  * It deliberately contains no provider credentials or write methods.
  */
-export type CiProviderId = "circleci" | "znect-build";
+export type CiProviderId = "circleci";
 
 export interface CiProjectScope {
   /** Stable Bridge registry ID, never a provider-native slug. */
@@ -111,6 +111,4 @@ export interface ReadOnlyCiProviderAdapter {
   getArtifact(scope: CiProjectScope, jobId: string, path: string, maxBytes: number): Promise<CiArtifactContent>;
   /** Run-level artifact metadata, when the provider does not associate artifacts with jobs. */
   listRunArtifacts?(scope: CiProjectScope, runId: string): Promise<CiArtifact[]>;
-  /** Bounded read of the validated central CI Bridge manifest, when supported. */
-  getValidationManifest?(scope: CiProjectScope, runId: string): Promise<Record<string, unknown>>;
 }
