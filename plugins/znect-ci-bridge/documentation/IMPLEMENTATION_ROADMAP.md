@@ -1196,9 +1196,9 @@ For every meaningful feature or fix:
 
 ### Stage 81 — Repair Preview smoke-test contract before live readiness — 2026-11-18
 
-- [x] Correct the Preview smoke script to send the required project_id and connection_id to authenticated Browser API status, run, report and diagnostics reads; include project_id on event-inbox reads.
+- [x] Correct the Preview smoke script to send the required project_id and connection_id to authenticated Browser API status, run, report and diagnostics reads; include project_id on initial, paginated and post-webhook event-inbox reads.
 - [x] Align status assertions with the actual Browser API response contract (project.id, connection.id, provider, and read-only permission), rather than an undocumented project slug field.
-- [x] Pass required project/connection arguments to MCP check_connection and project scope to list_recent_events.
+- [x] Pass required project/connection arguments to MCP check_connection and project scope to list_recent_events, including the post-webhook verification read.
 - [x] Extend the smoke preflight to retrieve /api/v1/report, validate the explicit assistant-handoff/no-token metadata, and round-trip up to three diagnostic UUIDs using locally reconstructed same-origin paths.
 - [x] Add regression-test source for Preview smoke request scoping, report handoff validation, read-only MCP calls and the approved Preview host boundary.
 - [ ] Execute the smoke-script contract tests and complete Bridge test/typecheck suite through Stage 80's authorized CircleCI exact-SHA workflow.
