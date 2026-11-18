@@ -1,3 +1,11 @@
+## 2026-11-18 — repair Preview smoke-test API contract
+
+- Added the required registered project and CircleCI connection scope to Browser API status, run, report, diagnostics and event requests.
+- Aligned status and MCP connection assertions with the actual response schema and required MCP tool arguments.
+- Extended the read-only smoke preflight to validate the aggregate assistant report handoff metadata and fetch up to three diagnostic reports using reconstructed same-origin paths.
+- Added regression-test source for request scoping, handoff metadata, read-only MCP calls and the approved Preview host boundary.
+- Tests, typecheck and live Preview checks remain unexecuted; no CircleCI pipeline, Preview deployment, secret access or Production change was performed.
+
 ## 2026-11-18 — require a valid JUnit report root
 
 - Restricted accepted JUnit XML documents to the standard `testsuite` and `testsuites` root elements; arbitrary well-formed XML can no longer be counted as a test report.
