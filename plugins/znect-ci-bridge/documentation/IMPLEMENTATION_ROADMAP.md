@@ -274,3 +274,12 @@ For every meaningful feature or fix:
 - The manifest records the exact project/source revision, recipe outcome, validation command list and central run identity; it explicitly states that deployment and CircleCI pipeline mutation did not occur **(выполнено — source implementation)**.
 - The central registry target `znect-ci-bridge/worker-validation` remains `execution_enabled: false`. No build/test/workflow was run; manifest artifact creation remains live-unverified.
 - The CI Bridge must consume central Build validation evidence through read-only central run/artifact metadata, without initiating a build or using MCP as its assistant channel.
+
+
+## 14. Central Znect Build result visibility — 2026-11-18
+
+- Repaired the Znect Build read-only provider adapter and aligned ownership verification with the central request-validation artifact fingerprint (project ID, registered source-repository SHA-256, exact source SHA and central run ID) **(выполнено — source implementation)**.
+- Exposed authenticated Browser JSON API routes for central Build status, run listing and run details; run details now include verified source SHA, request-fingerprint artifact metadata, validation-manifest artifact metadata, and central job/step outcomes **(выполнено — source implementation)**.
+- Added runtime registry/least-privilege credential instructions and regression coverage for validation manifest artifact metadata **(выполнено — source implementation)**.
+- The Browser API still returns artifact metadata only; it does not download/unpack the private manifest ZIP or extract GitHub job log archives. These remain future work.
+- No runtime registry/secrets were changed, no live API probe was performed, and no central workflow/build was triggered. The central target remains disabled.
