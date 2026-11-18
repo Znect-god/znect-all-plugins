@@ -158,6 +158,26 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
     expect(artifacts[0].jobId).toBeUndefined();
   });
 
+  it("exposes the private validation manifest as run-scoped metadata after ownership verification", async () => {
+    const manifest = {
+      id: 302,
+      name: `znect-ci-bridge-validation-${RUN_ID}`,
+      size_in_bytes: 2048,
+      expired: false
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response(runRecord()))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(), manifest] }))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(), manifest] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const artifacts = await adapter().listRunArtifacts!(scope, RUN_ID);
+
+    expect(artifacts.map((artifact) => artifact.path)).toContain(`znect-ci-bridge-validation-${RUN_ID}`);
+    expect(artifacts.find((artifact) => artifact.path === `znect-ci-bridge-validation-${RUN_ID}`))
+      .toMatchObject({ id: "302", runId: RUN_ID, size: 2048, contentType: "application/zip" });
+  });
+
   it("rejects a job when its parent run cannot be verified for the selected project", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({
