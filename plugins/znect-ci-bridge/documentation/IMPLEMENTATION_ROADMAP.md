@@ -797,6 +797,8 @@ For every meaningful feature or fix:
 - [x] Add regression tests proving the Bridge accepts the complete recipe provenance and rejects a manifest that omits the dependency audit **(выполнено — test source added; execution pending)**.
 - [x] Keep the central target disabled and do not dispatch a workflow, modify secrets, or alter repository settings **(выполнено — registry remains execution_enabled=false)**.
 - [x] Update the central registry target notes to list the dependency audit alongside typecheck, Vitest, syntax validation and Wrangler dry-run **(выполнено — registry source updated)**.
+- [x] Add central Build contract tests for exact recipe/manifest step order, disabled target policy and no-deploy dry-run semantics; include shell syntax validation in the central Build repository's own validation workflow **(выполнено — test/workflow source; execution pending)**.
+- [x] Align the central Build request-validation test fixture with the active CI Bridge feature branch **(выполнено — test fixture updated)**.
 - [ ] Review the central recipe changes and their validation on the intended Znect Build branch; no test execution is claimed.
 - [ ] Continue with the private report/ChatGPT access path and exact-SHA validation readiness.
 
