@@ -73,7 +73,7 @@ Event-cursor integer bounds use exact decimal comparisons, avoiding floating-poi
 
 ## CircleCI and ChatGPT handoff connection check
 
-The app includes **Check CircleCI ↔ ChatGPT handoff**. It uses the locally stored Bearer credential to:
+The app includes **Check CircleCI + ChatGPT report path**. It uses the locally stored Bearer credential to:
 
 1. Call the authenticated `GET /api/v1/status` endpoint over HTTPS.
 2. Verify the selected project and optional connection ID, CircleCI provider, read-only permission and a live recent-run probe.
