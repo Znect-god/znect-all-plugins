@@ -283,3 +283,14 @@ For every meaningful feature or fix:
 - Added runtime registry/least-privilege credential instructions and regression coverage for validation manifest artifact metadata **(выполнено — source implementation)**.
 - The Browser API still returns artifact metadata only; it does not download/unpack the private manifest ZIP or extract GitHub job log archives. These remain future work.
 - No runtime registry/secrets were changed, no live API probe was performed, and no central workflow/build was triggered. The central target remains disabled.
+
+
+## 15. Bounded central validation manifest retrieval — 2026-11-18
+
+- Added a read-only Browser JSON API endpoint for `/api/v1/build/runs/{run_id}/validation-manifest`, requiring the existing Browser API bearer authentication, project scope and central run ownership verification **(выполнено — source implementation)**.
+- Added bounded GitHub Actions artifact download: exact run-scoped artifact name, non-expired metadata, 2 MB compressed cap, one HTTPS Azure Blob redirect, no GitHub token forwarded to signed storage, and 15-second request timeout **(выполнено — source implementation)**.
+- Added ZIP central-directory validation, exact manifest path selection, rejection of encrypted/duplicate/unsupported entries, 64 KiB decompressed cap and CRC integrity verification **(выполнено — source implementation)**.
+- Added manifest schema/scope checks for project ID, registered repository, exact source SHA, central run identity, recipe outcome and explicit no-deployment/no-CircleCI-mutation assertions; response is allowlisted to known fields **(выполнено — source implementation)**.
+- Added ZIP extraction regression tests. Tests and typecheck have not been executed; this is not a compile-pass or runtime-verification claim.
+- No GitHub Actions run, central build, CircleCI request, deploy, Preview/Production change, secret read or runtime configuration change was performed. The central target remains disabled.
+- Next: source-level contract review, then request explicit authorization before running the central validation recipe or any live read-only provider probe.
