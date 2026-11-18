@@ -493,7 +493,7 @@ For every meaningful feature or fix:
 
 - Aligned the Android report validator with the Worker API's `Number.isSafeInteger(after)` contract: event cursors must be non-negative JSON integers no larger than JavaScript's maximum safe integer **(выполнено — source fix)**.
 - Added a regression test for a cursor above the safe-integer range **(выполнено — test source added; execution pending)**.
-- Android module test sources now total 29 cases: 8 origin + 18 report-schema/privacy + 3 Bearer-token tests. None has been executed; build and device checks remain pending.
+- Android module test sources now total 38 cases: 8 origin + 18 report-schema/privacy + 3 Bearer-token + 9 CircleCI connection-status tests. None has been executed; build and device checks remain pending.
 
 ## 20. Android report handoff integrity and lifecycle — 2026-11-18
 
