@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (diagnostic completeness parity)  
+**Updated:** 2026-11-18 (unified JSONL/JUnit test summaries)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)  
@@ -1149,3 +1149,23 @@ For every meaningful feature or fix:
 - [ ] Verify the same diagnostic status fields and summary flags against a real authorized CircleCI run through both MCP and Browser API.
 
 **Verification boundary:** shared status/summary helpers, both API call sites, the MCP parallel-execution selector correction and regression-test source are committed to the feature branch. No tests or typecheck were executed; no CircleCI API requests, pipeline execution, deployment or credential/runtime configuration changes were performed.
+
+
+### Stage 77 — Normalize CircleCI JSONL and parallel JUnit results into one test summary — 2026-11-18
+- [x] Add a dedicated bounded normalizer for CircleCI job JSONL and collected JUnit XML reports; emit one shared per-job summary with total, passed, failed, skipped and unknown counts.
+- [x] Parse the documented JSONL identity/status fields and a strict JUnit testcase subset; reject DTD/entity declarations, malformed XML, oversized inputs and excessive testcase/token/depth counts.
+- [x] Preserve parallel-execution indexes from JUnit artifacts and optional JSONL execution metadata.
+- [x] Deduplicate only unambiguous one-to-one JSONL/JUnit matches. Keep repeated test identities when they may represent retries or parallel shards; flag ambiguous groups rather than silently collapsing them.
+- [x] Prefer CircleCI JSONL when a one-to-one cross-source status conflict occurs, expose the conflict count and mark the summary incomplete.
+- [x] Attach the same `test_summary` contract to MCP diagnostics and the private Browser JSON API diagnostics; propagate summary incompleteness to the overall diagnostic report.
+- [x] Add focused regression-test source for status normalization, JUnit XML, safe entity handling, malformed/truncated inputs, one-to-one deduplication, status conflicts, retries and parallel execution ambiguity.
+- [ ] Execute the focused Vitest file and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
+- [ ] Review test/typecheck results and fix any implementation or type errors.
+- [ ] Verify the normalized summary against an authorized real CircleCI job with both JSONL results and per-execution JUnit artifacts.
+
+**Verification boundary:** normalizer source, both diagnostics call sites and focused regression-test source are committed on the isolated feature branch. Tests and TypeScript checks have not been executed. No CircleCI API requests, pipeline trigger, deployment, credential change or runtime configuration change was performed.
+
+## Remaining delivery in three controlled stages
+1. **Validation:** execute focused and full source checks through the explicitly authorized opt-in CircleCI workflow; resolve failures and record exact-SHA provenance.
+2. **Free ChatGPT handoff:** verify the private authenticated Browser JSON API report round-trip and report format without making MCP mandatory or exposing public unauthenticated data.
+3. **Readiness:** perform authorized read-only live CircleCI checks, review security/limits, and prepare Reporting / Diagnostics v1; no merge or Production deployment without separate approval.
