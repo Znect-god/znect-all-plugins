@@ -8,7 +8,7 @@
 **Previous engineering base:** `test/ci-bridge-webhook-ingress-contract`  
 **Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
 
-This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness. Historical sections may preserve earlier decisions and intermediate architecture; the current boundaries above and stages 45 onward supersede conflicting CircleCI-executor, Android-exporter and old GitHub Actions handoff instructions.
+This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness. Historical sections preserve earlier decisions and intermediate architecture. Stage 51 records the corrected requirement: CircleCI is the CI execution platform; Znect Build is the development/recipe home, not a GitHub Actions executor. Any earlier statement that CI Bridge validation must execute through GitHub Actions or that CircleCI is merely an observed provider is superseded.
 
 ## 1. Project boundaries
 
@@ -848,3 +848,18 @@ For every meaningful feature or fix:
 - [ ] Determine whether a supported direct authenticated REST access path exists for ChatGPT Free; if not, document the limitation rather than inventing a connector or requiring an upgrade.
 
 **Evidence:** OpenAI Help Center, “Connecting custom MCP servers in ChatGPT”: https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt. This stage records documented plan availability; it does not establish direct REST authentication from ChatGPT Free.
+
+
+## 51. Reconcile the actual CI executor with the CircleCI requirement — 2026-11-18
+
+- [x] Re-read the current heads of `Znect-god/znect-all-plugins` (`1e5d4500a5a80d43c17d8cd4c3f1cd9cc2ce28e3`) and `Znect-god/znect-build` (`72b633f120580739f965f672efd2fcc6881f3dd0`) **(выполнено — branch-head verification)**.
+- [x] Confirm that the existing Bridge CircleCI API v3 read-only adapter and provider contract are already implemented; preserve them rather than rebuilding the plugin **(выполнено — source inventory)**.
+- [x] Identify that the current Znect Build central workflow and its read-only Bridge adapter still depend on GitHub Actions endpoints and metadata **(выполнено — source inventory; architectural mismatch confirmed)**.
+- [x] Confirm that the inspected Znect Build feature branch has no `.circleci/config.yml`, while its README, architecture, operations and roadmap still describe GitHub Actions as the execution engine **(выполнено — repository/documentation review)**.
+- [x] Confirm the `znect-ci-bridge/worker-validation` registry target remains `execution_enabled: false`; no workflow or CircleCI pipeline was triggered **(выполнено — registry review; no execution performed)**.
+- [ ] Replace the Znect Build GitHub Actions execution path with a CircleCI-based validation flow while retaining Znect Build as the central development/recipe source.
+- [ ] Reconcile the Bridge central-build adapter and tests with CircleCI run/workflow/job/artifact identifiers and provenance; do not treat GitHub commit statuses or Actions run IDs as CircleCI evidence.
+- [ ] Update Znect Build architecture, operations, security, README and both project roadmaps to match the implemented CircleCI flow; keep any legacy GitHub Actions files inert or remove them after the CircleCI replacement is complete.
+- [ ] Preserve exact source-SHA verification, artifact ownership, size bounds, read-only Bridge access and disabled execution/deployment safeguards.
+
+**Verification boundary:** this stage is a completed source/architecture audit and roadmap correction only. The CircleCI migration has not yet been implemented or run. No CircleCI pipeline was triggered, no GitHub Actions workflow was used, no tests were executed, and no Preview/Production deployment or secret change occurred.
