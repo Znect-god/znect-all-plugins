@@ -1212,3 +1212,18 @@ For every meaningful feature or fix:
 - [ ] Confirm the private ChatGPT Free access/handoff path without MCP or manual secret sharing; do not claim automatic access unless the supported authentication path is proven.
 
 **Verification boundary:** source and regression-test updates are committed. Static contract inspection only; no Vitest, typecheck, CircleCI API request, CircleCI pipeline, Preview request/deployment, secret access or Production change was performed. Stage 81 remains incomplete pending the live checks above. The required CircleCI and Preview/Cloudflare control integrations are not available in the current execution session; the user has authorized the stages, but no live request can be issued from the available tools.
+
+
+### Stage 82 — Canonical branch consolidation and source-audit corrections — 2026-11-18
+
+- [x] Verify that the ten obsolete CI Bridge branches have been removed; retain `ci-bridge` as the only permanent CI Bridge development branch.
+- [x] Verify that `main` remains at `4a814052eb9a057d0d9f41840783f37ceb2f23d4` and is not used for CI Bridge development.
+- [x] Reconcile the root plugin catalog, plugin README, `plugin.json`, Usage Guide and this roadmap with the canonical `ci-bridge` branch and the `in-development` maturity status.
+- [x] Correct a duplicate `content-type` property in `test/worker.test.ts` that could fail a TypeScript diagnostic.
+- [x] Add a strict allowlist for the event-store page envelope (`events`, `next_cursor`) in `readEventPage`; add a regression test proving that unexpected top-level personal-data fields are rejected.
+- [x] Review the complete tracked source/test inventory, package manifest/lockfile alignment, Worker route boundaries, CircleCI provider ownership checks, webhook storage validation, dashboard DOM rendering, and inert repository-local GitHub Actions workflows.
+- [x] Review the separate Znect Build CircleCI exact-SHA workflow and central Worker validation recipe. The opt-in parameter remains disabled by default; the recipe performs install, audit, typecheck/tests, smoke-script syntax validation and Wrangler dry-run only.
+- [ ] Run `npm ci`, dependency audit, TypeScript, full Vitest suite, smoke-script syntax check and Wrangler dry-run on the exact current source SHA through the authorized CircleCI workflow.
+- [ ] Resolve any failures found by actual execution, then update this roadmap with exact run/job IDs and evidence.
+
+**Verification boundary:** source and documentation corrections are committed. The audit is source-level only. No test suite, dependency audit, typecheck, CircleCI pipeline, Preview deployment, live CircleCI API request, secret access or Production change was performed. Stage 82 implementation items are complete; validation remains open.
