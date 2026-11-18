@@ -254,6 +254,32 @@ describe("Browser API aggregate CircleCI assistant report", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("does not accept the MCP credential as a Browser API credential", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report?project_id=znect-forge",
+      { headers: { authorization: "Bearer " + MCP_TOKEN } }
+    ), env, ctx);
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain("Bearer");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-GET Browser API methods even with a valid web token", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report?project_id=znect-forge",
+      { method: "POST", headers: { authorization: "Bearer web-test-token" }, body: "{}" }
+    ), env, ctx);
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("keeps the report behind Browser API bearer authentication", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
