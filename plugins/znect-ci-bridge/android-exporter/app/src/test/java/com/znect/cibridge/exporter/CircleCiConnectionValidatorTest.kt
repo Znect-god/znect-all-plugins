@@ -18,6 +18,7 @@ class CircleCiConnectionValidatorTest {
             .put("connected", false)
             .put("provider_availability", "unavailable")
             .put("error", "Provider read probe failed.")
+            .remove("permissions")
             .remove("read_probe")
         val result = CircleCiConnectionValidator.validate(response, "project-1")
         assertFalse(result.connected)
