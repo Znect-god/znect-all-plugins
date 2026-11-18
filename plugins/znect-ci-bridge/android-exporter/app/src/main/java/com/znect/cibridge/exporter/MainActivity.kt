@@ -83,7 +83,7 @@ class MainActivity : Activity() {
 
         originInput = field("HTTPS API origin, e.g. https://ci.example.com")
         projectInput = field("Registered project ID")
-        connectionInput = field("Connection ID (optional)")
+        connectionInput = field("Connection ID (required if the project has multiple CircleCI connections)")
         tokenInput = field("Bearer token — entered only on this device").apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
