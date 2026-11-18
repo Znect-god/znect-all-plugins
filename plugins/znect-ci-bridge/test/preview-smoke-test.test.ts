@@ -12,6 +12,7 @@ describe("read-only Preview smoke-test contract", () => {
     expect(smoke).toContain('"/api/v1/diagnostics/" + latestRunId + "?" + SCOPE_QUERY');
     expect(smoke).toContain('"/api/v1/report?run_limit=10&event_limit=20&after=0&" + SCOPE_QUERY');
     expect(smoke).toContain('"/api/v1/events?limit=50&project_id=" + encodeURIComponent(PROJECT_ID)');
+    expect(smoke).toContain('"/api/v1/events?after=" + afterCursor + "&limit=10&project_id=" + encodeURIComponent(PROJECT_ID)');
   });
 
   it("validates the assistant handoff and follows only locally reconstructed diagnostic IDs", () => {
@@ -28,6 +29,7 @@ describe("read-only Preview smoke-test contract", () => {
   it("passes required project and connection IDs to read-only MCP calls", () => {
     expect(smoke).toContain('arguments: { project_id: PROJECT_ID, connection_id: CONNECTION_ID }');
     expect(smoke).toContain('arguments: { project_id: PROJECT_ID, after: 0, limit: 50 }');
+    expect(smoke).toContain('arguments: { project_id: PROJECT_ID, after: afterCursor, limit: 10 }');
     expect(smoke).toContain('tool.annotations?.readOnlyHint === true');
     expect(smoke).toContain('/^(start|rerun|retry|cancel|deploy|trigger)_/i');
   });
