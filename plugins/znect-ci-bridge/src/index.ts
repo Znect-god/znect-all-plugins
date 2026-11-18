@@ -1002,7 +1002,7 @@ function createServer(env: Env) {
       const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
       const run = await adapter.getRun(scope, run_id);
       const workflows = await adapter.listWorkflows(scope, run_id);
-      const workflowReports = [];
+      const workflowReports: Array<Record<string, unknown>> = [];
       for (const workflow of workflows.slice(0, 5)) {
         const jobs = await adapter.listJobs(scope, run_id, workflow.id);
         workflowReports.push({ workflow, jobs: jobs.slice(0, 40), jobs_truncated: jobs.length > 40 });
