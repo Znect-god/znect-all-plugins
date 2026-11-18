@@ -459,7 +459,7 @@
 
 - Added a bounded normalizer that combines CircleCI job JSONL records with per-execution JUnit XML artifacts into one per-job count summary.
 - Counts passed, failed, skipped and unknown test outcomes; labels totals as observed records, exposes which sources contributed, and retains malformed/truncated/incomplete indicators.
-- Deduplicates only unambiguous one-to-one cross-source matches. Repeated identities that may represent retries or parallel shards remain separate and ambiguous groups are explicitly flagged.
+- Deduplicates only unambiguous one-to-one cross-source matches using shared classname/name identity, with file and execution conflict guards. Repeated identities that may represent retries or parallel shards remain separate and ambiguous groups are explicitly flagged.
 - Gives CircleCI JSONL precedence on one-to-one status conflicts while surfacing the conflict and marking the summary incomplete.
-- Exposes the same `test_summary` in both diagnostics paths, including the private Browser JSON API used for report handoff.
+- Exposes the same `test_summary` in both diagnostics paths, including the private Browser JSON API used for report handoff; JSONL retrieval failures and JUnit collection limits propagate to summary completeness.
 - Added focused regression-test source. Tests and typecheck were not executed; no CircleCI API request, pipeline trigger, deployment or runtime configuration change was performed.
