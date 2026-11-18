@@ -1282,7 +1282,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           failed_jobs: reports
         });
       }
-            const payload = {
+      const payload = {
         project: { id: project.id, name: project.name, provider: adapter.provider },
         run,
         provenance,
