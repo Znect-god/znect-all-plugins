@@ -245,17 +245,15 @@ describe("Read-only browser API run details", () => {
             references: { project: { id: "123e4567-e89b-42d3-a456-426614174000" }, workflow: { id: workflowId } },
             attributes: {
               name: "unit-tests",
-              parallel_executions: [{
-                steps: [{
-                  name: "Run tests",
-                  num: 0,
-                  phase: "completed",
-                  type: "run",
-                  is_insignificant: false,
-                  outcome: "failed",
-                  exit_code: 1
-                }]
-              }]
+              parallel_executions: [[{
+                name: "Run tests",
+                num: 0,
+                phase: "completed",
+                type: "run",
+                is_insignificant: false,
+                outcome: "failed",
+                exit_code: 1
+              }]]
             }
           }
         }), { status: 200 });
