@@ -5,7 +5,7 @@ const manifest = {
   schema_version: 1,
   project_id: "znect-ci-bridge",
   source_repository: "Znect-god/znect-all-plugins",
-  source_ref: "feature/ci-bridge-android-exporter",
+  source_ref: "ci-bridge",
   source_sha: "a".repeat(40),
   build_target: "worker-validation",
   build_profile: "debug",
@@ -48,6 +48,11 @@ describe("CI Bridge provenance manifest schema", () => {
   it("accepts preserved failure provenance when the recipe exits nonzero", () => {
     const failed = { ...manifest, recipe_exit_code: 2, recipe_outcome: "failed" };
     expect(parseCiBridgeManifest(JSON.stringify(failed)).recipe_outcome).toBe("failed");
+  });
+
+  it("rejects a non-canonical or obsolete source branch", () => {
+    expect(() => parseCiBridgeManifest(JSON.stringify({ ...manifest, source_ref: "feature/ci-bridge-android-exporter" })))
+      .toThrow("manifest_values_invalid");
   });
 
   it("rejects obsolete API v1 build number and URL metadata", () => {
