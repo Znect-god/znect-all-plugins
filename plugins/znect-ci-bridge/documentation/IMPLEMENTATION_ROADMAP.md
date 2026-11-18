@@ -938,3 +938,14 @@ For every meaningful feature or fix:
 - [ ] Verify the registered Znect Build slug and private runtime connection using authenticated read-only access; no account/runtime connector is currently available.
 
 **Verification boundary:** parser and regression-test source were committed. No tests or CircleCI workflow were executed, no secrets/runtime bindings were changed, and no deployment occurred.
+## 57. Correct diagnostics semantics and close the provenance-manifest gap — 2026-11-18
+
+- [x] Remove stale GitHub Actions wording from the CircleCI diagnostics report; explicitly distinguish provider execution outcomes from verified project-release outcomes **(выполнено — source correction committed)**.
+- [x] Confirm the central CircleCI job emits `ci-bridge-validation-manifest.json` with exact source repository/ref/SHA, recipe repository/SHA/path, recipe exit code/outcome, CircleCI pipeline/workflow/job identifiers, timestamp and explicit no-deploy/no-mutation flags **(выполнено — static inspection of Znect Build config)**.
+- [x] Confirm the Bridge currently reads bounded JUnit/test artifacts but does not fetch, parse or validate the CI Bridge provenance manifest; do not treat manifest metadata as trusted evidence **(выполнено — provider/report source audit)**.
+- [ ] Implement strict manifest schema validation and cross-check its pipeline/workflow/job identity against the selected CircleCI run before presenting provenance.
+- [ ] Cross-check manifest recipe SHA against the CircleCI run's source revision and source SHA against the declared exact-SHA checkout; reject malformed, mismatched, truncated or duplicate manifests.
+- [ ] Add bounded regression tests for valid, failed-recipe, malformed, truncated, mismatched-SHA, wrong-pipeline and duplicate-manifest cases.
+- [ ] Execute the test suite and typecheck through the opt-in CircleCI exact-SHA workflow after explicit authorization.
+
+**Verification boundary:** the report's stale provider label was corrected. The manifest is still not parsed or trusted by Bridge; its presence in CircleCI artifacts is not proof that the Bridge validated it. All findings are from static source inspection; no tests, pipeline, runtime configuration or deployment were executed.
