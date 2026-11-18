@@ -1165,10 +1165,9 @@ For every meaningful feature or fix:
 
 **Verification boundary:** normalizer source, both diagnostics call sites and focused regression-test source are committed on the isolated feature branch. Tests and TypeScript checks have not been executed. No CircleCI API requests, pipeline trigger, deployment, credential change or runtime configuration change was performed.
 
-## Remaining delivery in three controlled stages
+## Remaining delivery in two controlled stages
 1. **Validation:** execute focused and full source checks through the explicitly authorized opt-in CircleCI workflow; resolve failures and record exact-SHA provenance.
-2. **Free ChatGPT handoff:** verify the private authenticated Browser JSON API report round-trip and report format without making MCP mandatory or exposing public unauthenticated data.
-3. **Readiness:** perform authorized read-only live CircleCI checks, review security/limits, and prepare Reporting / Diagnostics v1; no merge or Production deployment without separate approval.
+2. **Readiness:** verify the private authenticated Browser JSON API report/export round-trip in an authorized Preview, perform read-only live CircleCI checks, review security/limits, and prepare Reporting / Diagnostics v1. No merge or Production deployment without separate approval.
 
 
 ### Stage 78 — Make the free assistant report handoff explicit and self-describing — 2026-11-18
@@ -1182,3 +1181,13 @@ For every meaningful feature or fix:
 - [ ] Establish a supported automatic ChatGPT Free authentication path only if the platform provides one without sharing secrets or weakening authentication.
 
 **Verification boundary:** report metadata, Browser diagnostics output, regression-test source and documentation are committed. This does not establish direct automatic ChatGPT-to-API connectivity; the current supported fallback remains a user-reviewed JSON attachment. No tests, CircleCI pipeline, Preview/Production deployment, credential or runtime configuration change was performed.
+
+
+### Stage 79 — Harden normalized report parsing before CircleCI validation — 2026-11-18
+- [x] Reject non-whitespace text outside the JUnit XML root element and reject multiple root elements; preserve support for a valid self-closing empty testsuite.
+- [x] Fail closed on malformed JSONL/JUnit parallel execution metadata instead of silently dropping an invalid execution index and risking cross-shard deduplication.
+- [x] Add regression-test source for trailing XML garbage, multiple XML roots and invalid execution indexes in both report formats.
+- [ ] Execute the normalizer Vitest file and TypeScript checks through the explicitly authorized opt-in CircleCI workflow.
+- [ ] Review parser behavior against representative real CircleCI JSONL and JUnit artifacts; adjust only with evidence from the API contract.
+
+**Verification boundary:** parser hardening and regression-test source are committed to the feature branch. The tests and TypeScript checks remain unexecuted; no CircleCI pipeline, API request, deployment or runtime configuration change was performed.
