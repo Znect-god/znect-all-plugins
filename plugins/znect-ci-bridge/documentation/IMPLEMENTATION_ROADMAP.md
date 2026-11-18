@@ -548,6 +548,7 @@ For every meaningful feature or fix:
 - [x] Validate service identity, CircleCI provider, expected project/connection, explicit read-only permission, provider availability and recent-run probe result **(выполнено — source implementation)**.
 - [x] Follow the status probe with the bounded `GET /api/v1/report` request and existing report/privacy validation to test the assistant-facing report endpoint **(выполнено — source implementation)**.
 - [x] Add nine JVM regression tests for the connection-status response validator **(выполнено — test source added; execution pending)**.
+- [x] Serialize report fetch and connection checks through the existing single-thread executor; disable conflicting actions while a request is active **(выполнено — source implementation)**.
 - [ ] Verify the button and network behavior on a physical Android device.
 - [ ] Verify a real CircleCI-backed response from CircleCI-run validation/Preview evidence.
 - [ ] Establish a supported direct ChatGPT authentication mechanism for the private API. The Android check cannot attest that ChatGPT itself has an active authenticated session; it proves only that the Bridge endpoint and CircleCI read path respond to the app's credential.
