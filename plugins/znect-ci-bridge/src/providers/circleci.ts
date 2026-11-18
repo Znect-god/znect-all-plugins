@@ -79,7 +79,7 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
   // Do not consume an undocumented top-level alias as trusted provenance.
   const commitSha = text(vcsRecord.revision);
   const commitMessage = text(commit.subject) ?? text(commit.body);
-  const createdAt = attrs.created_at;
+  const createdAt = iso(attrs.created_at);
   return {
     id: resource.id,
     projectId,
@@ -87,7 +87,7 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
     ...(branch ? { branch } : {}),
     ...(commitSha ? { commitSha } : {}),
     ...(commitMessage ? { commitMessage } : {}),
-    ...(iso(createdAt) ? { createdAt: iso(createdAt) } : {})
+    ...(createdAt ? { createdAt } : {})
   };
 }
 
@@ -163,6 +163,8 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
 function mapJob(resource: V3Resource, projectId: string, workflowId?: string, runId?: string): CiJob {
   const attrs = attributes(resource);
   const steps = mapJobSteps(attrs);
+  const startedAt = iso(attrs.started_at);
+  const completedAt = iso(attrs.ended_at);
   return {
     id: resource.id,
     projectId,
@@ -170,8 +172,8 @@ function mapJob(resource: V3Resource, projectId: string, workflowId?: string, ru
     ...(workflowId ? { workflowId } : {}),
     status: statusOf(resource),
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
-    ...(iso(attrs.started_at) ? { startedAt: iso(attrs.started_at) } : {}),
-    ...(iso(attrs.ended_at) ? { completedAt: iso(attrs.ended_at) } : {}),
+    ...(startedAt ? { startedAt } : {}),
+    ...(completedAt ? { completedAt } : {}),
     ...(steps.length ? { steps } : {})
   };
 }
