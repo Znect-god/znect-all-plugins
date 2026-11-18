@@ -1,6 +1,6 @@
 # Znect Build provider API contract for CI Bridge
 
-**Status: proposed contract — not an existing or deployed API.**  
+**Status: legacy proposal — not an existing or deployed API.**  
 **Owner:** Znect Build.  
 **Consumer:** the single shared Znect CI Bridge.  
 **Access model:** project-scoped, read-only for CI Bridge.
@@ -76,3 +76,15 @@ The Bridge verifies the signature over the exact raw request body before parsing
 - [ ] Bridge adapter passes ownership, signature, pagination, redaction and size-limit tests.
 
 Until these items are satisfied, the Bridge must report the Znect Build connection as configured-but-not-implemented and must not attempt guessed endpoints.
+
+
+## Architecture correction — 2026-11-18
+
+Znect Build's central executor is GitHub Actions. The Bridge should not implement the illustrative `/api/v1/bridge/*` routes above unless the Znect Build project explicitly decides to ship that separate API. The current integration direction is to use GitHub's documented read-only Actions REST endpoints against the fixed central repository `Znect-god/znect-build`:
+
+- workflow-run collection and run detail;
+- jobs belonging to a workflow run;
+- bounded job log download;
+- artifacts belonging to a workflow run.
+
+This is a GitHub Actions provider integration, not a custom Znect Build API. The provider adapter must preserve the distinction between run-level artifacts and job-level resources, must not invent per-step log streams or test reports where GitHub does not expose them, and must enforce repository ownership, read-only permissions, redirect validation, pagination and response-size limits. This correction supersedes the illustrative route proposal above.
