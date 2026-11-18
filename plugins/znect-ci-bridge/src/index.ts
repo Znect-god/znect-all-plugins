@@ -183,6 +183,9 @@ async function readEventPage(
     throw new Error("Event storage returned an invalid event page.");
   }
   const page = parsed as Record<string, unknown>;
+  if (Object.keys(page).some((key) => key !== "events" && key !== "next_cursor")) {
+    throw new Error("Event storage returned an invalid event page.");
+  }
   if (!Array.isArray(page.events) || page.events.length > limit ||
       !Number.isSafeInteger(page.next_cursor) || (page.next_cursor as number) < 0 ||
       (page.events.length === 0 && page.next_cursor !== after)) {
