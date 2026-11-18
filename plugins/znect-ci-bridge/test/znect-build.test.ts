@@ -56,6 +56,40 @@ const scope = { projectId: PROJECT_ID, connectionId: CONNECTION_ID };
 
 afterEach(() => vi.unstubAllGlobals());
 
+function storedZip(name: string, content: string): Uint8Array {
+  const encoder = new TextEncoder();
+  const nameBytes = encoder.encode(name);
+  const data = encoder.encode(content);
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+  }
+  crc = (crc ^ 0xffffffff) >>> 0;
+  const localLength = 30 + nameBytes.length + data.length;
+  const centralLength = 46 + nameBytes.length;
+  const output = new Uint8Array(localLength + centralLength + 22);
+  const view = new DataView(output.buffer);
+  const put16 = (offset: number, value: number) => view.setUint16(offset, value, true);
+  const put32 = (offset: number, value: number) => view.setUint32(offset, value, true);
+  put32(0, 0x04034b50); put16(4, 20); put16(6, 0); put16(8, 0);
+  put32(14, crc); put32(18, data.length); put32(22, data.length);
+  put16(26, nameBytes.length); put16(28, 0);
+  output.set(nameBytes, 30); output.set(data, 30 + nameBytes.length);
+  const central = localLength;
+  put32(central, 0x02014b50); put16(central + 4, 20); put16(central + 6, 20);
+  put16(central + 8, 0); put16(central + 10, 0);
+  put32(central + 16, crc); put32(central + 20, data.length); put32(central + 24, data.length);
+  put16(central + 28, nameBytes.length); put16(central + 30, 0); put16(central + 32, 0);
+  put16(central + 34, 0); put16(central + 36, 0); put32(central + 38, 0);
+  put32(central + 42, 0); output.set(nameBytes, central + 46);
+  const end = central + centralLength;
+  put32(end, 0x06054b50); put16(end + 4, 0); put16(end + 6, 0);
+  put16(end + 8, 1); put16(end + 10, 1);
+  put32(end + 12, centralLength); put32(end + 16, localLength); put16(end + 20, 0);
+  return output;
+}
+
 describe("Znect Build GitHub Actions read-only adapter", () => {
   it("verifies project and source-repository ownership from the central validation artifact", async () => {
     const fetchMock = vi.fn()
@@ -225,4 +259,112 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
     await expect(adapter().getRun(scope, "../100")).rejects.toThrow(/invalid.*run ID/i);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it("accepts only a central validation manifest that records the full security-check recipe", async () => {
+    const manifest = {
+      schema_version: 1,
+      project_id: PROJECT_ID,
+      source_repository: SOURCE_REPOSITORY,
+      source_ref: "feature/ci-bridge-android-exporter",
+      source_sha: SOURCE_SHA,
+      build_target: "znect-ci-bridge/worker-validation",
+      build_profile: "debug",
+      recipe: "node-cloudflare-worker-validation",
+      recipe_outcome: "success",
+      validation_steps: [
+        "npm ci",
+        "npm audit --audit-level=high",
+        "npm run check",
+        "node --check scripts/preview-smoke-test.mjs",
+        "npx --no-install wrangler deploy --dry-run"
+      ],
+      deployment_performed: false,
+      circleci_pipeline_mutation: false,
+      central_run: {
+        repository: "Znect-god/znect-build",
+        run_id: RUN_ID,
+        run_url: `https://github.com/Znect-god/znect-build/actions/runs/${RUN_ID}`
+      },
+      generated_at: "2026-11-18T12:00:00.000Z"
+    };
+    const archive = storedZip("ci-bridge-validation-manifest.json", JSON.stringify(manifest));
+    const manifestArtifact = {
+      id: 302,
+      name: `znect-ci-bridge-validation-${RUN_ID}`,
+      size_in_bytes: archive.byteLength,
+      expired: false
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response(runRecord()))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(), manifestArtifact] }))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(), manifestArtifact] }))
+      .mockResolvedValueOnce(new Response(null, {
+        status: 302,
+        headers: { location: "https://ci-bridge.blob.core.windows.net/private/manifest.zip?sig=temporary" }
+      }))
+      .mockResolvedValueOnce(new Response(archive, {
+        status: 200,
+        headers: { "content-length": String(archive.byteLength) }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await adapter().getValidationManifest(scope, RUN_ID);
+
+    expect(result.validation_steps).toEqual(manifest.validation_steps);
+    expect(result.recipe_outcome).toBe("success");
+    expect(result.source_sha).toBe(SOURCE_SHA);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect((fetchMock.mock.calls[3][1] as RequestInit).headers).toBeUndefined();
+  });
+
+  it("rejects a validation manifest that omits the dependency audit step", async () => {
+    const manifest = {
+      schema_version: 1,
+      project_id: PROJECT_ID,
+      source_repository: SOURCE_REPOSITORY,
+      source_ref: "feature/ci-bridge-android-exporter",
+      source_sha: SOURCE_SHA,
+      build_target: "znect-ci-bridge/worker-validation",
+      build_profile: "debug",
+      recipe: "node-cloudflare-worker-validation",
+      recipe_outcome: "success",
+      validation_steps: [
+        "npm ci",
+        "npm run check",
+        "node --check scripts/preview-smoke-test.mjs",
+        "npx --no-install wrangler deploy --dry-run"
+      ],
+      deployment_performed: false,
+      circleci_pipeline_mutation: false,
+      central_run: {
+        repository: "Znect-god/znect-build",
+        run_id: RUN_ID,
+        run_url: `https://github.com/Znect-god/znect-build/actions/runs/${RUN_ID}`
+      },
+      generated_at: "2026-11-18T12:00:00.000Z"
+    };
+    const archive = storedZip("ci-bridge-validation-manifest.json", JSON.stringify(manifest));
+    const manifestArtifact = {
+      id: 302,
+      name: `znect-ci-bridge-validation-${RUN_ID}`,
+      size_in_bytes: archive.byteLength,
+      expired: false
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response(runRecord()))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(), manifestArtifact] }))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(), manifestArtifact] }))
+      .mockResolvedValueOnce(new Response(null, {
+        status: 302,
+        headers: { location: "https://ci-bridge.blob.core.windows.net/private/manifest.zip?sig=temporary" }
+      }))
+      .mockResolvedValueOnce(new Response(archive, {
+        status: 200,
+        headers: { "content-length": String(archive.byteLength) }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(adapter().getValidationManifest(scope, RUN_ID))
+      .rejects.toThrow(/manifest failed project, source, run, or safety validation/i);
+  });
+
 });
