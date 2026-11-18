@@ -9,7 +9,7 @@ import java.net.URI
 internal object OriginPolicy {
     fun normalize(raw: String): String? = try {
         val uri = URI(raw.trim())
-        if (uri.scheme != "https" ||
+        if (!uri.scheme.equals("https", ignoreCase = true) ||
             uri.host.isNullOrBlank() ||
             uri.rawUserInfo != null ||
             uri.rawQuery != null ||
