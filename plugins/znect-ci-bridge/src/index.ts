@@ -8,6 +8,7 @@ export { BuildEventStore };
 import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
 import { correlateEventsWithRuns } from "./correlation";
+import { inspectCiBridgeProvenance } from "./provenance";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
@@ -661,6 +662,7 @@ function createServer(env: Env) {
       const { project: registryProject, scope, adapter } = getCircleCiAdapter(env, project_id, connection_id);
       const run = await adapter.getRun(scope, run_id);
       const workflows = await adapter.listWorkflows(scope, run_id);
+      const provenance = await inspectCiBridgeProvenance(adapter, scope, run, workflows);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
       let failedJobLimitReached = false;
@@ -817,7 +819,8 @@ function createServer(env: Env) {
       const safePayload = redactKnownSecrets(JSON.stringify({
         project: { id: registryProject.id, name: registryProject.name, provider: adapter.provider },
         run,
-        status_semantics: "CircleCI run, workflow, and job outcomes are provider-reported execution states; they are not independently verified project-release outcomes. The Znect Build CI Bridge validation manifest is not yet parsed or trusted by this report.",
+        status_semantics: "CircleCI run, workflow, and job outcomes are provider-reported execution states; they are not independently verified project-release outcomes. Provenance is reported separately and only marked validated after strict manifest, artifact, SHA, pipeline, workflow and job cross-checks.",
+        provenance,
         workflows: workflowReports,
         diagnostics_summary: {
           workflows_total: workflows.length,
@@ -1150,6 +1153,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const { project, scope, adapter } = getCircleCiAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
       const run = await adapter.getRun(scope, parsed.data);
       const workflows = await adapter.listWorkflows(scope, run.id);
+      const provenance = await inspectCiBridgeProvenance(adapter, scope, run, workflows);
       const workflowReports: Array<Record<string, unknown>> = [];
       let failedJobsInspected = 0;
       let failedJobLimitReached = false;
@@ -1270,6 +1274,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const payload = {
         project: { id: project.id, name: project.name, provider: adapter.provider },
         run,
+        provenance,
         workflows: workflowReports,
         diagnostics_summary: {
           workflows_total: workflows.length,
