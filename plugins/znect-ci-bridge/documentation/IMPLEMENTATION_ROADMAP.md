@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (CircleCI pipeline definition added)  
+**Updated:** 2026-11-18 (Znect Build architecture alignment)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `test/ci-bridge-webhook-ingress-contract`  
@@ -15,7 +15,8 @@ This is the living implementation roadmap. Update it with every meaningful imple
 - **Znect All Plugins** is the source-development home for CI Bridge: code, tests, docs, plugin metadata, experiments and release preparation.
 - **Znect Build** is the centralized build system for producing applications from pinned source revisions and build recipes. It is not the Bridge source repository.
 - **Znect CI Bridge** is a read-only diagnostics/integration plugin. It observes CI systems and exposes reports; it does not become the build executor.
-- **CircleCI** remains the configured CI executor for Forge. Do not replace it with GitHub Actions.
+- **Znect Build** is the mandatory central execution path for Znect application builds; its central executor is GitHub Actions. Project repositories must not duplicate build recipes or start project builds independently.
+- **CircleCI** remains an external CI provider for projects that already use it (including Forge). CI Bridge may inspect CircleCI through its read-only adapter, but must not trigger, retry, cancel or modify CircleCI pipelines.
 - Bridge-to-Build integration is a separate provider integration. A registry entry or written API contract does not mean that the Build API exists or is operational.
 
 No PR merge, default-branch update, CI pipeline run, build, deployment, Preview refresh, Production change, or CircleCI action is authorized by this roadmap alone.
@@ -203,17 +204,17 @@ For every meaningful feature or fix:
 
 1. **Repository inventory and architecture alignment — (выполнено).** Existing work in All Plugins and Build reviewed; ownership boundaries and unavailable Build read interface recorded.
 2. **Bridge source hardening and regression coverage — (выполнено as source implementation).** CircleCI slug-alias consistency and workflow URL port validation implemented with focused regression tests. Tests remain unexecuted.
-3. **CircleCI validation pipeline definition — (выполнено).** Added a branch-scoped CircleCI configuration for dependency installation, TypeScript/unit checks, Preview smoke-script syntax validation and Wrangler dry-run. The workflow is configured for the isolated engineering branch only and contains no deploy or build-execution job.
-4. **CircleCI execution and result review — pending.** Pipeline has not been triggered. Run it only after explicit authorization; record the exact pipeline/commit and investigate any failures before proceeding to Preview or live webhook verification.
+3. **Build-system alignment review — (выполнено).** Confirmed that Znect Build is the mandatory central build orchestrator and uses GitHub Actions. The standalone CircleCI config previously added for Bridge validation was removed because it created a parallel workflow outside the established Znect Build architecture.
+4. **Supported validation path — pending.** CI Bridge is not currently an enabled Znect Build target. Do not trigger CircleCI or a central build for this plugin until a supported Node/Worker validation recipe and safe project onboarding path are explicitly implemented in Znect Build.
 
 ## 10. Next development priorities
 
 1. Continue source-level review of webhook ingress, correlation and dashboard; fix any demonstrated authorization, parsing or output-boundary issues.
 2. Continue reviewing webhook event-store transactionality, retention and replay boundaries; add focused regression tests and update this roadmap in the same development cycle.
 3. Inspect the full Bridge implementation for security, authorization, bounded-output and provider-ownership gaps.
-4. Prepare the current branch for an authorized validation run, without starting any CI or deployment.
-5. After source validation is authorized and successful, proceed to isolated Preview and real CircleCI delivery verification.
-6. Design the Bridge-to-Build read-only result integration against the actual Znect Build result transport (API if one is added, otherwise the supported private artifact/status mechanism); do not invent an API or make Bridge a build executor.
+4. Prepare a Znect Build onboarding proposal for the CI Bridge Node.js/Cloudflare Worker package; do not add a duplicate project-side build workflow.
+5. Keep source validation, Preview deployment and live provider verification as separate gates. Do not trigger any of them without the required authorization and supported central recipe.
+6. Design the Bridge-to-Build read-only result integration against the actual Znect Build result transport. The current Build contracts expose request validation artifacts and optional commit status callbacks, but no confirmed Bridge-facing read API or event feed; do not invent endpoints or make Bridge a build executor.
 
 
 ## 11. Repository alignment review — 2026-11-17
@@ -223,10 +224,13 @@ For every meaningful feature or fix:
 - The Bridge remains in `znect-all-plugins` for plugin source development. It must not be relocated into `znect-build` or duplicate application build recipes.
 
 
-## 12. CircleCI validation workflow — 2026-11-18
+## 12. Znect Build architecture alignment — 2026-11-18
 
-- Added the repository-root `.circleci/config.yml` for the isolated branch `test/ci-bridge-webhook-ingress-contract`.
-- Uses Node.js 24.11.0, matching the minimum Node engine declared by the committed dependency lockfile.
-- The job runs `npm ci`, `npm run check` (TypeScript typecheck and Vitest suite), `node --check scripts/preview-smoke-test.mjs`, and `npx wrangler deploy --dry-run`.
-- The Wrangler command is validation-only; no deployment is performed. No CircleCI job starts a build, triggers Forge, changes provider configuration, or uses secrets.
-- The workflow is branch-filtered to the current isolated CI Bridge engineering branch. No CircleCI pipeline has been triggered; the configuration is authored but not runtime-validated.
+- Re-checked the canonical `Znect-god/znect-build` repository: Znect Build is the single central build/orchestration system for Znect projects, and GitHub Actions is its central execution engine.
+- Confirmed the canonical request path is `repository_dispatch` with event type `znect-build-request`, or controlled `workflow_dispatch` for operator diagnostics. Requests require a registered project, exact source repository, source ref and full source SHA, target and profile.
+- Confirmed the current Build registry contains only `znect-forge`; its `android-debug` target has `execution_enabled: false`. Build execution is also globally gated and requires external source-read/dispatch credentials. The Forge 0.7.0 user-testing gate remains in force.
+- Confirmed Znect Build currently defines an Android Gradle debug recipe, not a Node.js/Cloudflare Worker recipe for CI Bridge. CI Bridge is not currently a registered or enabled Build target.
+- Confirmed Build request/result schemas and central workflow artifacts exist, but no dedicated Bridge-facing read API or signed result-event feed is currently specified as implemented. The API document in this plugin remains a proposal only.
+- Removed the standalone root `.circleci/config.yml` previously added for CI Bridge checks. It created an independent CircleCI workflow and was not the correct route for Znect project build orchestration.
+- No CircleCI pipeline, Znect Build workflow, Forge build, test suite, typecheck, Wrangler dry-run, Preview deployment or Production action was triggered by this correction.
+- Next step is to design an explicit Node/Worker validation/build recipe and safe onboarding contract in Znect Build, then define a read-only Bridge result integration against the real central result transport. Do not activate either path by guessing or bypassing central policy.
