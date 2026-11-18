@@ -56,8 +56,9 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Provider-neutral read-only adapter contract **(выполнено)**.
 - [x] CircleCI provider adapter for core API v3 operations **(выполнено)**.
 - [x] Project/run/job/workflow ownership checks and bounded run traversal **(выполнено)**.
-- [ ] Define a narrow read-only Bridge integration with Znect Build only after its supported result/status retrieval interface is explicitly established; the current Build repository documents request/result schemas and GitHub Actions orchestration, not a confirmed public read API.
-- [ ] If Build results are exposed through private artifacts or repository status records rather than an API, integrate through that supported mechanism without duplicating build execution.
+- [ ] Implement a read-only GitHub Actions adapter for the central `Znect-god/znect-build` repository using the documented Actions REST API; treat GitHub Actions workflow runs as the source of central Build lifecycle truth.
+- [ ] Map run/workflow/job ownership conservatively and expose only data whose parent relationship is verifiable; keep run-level artifacts distinct from job-level artifacts.
+- [ ] Confirm the minimum repository-scoped read permissions and bounded log/artifact handling before enabling the connection. Do not invent a custom Build API or duplicate build execution.
 - [ ] Verify multi-project and multi-connection behavior against live, authorized projects.
 
 ### 3.3 CircleCI diagnostics
@@ -169,7 +170,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - Keep changes isolated. Do not merge, open a PR, or update `main` without explicit approval.
 - Older branches (`feat/ci-bridge-circleci-webhooks`, `feature/ci-bridge-test-reports`, `feature/znect-ci-bridge-source`, `work/znect-ci-bridge-free-channel-v0.2.0`, `work/znect-ci-bridge-mcp-v0.2.0`) are historical work lines/prototypes; do not develop them in parallel unless a specific recovery or comparison requires it.
 - The `docs/ci-bridge-implementation-roadmap` branch contains the earlier roadmap source; this living copy is maintained alongside the active engineering branch so implementation status and future work stay together.
-- Znect Build remains a separate repository for centralized application builds, with GitHub Actions as its central execution engine. Its current README/implementation status says the request validator and orchestration are implemented, but live execution is gated by hosted-runner availability, source credentials and the disabled Forge target. Its current contracts describe build requests/results; no dedicated Bridge-facing read API was confirmed during the 2026-11-17 repository review. Do not move Bridge plugin source into Build.
+- Znect Build remains a separate repository for centralized application builds, with GitHub Actions as its central execution engine. A dedicated Build API is not present. The actual run records, jobs, logs and run-level artifacts are available from GitHub Actions' read-only repository APIs; CI Bridge should integrate with those documented APIs rather than guessed Znect Build routes. A Node/Cloudflare Worker validation recipe and disabled CI Bridge registry target are being prepared on isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`; that branch is not merged and no run has been triggered. Do not move Bridge source into Build.
 - Do not trigger GitHub Actions, CircleCI, builds, deployments, Preview refreshes or Production changes without explicit authorization.
 - Do not request already-configured credentials again. Never put secret values in code, docs, commits, chat or logs.
 
@@ -205,14 +206,14 @@ For every meaningful feature or fix:
 1. **Repository inventory and architecture alignment — (выполнено).** Existing work in All Plugins and Build reviewed; ownership boundaries and unavailable Build read interface recorded.
 2. **Bridge source hardening and regression coverage — (выполнено as source implementation).** CircleCI slug-alias consistency and workflow URL port validation implemented with focused regression tests. Tests remain unexecuted.
 3. **Build-system alignment review — (выполнено).** Confirmed that Znect Build is the mandatory central build orchestrator and uses GitHub Actions. The standalone CircleCI config previously added for Bridge validation was removed because it created a parallel workflow outside the established Znect Build architecture.
-4. **Supported validation path — pending.** CI Bridge is not currently an enabled Znect Build target. Do not trigger CircleCI or a central build for this plugin until a supported Node/Worker validation recipe and safe project onboarding path are explicitly implemented in Znect Build.
+4. **Central recipe and onboarding — (выполнено as isolated source configuration).** Added a disabled `znect-ci-bridge/worker-validation` target and central Node/Cloudflare Worker validation recipe on Znect Build branch `feat/ci-bridge-node-worker-recipe`. The branch is not merged; execution remains disabled and no workflow has been triggered.
 
 ## 10. Next development priorities
 
 1. Continue source-level review of webhook ingress, correlation and dashboard; fix any demonstrated authorization, parsing or output-boundary issues.
 2. Continue reviewing webhook event-store transactionality, retention and replay boundaries; add focused regression tests and update this roadmap in the same development cycle.
 3. Inspect the full Bridge implementation for security, authorization, bounded-output and provider-ownership gaps.
-4. Prepare a Znect Build onboarding proposal for the CI Bridge Node.js/Cloudflare Worker package; do not add a duplicate project-side build workflow.
+4. Review the isolated Znect Build Node/Worker recipe and disabled registry target; keep it unmerged/unexecuted until central runner and permission gates are reviewed.
 5. Keep source validation, Preview deployment and live provider verification as separate gates. Do not trigger any of them without the required authorization and supported central recipe.
 6. Design the Bridge-to-Build read-only result integration against the actual Znect Build result transport. The current Build contracts expose request validation artifacts and optional commit status callbacks, but no confirmed Bridge-facing read API or event feed; do not invent endpoints or make Bridge a build executor.
 
@@ -229,8 +230,8 @@ For every meaningful feature or fix:
 - Re-checked the canonical `Znect-god/znect-build` repository: Znect Build is the single central build/orchestration system for Znect projects, and GitHub Actions is its central execution engine.
 - Confirmed the canonical request path is `repository_dispatch` with event type `znect-build-request`, or controlled `workflow_dispatch` for operator diagnostics. Requests require a registered project, exact source repository, source ref and full source SHA, target and profile.
 - Confirmed the current Build registry contains only `znect-forge`; its `android-debug` target has `execution_enabled: false`. Build execution is also globally gated and requires external source-read/dispatch credentials. The Forge 0.7.0 user-testing gate remains in force.
-- Confirmed Znect Build currently defines an Android Gradle debug recipe, not a Node.js/Cloudflare Worker recipe for CI Bridge. CI Bridge is not currently a registered or enabled Build target.
+- Confirmed Znect Build main currently defines the Android Gradle debug recipe. An isolated, unmerged branch `feat/ci-bridge-node-worker-recipe` now adds the CI Bridge Node.js/Cloudflare Worker validation recipe and a registered-but-disabled target; it is not active on main.
 - Confirmed Build request/result schemas and central workflow artifacts exist, but no dedicated Bridge-facing read API or signed result-event feed is currently specified as implemented. The API document in this plugin remains a proposal only.
 - Removed the standalone root `.circleci/config.yml` previously added for CI Bridge checks. It created an independent CircleCI workflow and was not the correct route for Znect project build orchestration.
 - No CircleCI pipeline, Znect Build workflow, Forge build, test suite, typecheck, Wrangler dry-run, Preview deployment or Production action was triggered by this correction.
-- Next step is to design an explicit Node/Worker validation/build recipe and safe onboarding contract in Znect Build, then define a read-only Bridge result integration against the real central result transport. Do not activate either path by guessing or bypassing central policy.
+- Added the central Node/Worker recipe and safe onboarding entry on an isolated Znect Build branch; it remains unmerged and disabled. Next step is a read-only GitHub Actions adapter for central run/job/log/artifact diagnostics, with explicit run-vs-job artifact semantics. Do not trigger a build or invent a custom Build API.
