@@ -48,6 +48,19 @@ export async function collectJobReportArtifacts(
       const report: CiArtifactContent = await adapter.getArtifact(
         scope, jobId, artifact.path, remainingBytes, artifact.execution
       );
+      if (report.path !== artifact.path ||
+          (artifact.execution !== undefined && report.execution !== artifact.execution)) {
+        // Never attach content to a different artifact path or parallel execution.
+        // A known execution must be echoed by the provider response.
+        artifacts.push({
+          path: artifact.path,
+          ...(typeof artifact.size === "number" ? { size: artifact.size } : {}),
+          ...(typeof artifact.execution === "number" ? { execution: artifact.execution } : {}),
+          error: "Retrieved report identity did not match the listed artifact."
+        });
+        incomplete = true;
+        continue;
+      }
       const actualBytes = new TextEncoder().encode(report.content).byteLength;
       if (actualBytes > remainingBytes) {
         // Fail closed if an adapter violates its per-download byte contract.
