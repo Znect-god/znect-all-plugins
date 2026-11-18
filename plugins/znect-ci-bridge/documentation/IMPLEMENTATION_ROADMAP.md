@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (normalized test summaries and assistant handoff contract)  
+**Updated:** 2026-11-18 (parallel JUnit artifact identity verification)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `ci-bridge` (the single permanent CI Bridge development branch)
@@ -236,6 +236,16 @@ For every meaningful feature or fix:
 2. **Bridge source hardening and regression coverage — (выполнено as source implementation).** CircleCI slug-alias consistency and workflow URL port validation implemented with focused regression tests. Tests remain unexecuted.
 3. **Build-system alignment review — (выполнено).** Confirmed that Znect Build is the mandatory central build orchestrator and uses GitHub Actions. The standalone CircleCI config previously added for Bridge validation was removed because it created a parallel workflow outside the established Znect Build architecture.
 4. **Central recipe and onboarding — (выполнено as isolated source configuration).** Added a disabled `znect-ci-bridge/worker-validation` target and central Node/Cloudflare Worker validation recipe on Znect Build branch `feat/ci-bridge-node-worker-recipe`. The branch is not merged; execution remains disabled and no workflow has been triggered.
+
+### Stage 89 — Verify JUnit artifact identity across parallel executions — 2026-11-18
+
+- [x] Verify the artifact collector passes each listed artifact's zero-based CircleCI execution index into the read-only provider request.
+- [x] Fail closed when a provider response returns a different artifact path or does not echo the listed execution identity; do not attach mismatched report content to the requested artifact.
+- [x] Preserve the listed artifact path and execution in the safe error record and mark the report collection incomplete.
+- [x] Add regression-test source for mismatched artifact paths and execution indexes, confirming mismatched content is never included.
+- [ ] Execute the focused artifact tests, full Vitest suite and TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
+
+**Verification boundary:** implementation and regression-test source are committed on ci-bridge. No tests/typecheck were executed; no CircleCI API request, pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
 
 ## 10. Next development priorities
 
