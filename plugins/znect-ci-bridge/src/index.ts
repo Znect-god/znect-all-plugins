@@ -11,6 +11,7 @@ import { correlateEventsWithRuns } from "./correlation";
 import { inspectCiBridgeProvenance } from "./provenance";
 import { collectJobReportArtifacts, MAX_REPORT_ARTIFACTS_PER_JOB, MAX_REPORT_BYTES_PER_JOB } from "./diagnostic-artifacts";
 import { buildDiagnosticsSummary, failedStepLogsStatus, reportArtifactsStatus, testResultsStatus } from "./diagnostic-completeness";
+import { normalizeJobTestResults } from "./normalize-test-results";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
@@ -791,6 +792,12 @@ function createServer(env: Env) {
             reportDataIncomplete = true;
           }
           const artifactsState = reportArtifactsStatus({ artifacts, incomplete: artifactCollectionIncomplete });
+          const testSummary = normalizeJobTestResults({
+            jsonl: testResults,
+            jsonlTruncated: testResultsState === "partial",
+            junitArtifacts: artifacts
+          });
+          if (testSummary.incomplete) reportDataIncomplete = true;
 
           diagnostics.push({
             job_id: job.id,
@@ -810,6 +817,7 @@ function createServer(env: Env) {
             test_results: testResults,
             test_results_error: testResultsError,
             test_results_status: testResultsState,
+            test_summary: testSummary,
             report_artifacts: artifacts,
             report_artifacts_status: artifactsState
           });
@@ -1253,6 +1261,12 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             reportDataIncomplete = true;
           }
           const artifactsState = reportArtifactsStatus({ artifacts: reportArtifacts, incomplete: artifactCollectionIncomplete });
+          const testSummary = normalizeJobTestResults({
+            jsonl: testResults,
+            jsonlTruncated: testResultsState === "partial",
+            junitArtifacts: reportArtifacts as Array<{ content?: string; execution?: number; error?: string }>
+          });
+          if (testSummary.incomplete) reportDataIncomplete = true;
           reports.push({
             job: details,
             failed_steps: failedSteps,
@@ -1269,6 +1283,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             test_results: testResults,
             test_results_error: testResultsError,
             test_results_status: testResultsState,
+            test_summary: testSummary,
             report_artifacts: reportArtifacts,
             report_artifacts_status: artifactsState
           });
