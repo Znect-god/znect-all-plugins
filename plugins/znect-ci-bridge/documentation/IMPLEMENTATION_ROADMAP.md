@@ -1038,7 +1038,7 @@ For every meaningful feature or fix:
 - [x] Make the private Browser API contract explicit: separate Bearer credential, GET-only routes, disabled CORS, bounded project-scoped responses, and no implied direct ChatGPT authentication **(выполнено — source/documentation cross-check and guide update)**.
 - [x] Clarify that dashboard JSON export is a user-reviewed manual handoff and that the historical Android-exporter branch name does not mean an Android exporter is implemented **(выполнено — documentation correction)**.
 - [x] Preserve the small legacy CircleCI API v1.1 compatibility surface as explicitly separate, read-only compatibility; do not confuse its build numbers with API v3 UUIDs **(выполнено — source/documentation boundary review)**.
-- [ ] Reconcile remaining historical security-review and migration-document passages that describe the retired GitHub Actions adapter as current; retain them only when clearly labelled as historical/superseded.
+- [x] Reconcile remaining security-review and API-migration passages that described the retired GitHub Actions adapter as current; retain the old implementation only as clearly labelled historical context **(выполнено — documentation source updates)**.
 - [ ] Resolve API v3 VCS revision field nesting from an authorized real CircleCI run response; public operation documentation inspected so far does not establish the exact field path.
 - [ ] Run typecheck, focused adapter/provenance tests and the complete Vitest suite on the exact source SHA through the authorized opt-in CircleCI workflow after explicit authorization.
 - [ ] Verify the private Browser API and dashboard export end-to-end against an isolated authorized runtime; do not claim ChatGPT Free direct authentication until supported and tested.
