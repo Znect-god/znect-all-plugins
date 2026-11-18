@@ -472,3 +472,11 @@
 - Clarified that test totals represent observed records and that source coverage/incompleteness must be reviewed before drawing conclusions.
 - Added Browser API contract-test source and updated the assistant-channel, README and usage documentation.
 - Direct authenticated ChatGPT Free access remains unverified. Tests/typecheck and live Preview export were not run; no CircleCI pipeline, deployment or runtime configuration change was performed.
+
+
+## 2026-11-18 — JUnit parser and parallel-execution metadata hardening
+
+- Reject non-whitespace data outside the XML document root and multiple root elements while preserving valid empty self-closing JUnit suites.
+- Reject malformed execution indexes in JSONL records and JUnit artifact metadata instead of silently treating the records as unscoped.
+- Added regression-test source for malformed XML document boundaries and invalid execution metadata.
+- Tests and typecheck remain pending CircleCI opt-in authorization; no pipeline or live API call was made.
