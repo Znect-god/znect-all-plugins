@@ -513,3 +513,9 @@ For every meaningful feature or fix:
 - Added Worker tests proving the MCP bearer token cannot authenticate to the separate Browser JSON API, and that an authenticated POST is rejected with `405 Allow: GET` before provider access **(выполнено — test source added; execution pending)**.
 - These tests preserve the separate `WEB_ACCESS_TOKEN` boundary and GET-only report handoff. They do not add MCP-based CircleCI access or any write capability.
 - The Android module has 32 authored JVM test cases; Worker tests have been extended by two cases. No test suite or CircleCI job has been executed.
+
+## 23. Android temporary-report retention verification — 2026-11-18
+
+- Startup TTL cleanup now checks whether expired cached report files/directories were actually removed and surfaces a warning when cleanup cannot be verified **(выполнено — source fix)**.
+- Before a new report is accepted, the exporter now requires the private cache directory to be inspectable and verifies removal of prior temporary reports; it does not silently treat a failed directory listing as successful cleanup **(выполнено — source fix)**.
+- No Android filesystem fault-injection, Gradle test, APK build, CircleCI run or device verification was performed.
