@@ -149,9 +149,11 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Bounded 100 KB report retrieval, redirect rejection, credential-field scan and explicit FileProvider/Sharesheet export **(выполнено — source implementation)**.
 - [x] Validate report identity, CircleCI provider, read-only permissions, ISO timestamp, project/connection metadata, bounded run/event arrays and completeness metadata **(выполнено — source implementation; not yet compiled)**.
 - [x] Eight origin-policy unit-test cases authored **(выполнено — test source only)**.
+- [x] Ten report-schema/privacy unit-test cases authored with a JVM JSON test dependency **(выполнено — test source only)**.
 - [x] Add a local disconnect action that removes the encrypted token, Android Keystore key entry and temporary report **(выполнено — source implementation; device verification pending)**.
-- [ ] Add focused report-schema unit tests.
+- [x] Extract report-schema validation from Activity code and add focused JVM unit-test source for valid reports, provider/permission/project rejection, malformed timestamps, run bounds/counts, event counts, completeness and recursive sensitive-key detection **(выполнено — test source added; execution pending)**.
 - [ ] Add device-auth/biometric confirmation and verify lifecycle/error handling.
+- [ ] Add a reproducible Gradle Wrapper distribution and verify its provenance before enabling the Android CircleCI job; no wrapper binary or checksum has been fabricated.
 - [ ] Run Android Gradle tests/build only after explicit authorization; no APK or device verification is claimed.
 
 ### 4.9 CircleCI validation pipeline
