@@ -1,7 +1,7 @@
-name: Znect CI Bridge checks (retired — CircleCI only)
+name: Znect CI Bridge checks (retired — central Znect Build owns validation)
 
 # Retired for the CI Bridge engineering path.
-# CircleCI is the sole executor for CI Bridge validation.
+# CI Bridge validation is owned by central Znect Build.
 # This inert workflow is retained for repository history only.
 # It performs no checkout, runner allocation, tests, build, deployment or secret access.
 
@@ -15,4 +15,4 @@ jobs:
     if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
-      - run: echo "This workflow is retired. Use CircleCI for CI Bridge validation."
+      - run: echo "This workflow is retired. Use central Znect Build for CI Bridge validation."
