@@ -469,3 +469,11 @@ For every meaningful feature or fix:
 - Added JVM test cases for inconsistent failed counts, malformed item types, mismatched completeness flags and out-of-contract requested limits **(выполнено — test source added; execution pending)**.
 - Updated Disconnect to clear all locally stored settings, encrypted credential data and cached report files, and to report separately if Android Keystore alias cleanup cannot be verified **(выполнено — source fix)**.
 - Runtime tests, CircleCI execution and device verification remain pending; no build success is claimed.
+
+
+## 17. Android report schema type strictness — 2026-11-18
+
+- Changed the Android validator to inspect actual JSON primitive types rather than coercing strings through `optInt`/`optLong`; report version, counters, requested limits and event cursor must be JSON numbers, while identity/permission fields must have their declared types **(выполнено — source fix)**.
+- Added three JVM regression tests for numeric strings in counters, string report versions and string event cursors **(выполнено — test source added; execution pending)**.
+- Updated Android exporter documentation to 17 report-schema/privacy test cases. Across the module, 8 origin + 17 report + 3 Bearer policy tests are authored (28 total); none has been executed.
+- No Gradle build, CircleCI run, APK creation, live API request, deployment or secret access was performed.
