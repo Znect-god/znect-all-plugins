@@ -42,6 +42,14 @@ This execution pipeline is separate from the Bridge's CircleCI API adapter. The 
 - CircleCI read operations do not consume pipeline execution minutes. CI Bridge's own CircleCI validation pipeline does consume the account's applicable CircleCI credits/quota.
 - No Production deployment is authorized by this document.
 
+## Current source validation state — 2026-11-18
+
+- Android exporter: 32 JVM test cases are authored (8 origin, 21 report/privacy, 3 Bearer-token policy); none has been executed. APK assembly and device verification remain pending.
+- Worker Browser API: two additional regression cases cover separation of `MCP_ACCESS_TOKEN` from `WEB_ACCESS_TOKEN` and rejection of authenticated non-GET requests. Worker suite execution remains pending on the current branch.
+- The Android client now checks the selected connection ID against the returned report, requires JSON media type, writes report files through temporary-file finalization, and suppresses late Activity UI callbacks after teardown.
+- Integer bounds for the event cursor use exact decimal comparison, including the JavaScript maximum-safe-integer edge.
+- CircleCI is the only current executor for CI Bridge development/validation. No CircleCI result is verified on the current head; no pipeline was manually triggered.
+
 ## Remaining work
 
 - [x] Implement the bounded direct `GET /api/v1/report` assistant report endpoint. **(выполнено — source implementation; regression source added, execution pending)**
