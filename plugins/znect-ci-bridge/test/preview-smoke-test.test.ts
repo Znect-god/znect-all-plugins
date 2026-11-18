@@ -20,6 +20,8 @@ describe("read-only Preview smoke-test contract", () => {
     expect(smoke).toContain('handoff?.mcp_required !== false');
     expect(smoke).toContain('handoff?.bearer_token_included !== false');
     expect(smoke).toContain('handoff?.test_summary_count_scope !== "observed_records"');
+    expect(smoke).toContain('JSON.stringify(assistantReport).includes(webToken)');
+    expect(smoke).toContain('JSON.stringify(diagnostic).includes(mcpToken)');
     expect(smoke).toContain('encodeURIComponent(item.run_id) + "?" + SCOPE_QUERY');
   });
 
