@@ -1030,3 +1030,17 @@ For every meaningful feature or fix:
 - [ ] Add or adjust fixtures only after the actual response shape is confirmed; then run adapter tests and TypeScript checks through the authorized opt-in CircleCI workflow.
 
 **Verification boundary:** official API documentation and source were inspected; no CircleCI API request, test run, or pipeline execution was performed. VCS revision mapping remains explicitly unverified.
+
+## Stage 67 — Reconcile the assistant-channel contract with the retired GitHub Actions adapter — 2026-11-18
+
+- [x] Audit the current Bridge source and confirm the former GitHub Actions-backed Znect Build adapter, routes, tests and runtime token requirement are retired; the generic CircleCI read-only adapter remains the provider path **(выполнено — source and test inventory)**.
+- [x] Find and correct stale `ASSISTANT_CHANNEL.md` statements that still described the retired GitHub Actions adapter as active and requested its future migration **(выполнено — documentation source update)**.
+- [x] Make the private Browser API contract explicit: separate Bearer credential, GET-only routes, disabled CORS, bounded project-scoped responses, and no implied direct ChatGPT authentication **(выполнено — source/documentation cross-check and guide update)**.
+- [x] Clarify that dashboard JSON export is a user-reviewed manual handoff and that the historical Android-exporter branch name does not mean an Android exporter is implemented **(выполнено — documentation correction)**.
+- [x] Preserve the small legacy CircleCI API v1.1 compatibility surface as explicitly separate, read-only compatibility; do not confuse its build numbers with API v3 UUIDs **(выполнено — source/documentation boundary review)**.
+- [ ] Reconcile remaining historical security-review and migration-document passages that describe the retired GitHub Actions adapter as current; retain them only when clearly labelled as historical/superseded.
+- [ ] Resolve API v3 VCS revision field nesting from an authorized real CircleCI run response; public operation documentation inspected so far does not establish the exact field path.
+- [ ] Run typecheck, focused adapter/provenance tests and the complete Vitest suite on the exact source SHA through the authorized opt-in CircleCI workflow after explicit authorization.
+- [ ] Verify the private Browser API and dashboard export end-to-end against an isolated authorized runtime; do not claim ChatGPT Free direct authentication until supported and tested.
+
+**Verification boundary:** this stage corrects an active assistant-channel document that contradicted the already-retired source implementation. The correction is committed on the isolated engineering branch. This was a static source/documentation audit only: no tests, CircleCI API request, pipeline, Preview/Production deployment, secret access or runtime change was performed.
