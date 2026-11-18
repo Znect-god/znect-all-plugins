@@ -679,3 +679,17 @@ For every meaningful feature or fix:
 - [ ] Verify expiry and manual Sharesheet behavior on a physical Android device.
 
 **Verification boundary:** source and tests are committed, but the five new tests have not been executed. The CircleCI run, APK assembly and physical-device behavior remain unverified.
+
+## 37. Remove the remaining GitHub Actions CI Bridge executor — 2026-11-18
+
+- [x] Inspect all CI Bridge workflow files in the active engineering branch and identify the still-active `.github/workflows/znect-ci-bridge.yml`, which ran validation on pull requests and pushes to `main` **(выполнено — concrete configuration finding)**.
+- [x] Retire that workflow in place with an inert `if: false` job, empty permissions, and no checkout, runner work, tests, build, deployment or secret access **(выполнено — source/configuration fix)**.
+- [x] Preserve the historical workflow file while making `.circleci/config.yml` the sole CI Bridge validation executor **(выполнено)**.
+- [x] Reconfirm that the separate `znect-ci-bridge-preview.yml` workflow is also inert **(выполнено — source review)**.
+- [ ] Confirm the next validation run is created by CircleCI on this exact branch HEAD; do not use GitHub Actions statuses as CircleCI evidence.
+- [ ] Execute Worker checks and all 45 authored Android JVM tests in CircleCI, inspect test reports, and retrieve the debug APK artifact.
+- [ ] Verify Android behavior on a physical device and continue the separate ChatGPT private Browser API authentication work.
+
+**Repository responsibility boundary:** `znect-all-plugins` remains the CI Bridge source-development repository. `znect-build` remains a separate central build/orchestration system for Znect project development builds; its GitHub Actions implementation is not reused as the CI Bridge validation executor. The optional Znect Build read-only adapter remains a distinct provider path and must not replace CircleCI in the primary ChatGPT/CircleCI diagnostics flow.
+
+**Verification boundary:** the legacy GitHub Actions workflow was disabled by committed source configuration. This does not establish a CircleCI run, passing tests, APK assembly, device verification or deployment.
