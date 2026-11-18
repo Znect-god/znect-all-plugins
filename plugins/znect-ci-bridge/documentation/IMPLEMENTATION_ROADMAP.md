@@ -266,3 +266,11 @@ For every meaningful feature or fix:
 - The free ChatGPT request/report path must be orchestrated and executed through Znect Build. A standalone Forge GitHub Actions workflow must not become an independent build executor or alternative orchestration system.
 - Existing Forge issue #8 and PR #9 workflow are treated as the current report-handoff implementation to be reconciled/migrated into the central Znect Build flow; they do not authorize Forge Actions to own CI Bridge builds.
 - No CI Bridge build or workflow was started during this clarification. Central Build branch changes remain isolated and unexecuted.
+
+
+## 13. Central Build validation evidence — 2026-11-18
+
+- Updated the isolated Znect Build recipe to emit a machine-readable CI Bridge validation provenance manifest and upload it with the resolved source SHA as a private 14-day central artifact **(выполнено — source implementation in Znect Build branch)**.
+- The manifest records the exact project/source revision, recipe outcome, validation command list and central run identity; it explicitly states that deployment and CircleCI pipeline mutation did not occur **(выполнено — source implementation)**.
+- The central registry target `znect-ci-bridge/worker-validation` remains `execution_enabled: false`. No build/test/workflow was run; manifest artifact creation remains live-unverified.
+- The CI Bridge must consume central Build validation evidence through read-only central run/artifact metadata, without initiating a build or using MCP as its assistant channel.
