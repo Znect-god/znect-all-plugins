@@ -651,3 +651,17 @@ For every meaningful feature or fix:
 - [ ] Retrieve and verify the CircleCI Android test result and debug APK; perform device verification and resolve the separate ChatGPT authentication limitation.
 
 **Verification boundary:** source and regression-test changes are committed. The new test has not been executed in this session; no CircleCI run, green status, or APK artifact is claimed.
+
+
+## 35. Worker read API and Android export boundary review — 2026-11-18
+
+- [x] Re-review authenticated Browser JSON API routing: Bearer verification, constant-time comparison, failed-auth rate limiting, authenticated-request rate limiting, GET-only enforcement, no-store JSON responses and bounded report serialization **(выполнено — source review)**.
+- [x] Re-review `/api/v1/status` and `/api/v1/report`: registered project/connection selection, CircleCI-only provider selection, bounded query parameters, safe provider failure responses, bounded event-store parsing and explicit read-only report metadata **(выполнено — source review)**.
+- [x] Re-review CircleCI v3 adapter ownership boundaries: run membership is verified against the project-scoped collection and explicit project reference; workflow and job references are checked before logs, tests or artifacts are read **(выполнено — source review)**.
+- [x] Re-review Android export boundaries: backup disabled, cleartext traffic disabled, system trust anchors only, FileProvider limited to the private reports cache, non-exported provider, local Keystore-backed credential storage and explicit read-only Sharesheet grant **(выполнено — manifest/resource/source review)**.
+- [x] Re-review Android report validation and lifecycle handling: bounded response reads, schema/project/connection checks, sensitive-key rejection, serialized network actions, request cancellation on Activity destruction and temporary-file cleanup paths **(выполнено — source review)**.
+- [ ] No new source defect was confirmed in this pass; do not introduce speculative code changes. Continue with targeted review and add regression tests only for reproducible findings.
+- [ ] Execute Worker/security and all 40 authored Android JVM tests in CircleCI; inspect actual test reports and retrieve the debug APK. No execution or APK artifact is claimed.
+- [ ] Verify the real CircleCI-backed status/report path and manual Sharesheet handoff on a physical Android device. The app's check still does not prove that a separate ChatGPT conversation is authenticated.
+
+**Verification boundary:** this section records static source review only. It does not establish passing tests, a CircleCI run, an assembled APK, device verification, automatic ChatGPT authentication or deployment.
