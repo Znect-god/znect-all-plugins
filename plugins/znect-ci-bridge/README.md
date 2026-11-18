@@ -2,7 +2,7 @@
 
 **Status: `in-development` — experimental; not production-ready.**  
 **Version:** `0.1.0`  
-**Current CI diagnostics provider:** CircleCI Cloud (read-only). Projects and CI connections are explicitly registered; no project is injected as a default. All Znect project builds are centrally orchestrated by Znect Build, whose executor is GitHub Actions.  
+**Current CI diagnostics providers:** CircleCI Cloud and central Znect Build via GitHub Actions (read-only; Build adapter live verification pending). Projects and CI connections are explicitly registered; no project is injected as a default. All Znect project builds are centrally orchestrated by Znect Build, whose executor is GitHub Actions.  
 **Architecture:** one Bridge instance with a validated multi-project registry and provider-neutral read-only adapters for CircleCI and central Znect Build (GitHub Actions). The Znect Build adapter is source-implemented but not yet validated against a live central workflow.
 
 Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and inspecting provider runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. It exposes a Streamable HTTP MCP endpoint, a browser dashboard/JSON API, and a signed CircleCI webhook inbox.
