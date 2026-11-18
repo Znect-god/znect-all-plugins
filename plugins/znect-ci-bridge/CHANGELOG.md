@@ -1,3 +1,9 @@
+## 2026-11-18 — Central Znect Build ownership clarification
+
+- Clarified that CI Bridge validation and all Znect builds are executed through `Znect-god/znect-build`.
+- CircleCI remains a read-only external provider for status, run, job, log, test and artifact inspection; CI Bridge must not dispatch or mutate CircleCI pipelines.
+- The standalone Forge report workflow is to be reconciled with/migrated into central Build orchestration, not treated as an alternative build executor.
+
 ## 2026-11-18 — CircleCI report workflow contract guard
 
 - Added a static validator for the private Forge report workflow to prevent regressions in required project/connection query parameters and status response field names.
