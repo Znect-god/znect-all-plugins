@@ -37,6 +37,19 @@ describe("browser dashboard security", () => {
     expect(DASHBOARD_HTML).toContain('entry.reason==="missing_revision"?"Webhook event has no commit revision.":"No recent run met the correlation criteria."');
     expect(DASHBOARD_HTML).toContain('eventsBox.replaceChildren(element("p","status error",error.message))');
   });
+  it("exports a bounded ChatGPT-ready report and only follows validated run UUIDs", () => {
+    expect(DASHBOARD_HTML).toContain('id="export-report"');
+    expect(DASHBOARD_HTML).toContain('request("/api/v1/report?run_limit=10&event_limit=20&after=0&"+scopeQuery())');
+    expect(DASHBOARD_HTML).toContain('report.runs.diagnostics.slice(0,3)');
+    expect(DASHBOARD_HTML).toContain('request("/api/v1/diagnostics/"+encodeURIComponent(runId)+"?"+scopeQuery())');
+    expect(DASHBOARD_HTML).toContain('report.completeness.diagnostics_included');
+    expect(DASHBOARD_HTML).toContain('serialized.length>600000');
+    expect(DASHBOARD_HTML).toContain('URL.createObjectURL(blob)');
+    expect(DASHBOARD_HTML).toContain('link.download="znect-ci-report-"');
+    expect(DASHBOARD_HTML).toContain('eventsRequestId++;exportRequestId++');
+    expect(DASHBOARD_HTML).not.toContain('window.open(item.endpoint)');
+  });
+
   it("sends the token only in an authenticated same-origin GET without ambient credentials", () => {
     expect(DASHBOARD_HTML).toContain('method:"GET"');
     expect(DASHBOARD_HTML).toContain('Authorization:"Bearer "+token');
