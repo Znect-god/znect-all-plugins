@@ -30,6 +30,20 @@ function assertUuid(value: string, label: string): void {
   if (!isCircleCiUuid(value)) throw new Error(`Invalid CircleCI ${label}.`);
 }
 
+/** Reject duplicate resource identities across pages instead of returning ambiguous collections. */
+function assertUniqueResourceIds(
+  resources: V3Resource[],
+  label: string,
+  seenIds: Set<string>
+): void {
+  for (const resource of resources) {
+    if (seenIds.has(resource.id)) {
+      throw new Error(`CircleCI API v3 repeated a ${label} ID across pagination pages.`);
+    }
+    seenIds.add(resource.id);
+  }
+}
+
 function validateApiPath(path: string): URL {
   const rawPath = path.split("?", 1)[0];
   if (
@@ -163,6 +177,7 @@ export async function getCircleCiRunForProject(
   assertUuid(runId, "run ID");
   let cursor: string | null = null;
   const seenCursors = new Set<string>();
+  const seenRunIds = new Set<string>();
   const maxPages = 20;
 
   for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
@@ -182,6 +197,7 @@ export async function getCircleCiRunForProject(
       assertUuid(run.id, "run ID");
       assertCircleCiRunOwnership(run, projectId);
     }
+    assertUniqueResourceIds(page.data, "run", seenRunIds);
     if (page.data.some((run) => run.id === runId)) {
       const detail = await getCircleCiRun(token, runId);
       assertCircleCiRunOwnership(detail, projectId);
@@ -265,6 +281,7 @@ export async function listCircleCiRuns(
   const runs: V3Resource[] = [];
   let cursor: string | null = null;
   const seenCursors = new Set<string>();
+  const seenRunIds = new Set<string>();
 
   // v3 caps a run page at 20. A maximum of two pages is enough for this tool's
   // 30-item contract; cursor values remain opaque and are never interpreted.
@@ -287,6 +304,7 @@ export async function listCircleCiRuns(
       assertUuid(run.id, "run ID");
       assertCircleCiRunOwnership(run, projectId);
     }
+    assertUniqueResourceIds(page.data, "run", seenRunIds);
     runs.push(...page.data);
     const next = readNextCursor(page, "runs");
     if (next === null) break;
@@ -327,6 +345,7 @@ async function listCircleCiCollection(
   }
   const resources: V3Resource[] = [];
   const seenCursors = new Set<string>();
+  const seenWorkflowIds = new Set<string>();
   let cursor: string | null = null;
 
   for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
@@ -341,6 +360,7 @@ async function listCircleCiCollection(
       throw new Error(`CircleCI API v3 returned more ${resourceLabel}s than the requested page limit.`);
     }
     for (const resource of page.data) assertUuid(resource.id, `${resourceLabel} ID`);
+    assertUniqueResourceIds(page.data, resourceLabel, seenWorkflowIds);
     resources.push(...page.data);
 
     const next = readNextCursor(page, resourceLabel);
