@@ -1,3 +1,9 @@
+## 2026-11-18 — require a valid JUnit report root
+
+- Restricted accepted JUnit XML documents to the standard `testsuite` and `testsuites` root elements; arbitrary well-formed XML can no longer be counted as a test report.
+- Rejected CDATA sections outside the XML root while retaining valid XML comments and processing instructions.
+- Added regression cases for a non-JUnit root and CDATA before the root. Tests and typecheck remain unexecuted; no CircleCI pipeline, API request, deployment or runtime configuration change was performed.
+
 ## 2026-11-18 — correct CircleCI v3 job execution and artifact mapping
 
 - Corrected job-detail parsing to match CircleCI's public CLI v3 acceptance-fixture model: `parallel_executions` is an array of step arrays, with the outer index identifying the zero-based execution.
