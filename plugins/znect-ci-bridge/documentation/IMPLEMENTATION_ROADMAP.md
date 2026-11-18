@@ -989,3 +989,11 @@ For every meaningful feature or fix:
 - [ ] Execute the provenance schema/adapter tests and validate an actual manifest through the Bridge against live API v3 resources.
 
 **Verification boundary:** producer and consumer schema now agree at source level. No test execution, CircleCI pipeline, runtime configuration change or deployment was performed.
+## 62. Repair CircleCI adapter regression fixture and enforce job outcome consistency — 2026-11-18
+
+- [x] Fix a duplicated `references` property in the CircleCI run adapter test fixture that silently overwrote the project ownership reference and made the fixture invalid for the API v3 ownership contract **(выполнено — test source correction)**.
+- [x] Require the provider-reported CircleCI job outcome to agree with the manifest recipe outcome before reporting `validated` or `failed_recipe` **(выполнено — provenance source implementation)**.
+- [x] Add regression-test source for a successful recipe manifest paired with a failed CircleCI job; mismatched outcomes are rejected **(выполнено — test source added; execution pending)**.
+- [ ] Execute adapter/provenance tests, TypeScript checks and the full suite on the exact source SHA through the authorized opt-in CircleCI workflow.
+
+**Verification boundary:** these are source and test-fixture corrections. No test suite or CircleCI pipeline was executed.
