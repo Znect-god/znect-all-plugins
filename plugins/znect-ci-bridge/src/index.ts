@@ -836,7 +836,11 @@ function createServer(env: Env) {
           jobs_total: jobs.length,
           jobs_inspected: inspectedJobs.length,
           jobs_truncated: jobsTruncated,
-          failed_jobs_total: failedJobs.length,
+          // The full failure count is unknown when the job list was truncated.
+          failed_jobs_total: jobsTruncated ? null : failedJobs.length,
+          failed_jobs_observed: failedJobs.length,
+          failed_jobs_diagnostics_returned: diagnostics.length,
+          failed_jobs_diagnostics_truncated: diagnostics.length < failedJobs.length,
           failed_jobs: diagnostics
         });
       }
