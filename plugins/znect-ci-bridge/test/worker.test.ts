@@ -56,7 +56,6 @@ describe("Worker HTTP boundary", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "content-type": "application/json",
           "circleci-event-type": "workflow-completed",
           "circleci-signature": await circleCiSignature(body, "webhook-test-secret")
         },
@@ -238,6 +237,28 @@ describe("Worker HTTP boundary", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ events: [{ cursor: 7, id: event.id }], next_cursor: 7 });
     expect(String(storeFetch.mock.calls[0][0])).toContain("after=3&limit=10");
+  });
+
+  it("rejects event-store page envelopes with unknown fields", async () => {
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => Response.json({
+        events: [],
+        next_cursor: 0,
+        author_email: "must-not-be-exposed@example.invalid"
+      }) })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: namespace },
+      ctx
+    );
+    expect(response.status).toBe(503);
+    const body = await response.text();
+    expect(body).not.toContain("author_email");
+    expect(body).not.toContain("must-not-be-exposed");
   });
 
   it("returns 503 when the event inbox Durable Object throws", async () => {
