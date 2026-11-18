@@ -249,6 +249,9 @@ async function readEventPage(
       }
     }
     const cursor = event.cursor as number;
+    if (after > 0 && cursor <= after) {
+      throw new Error("Event storage returned an event at or before the requested cursor.");
+    }
     if (cursors.has(cursor)) throw new Error("Event storage returned duplicate cursors.");
     cursors.add(cursor);
     parsedCursors.push(cursor);
