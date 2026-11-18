@@ -1280,3 +1280,14 @@ For every meaningful feature or fix:
 - [ ] Execute focused CircleCI client tests, the full Vitest suite and TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
 
 **Verification boundary:** the source and regression-test updates are committed on the canonical `ci-bridge` branch. This is source-level work only; no test execution, typecheck, CircleCI API request, CircleCI pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
+
+
+### Stage 88 — Preserve parallel execution identity and honest diagnostic totals — 2026-11-18
+
+- [x] Correct automatic `diagnose_run` to read the provider contract's normalized `execution` field for failed-step log requests and report output; do not read the nonexistent `execution_index` property.
+- [x] Align the Browser API diagnostic regression fixture with CircleCI API v3's nested-array `parallel_executions` shape (one step array per execution).
+- [x] Mark `failed_jobs_total` unknown (`null`) when the job collection was truncated; separately expose `failed_jobs_observed`, the number of failed jobs in the inspected subset, and whether returned diagnostics were capped.
+- [x] Add an end-to-end MCP regression-test source for a failed step on execution index 1, asserting both stdout/stderr requests use that index and truncated job collections do not claim a complete failure total.
+- [ ] Execute the focused provider, Browser API and MCP diagnostic tests, full Vitest suite, and TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
+
+**Verification boundary:** source and regression-test updates are committed on the canonical `ci-bridge` branch. CircleCI API v3 documents job detail as including steps and parallel executions, and its log endpoints accept an explicit `filter[execution]`; the implementation preserves that index end to end. No tests, typecheck, live CircleCI API request, CircleCI pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
