@@ -44,6 +44,7 @@ class MainActivity : Activity() {
     @Volatile private var latestReportFile: File? = null
     @Volatile private var fetching = false
     @Volatile private var destroyed = false
+    private var expiredReportCleanupFailed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +56,9 @@ class MainActivity : Activity() {
             "Credential is configured on this device. It is never shown again."
         } else {
             "Configure the private API origin, project and Bearer token locally."
+        }
+        if (expiredReportCleanupFailed) {
+            statusText.append("\nWarning: expired temporary report cleanup could not be verified. Use Disconnect and clear local data to retry cleanup.")
         }
     }
 
@@ -362,10 +366,15 @@ class MainActivity : Activity() {
             if (!temporary.renameTo(destination)) {
                 throw IllegalStateException("The private report could not be finalized safely.")
             }
-            dir.listFiles()?.filter { it != destination }?.forEach { oldFile ->
+            val previousFiles = dir.listFiles()
+                ?: throw IllegalStateException("Private report storage could not be inspected for cleanup.")
+            previousFiles.filter { it != destination }.forEach { oldFile ->
                 val removed = if (oldFile.isDirectory) oldFile.deleteRecursively() else oldFile.delete()
                 if (!removed && oldFile.exists()) {
-                    destination.delete()
+                    val currentRemoved = destination.delete()
+                    if (!currentRemoved && destination.exists()) {
+                        throw IllegalStateException("Previous and current temporary report cleanup could not be verified.")
+                    }
                     throw IllegalStateException("Previous temporary report cleanup could not be verified.")
                 }
             }
@@ -440,8 +449,17 @@ class MainActivity : Activity() {
 
     private fun cleanExpiredReports() {
         val dir = File(cacheDir, "reports")
+        if (!dir.exists()) return
+        val files = dir.listFiles()
+        if (files == null) {
+            expiredReportCleanupFailed = true
+            return
+        }
         val cutoff = System.currentTimeMillis() - REPORT_TTL_MS
-        dir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
+        files.filter { it.lastModified() < cutoff }.forEach { file ->
+            val removed = if (file.isDirectory) file.deleteRecursively() else file.delete()
+            if (!removed && file.exists()) expiredReportCleanupFailed = true
+        }
     }
 
     private fun safeErrorMessage(error: Exception): String {
