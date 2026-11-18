@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (bounded diagnostic artifact collector extraction)  
+**Updated:** 2026-11-18 (diagnostic completeness parity)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)  
@@ -1134,3 +1134,17 @@ For every meaningful feature or fix:
 - [ ] Verify bounded multi-execution JUnit collection against a live authorized CircleCI job.
 
 **Verification boundary:** module extraction, both call-site imports and focused regression-test source are committed to the feature branch. Tests and TypeScript checks were not executed; no CircleCI API requests, pipeline execution, deployment or credential/configuration changes were performed.
+
+
+### Stage 76 — Make diagnostic completeness explicit and consistent across MCP and Browser API — 2026-11-18
+- [x] Extract shared diagnostic summary construction so MCP and Browser JSON API use identical workflow/job/log/report completeness rules.
+- [x] Ensure the overall `incomplete` flag is true whenever the report artifact count/byte limit indicator is true, even if an upstream caller misses the separate report-data flag.
+- [x] Add per-job `test_results_status` values to distinguish available, partial/truncated, empty and unavailable structured JSONL results.
+- [x] Add per-job `report_artifacts_status` values to distinguish available, partial, unavailable and no matching JUnit artifacts.
+- [x] Add per-job `failed_step_logs_status` values to distinguish available, partial, unavailable and not-applicable logs; account for retrieval errors, truncation, invalid step numbers and global log-action caps.
+- [x] Add focused regression-test source for source-status classification, failed-step log completeness and shared overall summary semantics.
+- [ ] Execute focused Vitest files and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
+- [ ] Review test/typecheck results and correct any failures.
+- [ ] Verify the same diagnostic status fields and summary flags against a real authorized CircleCI run through both MCP and Browser API.
+
+**Verification boundary:** shared status/summary helpers, both API call sites and regression-test source are committed to the feature branch. No tests or typecheck were executed; no CircleCI API requests, pipeline execution, deployment or credential/runtime configuration changes were performed.
