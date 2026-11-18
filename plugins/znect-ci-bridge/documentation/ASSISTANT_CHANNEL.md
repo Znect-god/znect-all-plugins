@@ -68,3 +68,10 @@ All Browser API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`. The
 ## Platform limitation
 
 A private Bearer-protected REST endpoint is not automatically callable by a ChatGPT conversation merely because the endpoint exists. Until a supported authenticated integration is proven, the dashboard's user-reviewed JSON export is the explicit fallback handoff. It does not expose the token and must not be described as automatic ChatGPT connectivity.
+
+
+### Custom MCP availability check (2026-11-18)
+
+The current OpenAI Help Center documents custom MCP server connections for ChatGPT Business and Enterprise/Edu workspaces; it also notes that Pro users can connect custom servers with read/fetch permissions. Free is not listed as supporting custom MCP server connections. Therefore, a custom MCP app is not a valid assumption for the Free-tier access requirement and must not become a mandatory dependency. See [OpenAI Help Center — Connecting custom MCP servers in ChatGPT](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt).
+
+This does not prove that ChatGPT Free can directly authenticate to an arbitrary private REST endpoint. The direct Browser API route remains a platform capability to verify; until then, the bounded dashboard JSON download is the supported fallback.
