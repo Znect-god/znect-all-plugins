@@ -601,7 +601,7 @@ class MainActivity : Activity() {
     private fun safeErrorMessage(error: Exception): String {
         val message = error.message.orEmpty()
         return if (message.contains("HTTP") || message.contains("report", true) ||
-            message.contains("origin", true) || message.contains("credential", true) || message.contains("CircleCI", true) ||
+            message.contains("origin", true) || message.contains("credential", true) || message.contains("CircleCI", true) || message.contains("provider", true) || message.contains("read probe", true) ||
             message.contains("redirect", true) || message.contains("project", true) ||
             message.contains("100 KB")
         ) message else "Could not retrieve the report. Check connectivity and local configuration."
