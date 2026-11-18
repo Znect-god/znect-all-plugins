@@ -92,6 +92,24 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
     await expect(adapter().listRuns(scope, 5)).resolves.toEqual([]);
   });
 
+  it("caps artifact ownership probes to protect Worker subrequest budgets", async () => {
+    const candidates = Array.from({ length: 21 }, (_, index) => ({
+      ...runRecord(),
+      id: 500 + index,
+      display_title: `Znect Build / ${PROJECT_ID} / request-${index.toString().padStart(8, "0")}`
+    }));
+    const fetchMock = vi.fn().mockResolvedValueOnce(response({ workflow_runs: candidates }));
+    for (let index = 0; index < 20; index++) {
+      fetchMock.mockResolvedValueOnce(response({ artifacts: [await runArtifact(undefined, String(500 + index))] }));
+    }
+    vi.stubGlobal("fetch", fetchMock);
+
+    const runs = await adapter().listRuns(scope, 20);
+
+    expect(runs).toHaveLength(20);
+    expect(fetchMock).toHaveBeenCalledTimes(21);
+  });
+
   it("rejects direct run reads when the run title belongs to another project", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(response({
       ...runRecord(),
