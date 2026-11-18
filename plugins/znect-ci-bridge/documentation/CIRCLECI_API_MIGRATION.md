@@ -1,5 +1,7 @@
 # CircleCI API migration plan
 
+**Current assistant-channel boundary:** this document describes CircleCI provider/API compatibility, not a requirement to use MCP. The authenticated Browser JSON API is the primary ChatGPT-facing surface; MCP tools are optional compatibility functionality. The former GitHub Actions-backed Znect Build adapter is retired. CircleCI API v3 is the primary read-only provider path, while the explicitly separate v1.1 methods are legacy compatibility only.
+
 **Status:** CircleCI Cloud target established; v3 read-only adapter and nine v3 MCP tools implemented with mocked tests, including cursor pagination for workflow and job collections. Live token access and project UUID resolution remain unverified.  
 **Current MCP tools:** legacy v1.1 tools remain for compatibility; nine separate v3 tools are now available.  
 **Target:** API v3 for the existing CircleCI Cloud project. No Forge hosting migration is needed.
@@ -42,7 +44,7 @@ Sources:
 - bounded stdout/stderr retrieval using the documented step and execution filters;
 - sanitized 401/403/404/429 and other upstream errors.
 
-The v3 adapter is now wired to nine new MCP tools, kept separate from the legacy tools:
+The v3 adapter is exposed through the authenticated Browser JSON API and nine optional MCP compatibility tools, kept separate from the legacy v1.1 tools:
 - `check_connection()` verifies read access to the fixed project and returns its UUID and slug.
 - `list_recent_runs(limit)` resolves the fixed project slug and lists v3 runs.
 - `get_run_details(run_id)` reads a run, its workflows and their jobs.
@@ -67,12 +69,13 @@ Single-resource v3 responses are unwrapped from the documented `data` envelope. 
 ## Remaining work
 
 1. Confirm the configured CircleCI personal API token as the Worker Secret `CIRCLECI_TOKEN` without exposing it in chat.
-2. Verify the existing `MCP_ACCESS_TOKEN` secret and Cloudflare Worker bindings without changing production.
-3. Perform a live read-only API v3 smoke test, verifying exact project slug, UUID, recent runs, workflows, jobs, test results, and bounded logs.
+2. Verify the private Browser API's separate `WEB_ACCESS_TOKEN` and required Worker bindings without changing Production.
+3. Perform a live read-only API v3 smoke test, verifying exact project slug, UUID, recent runs, workflows, jobs, test results, bounded logs and provenance artifacts.
 4. Re-diagnose the known historical Forge failure using its existing run UUID; do not trigger a new build.
-5. Compare historical build metadata across v1.1 and v3 using commit SHA, branch, and timestamps. Do not infer an identity match from build number alone.
-6. Decide later whether to deprecate v1.1 tools; do not silently retry v1.1 after a v3 authorization or data error.
-7. Complete Linux CI and review all results. Keep plugin status `in-development` until live verification is complete.
+5. Compare any historical v1.1/v3 records using commit SHA, branch and timestamps. Do not infer an identity match from build number alone.
+6. Decide later whether to deprecate v1.1 compatibility tools; do not silently retry v1.1 after a v3 authorization or data error.
+7. Establish a supported private ChatGPT Free access/handoff path without making MCP mandatory or weakening Browser API authentication.
+8. Complete typecheck and unit tests through the authorized opt-in CircleCI workflow after explicit authorization. Keep plugin status `in-development` until live verification is complete.
 
 ## Security decisions
 
