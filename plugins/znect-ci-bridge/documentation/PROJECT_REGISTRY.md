@@ -64,7 +64,7 @@ The registry is non-secret routing metadata. Never place API tokens, webhook sig
 - A repository may be mapped to a component; multiple components may refer to the same repository for monorepo layouts.
 - CircleCI connections require a unique provider-native `projectSlug` (`gh/owner/repository`). The v1.1 and v3 read-only tools resolve the selected project's registered slug rather than using a global Forge constant.
 - `znect-build` is a reserved provider type for the planned native Build adapter. Registry support alone does not implement its API client, event signature, credentials, or diagnostics mapping.
-- Unknown providers, duplicate project IDs, duplicate CircleCI slugs, invalid component references, unsafe path prefixes, malformed JSON, and oversized configuration are rejected.
+- Unknown providers, duplicate project IDs, duplicate CircleCI slugs, invalid component references, and malformed/oversized configuration are rejected. Component `pathPrefix` values must be relative slash-separated paths with non-empty ASCII `[A-Za-z0-9._-]` segments; absolute paths, empty segments, `.` / `..`, backslashes, percent-encoded separators/traversal, query and fragment characters are rejected.
 - If the variable is absent, an empty version-1 registry is loaded. No project or provider connection is injected implicitly.
 - A project may have an empty `connections[]` array; its CI configuration state is `not_configured`.
 - A registered project is not proof that its provider is reachable. The catalog reports provider availability as `not_checked` until a read-only probe is performed.
