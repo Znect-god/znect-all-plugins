@@ -142,7 +142,7 @@ Production was not deployed or modified. PR #5 remains Draft and unmerged. The b
 ### Znect Build GitHub Actions read-only adapter — source implementation, verification pending
 
 - The new adapter uses a fixed `api.github.com/repos/Znect-god/znect-build` origin and GET-only requests with a 15-second timeout, bounded JSON bodies, manual redirect rejection and sanitized status errors.
-- It requires a project-matching run display title plus an unexpired validation artifact containing the registered project ID, SHA-256 fingerprint of the registered source repository, validated source SHA and exact run ID. The central workflow computes the fingerprint only after request validation.
+- It requires the exact central repository identity, `.github/workflows/central-build.yml` workflow path, `main` branch, a project-matching run display title, and an unexpired validation artifact containing the registered project ID, SHA-256 fingerprint of the registered source repository, validated source SHA and exact run ID. The central workflow computes the fingerprint only after request validation.
 - Job resources are checked against their verified parent workflow run. Artifacts remain run-scoped; no job relationship or download URL is fabricated.
 - The adapter does not yet extract GitHub Actions ZIP logs/artifacts or claim generic test-report access. These capabilities are explicitly unavailable.
 - A repository-scoped read-only token is required. Its configured value is included in the shared known-secret redaction list. Do not grant Actions write, dispatch, workflow, contents write or administration permissions.
