@@ -1191,3 +1191,19 @@ For every meaningful feature or fix:
 - [ ] Review parser behavior against representative real CircleCI JSONL and JUnit artifacts; adjust only with evidence from the API contract.
 
 **Verification boundary:** parser hardening and regression-test source are committed to the feature branch. Static source inspection only; tests and TypeScript checks remain unexecuted. No CircleCI pipeline, API request, deployment or runtime configuration change was performed.
+
+
+
+### Stage 81 — Repair Preview smoke-test contract before live readiness — 2026-11-18
+
+- [x] Correct the Preview smoke script to send the required project_id and connection_id to authenticated Browser API status, run, report and diagnostics reads; include project_id on event-inbox reads.
+- [x] Align status assertions with the actual Browser API response contract (project.id, connection.id, provider, and read-only permission), rather than an undocumented project slug field.
+- [x] Pass required project/connection arguments to MCP check_connection and project scope to list_recent_events.
+- [x] Extend the smoke preflight to retrieve /api/v1/report, validate the explicit assistant-handoff/no-token metadata, and round-trip up to three diagnostic UUIDs using locally reconstructed same-origin paths.
+- [x] Add regression-test source for Preview smoke request scoping, report handoff validation, read-only MCP calls and the approved Preview host boundary.
+- [ ] Execute the smoke-script contract tests and complete Bridge test/typecheck suite through Stage 80's authorized CircleCI exact-SHA workflow.
+- [ ] Run the corrected smoke test against the authorized Preview and review a real exported JSON report, diagnostics, redaction and completeness fields.
+- [ ] Verify live CircleCI read-only connectivity and representative successful/failed run, logs, JSONL/JUnit and artifact retrieval.
+- [ ] Confirm the private ChatGPT Free access/handoff path without MCP or manual secret sharing; do not claim automatic access unless the supported authentication path is proven.
+
+**Verification boundary:** source and regression-test updates are committed. Static contract inspection only; no Vitest, typecheck, CircleCI API request, CircleCI pipeline, Preview request/deployment, secret access or Production change was performed. Stage 81 remains incomplete pending the live checks above.
