@@ -2,7 +2,7 @@
 
 **Status: `in-development` — experimental; not production-ready.**  
 **Version:** `0.1.0`  
-**Current CI diagnostics provider:** CircleCI Cloud (read-only; live API verification remains separate from source implementation). Projects and CI connections are explicitly registered; no project is injected as a default. All Znect project builds are centrally orchestrated by Znect Build, whose executor is GitHub Actions.  
+**Current CI diagnostics provider:** CircleCI Cloud (read-only; live API verification remains separate from source implementation). Projects and CI connections are explicitly registered; no project is injected as a default. Znect Build remains the separate central build system for other Znect application builds; CI Bridge source validation and development checks run through CircleCI.  
 **Architecture:** one Bridge instance with a validated multi-project registry and a provider-neutral, read-only CircleCI adapter. CircleCI also runs CI Bridge's own validation pipeline; that execution role is separate from the Bridge's read-only CircleCI diagnostics API.
 
 Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting CI events and inspecting CircleCI runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. The supported ChatGPT access path is the free authenticated Browser JSON API plus a private report handoff. MCP is not required and GitHub Actions / Znect Build are not used to execute CI Bridge validation or the ChatGPT report request.
@@ -11,7 +11,7 @@ Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting
 
 ## Current state — 2026-11-18
 
-- Historical integration branch: `feature/ci-bridge-test-reports`. Current isolated engineering branch: `test/ci-bridge-webhook-ingress-contract` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins).
+- Historical integration branch: `feature/ci-bridge-test-reports`. Current isolated engineering branch: `feature/ci-bridge-android-exporter` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins). The previous webhook-ingress branch is its engineering base.
 - PR #5 was merged into this feature branch; it was not merged into `main`. PR #2, #4 and #6 remain separate draft workstreams and must not be merged without approval.
 - Isolated Cloudflare Preview: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`.
 - Legacy MCP route: `/mcp` remains in the experimental source but is not the supported ChatGPT channel and is not required. CircleCI webhook endpoint: append `/webhooks/circleci`.
@@ -116,9 +116,9 @@ node --check scripts/preview-smoke-test.mjs
 npx wrangler deploy --dry-run
 ```
 
-These commands are local validation steps, not a project build or deployment. Android ARM64 Termux is not a supported Wrangler/workerd deployment environment. **All Znect project builds must be orchestrated through `Znect-god/znect-build`; GitHub Actions is the central executor used by Znect Build.** Do not create or trigger an independent CircleCI workflow for CI Bridge. CircleCI is used here only as a read-only external CI diagnostics provider for projects that already use it.
+These commands are local validation steps, not a project build or deployment. Android ARM64 Termux is not a supported Wrangler/workerd deployment environment. **CI Bridge's own source validation is defined in the root `.circleci/config.yml` and is executed by CircleCI.** Znect Build remains a separate central build system for other Znect application builds; its executor is documented in that repository and is not used to validate or run CI Bridge.
 
-A validation-only CI Bridge target (`znect-ci-bridge/worker-validation`) and centrally maintained Node/Cloudflare Worker recipe have been added on the isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`. That branch is not merged into Build main and target execution remains disabled. The recipe performs `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run only; it has no deployment step. Do not trigger a central workflow or CircleCI pipeline until the central branch, hosted-runner availability, source-read permissions and script trust boundary have been reviewed.
+The CircleCI validation config performs `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run only; it has no deployment step. The pipeline has not been triggered for the current exporter branch.
 
 ## Safety and limitations
 
