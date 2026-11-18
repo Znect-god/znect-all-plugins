@@ -24,6 +24,7 @@ export interface CiRun {
   completedAt?: string;
   url?: string;
   componentId?: string;
+  workflowId?: string;
 }
 
 export interface CiWorkflow {
@@ -73,7 +74,10 @@ export interface CiTestReport {
 
 export interface CiArtifact {
   id: string;
-  jobId: string;
+  /** Present for providers whose artifact API is job-scoped. */
+  jobId?: string;
+  /** Present for providers whose artifact API is run-scoped. */
+  runId?: string;
   path: string;
   size?: number;
   contentType?: string;
@@ -105,4 +109,6 @@ export interface ReadOnlyCiProviderAdapter {
   getTestReport(scope: CiProjectScope, jobId: string, maxBytes: number): Promise<CiTestReport>;
   listArtifacts(scope: CiProjectScope, jobId: string): Promise<CiArtifact[]>;
   getArtifact(scope: CiProjectScope, jobId: string, path: string, maxBytes: number): Promise<CiArtifactContent>;
+  /** Run-level artifact metadata, when the provider does not associate artifacts with jobs. */
+  listRunArtifacts?(scope: CiProjectScope, runId: string): Promise<CiArtifact[]>;
 }
