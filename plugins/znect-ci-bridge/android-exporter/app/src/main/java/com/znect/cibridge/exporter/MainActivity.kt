@@ -158,6 +158,10 @@ class MainActivity : Activity() {
             statusText.text = "Enter the Bearer token locally before saving."
             return
         }
+        if (enteredToken.isNotEmpty() && !isValidBearerToken(enteredToken)) {
+            statusText.text = "Bearer token format is invalid or exceeds the 4096-character limit."
+            return
+        }
 
         try {
             val editor = prefs.edit()
@@ -194,6 +198,7 @@ class MainActivity : Activity() {
         executor.execute {
             try {
                 val token = decryptToken(prefs.getString(TOKEN_CIPHERTEXT, "") ?: "")
+                if (!isValidBearerToken(token)) throw IllegalStateException("Stored credential is invalid. Re-enter it in the app.")
                 val report = requestReport(origin, project, connection, token)
                 val file = writePrivateReport(report)
                 latestReportFile = file
@@ -321,7 +326,7 @@ class MainActivity : Activity() {
         dir.listFiles()?.forEach { it.delete() }
         val stamp = report.optString("generated_at").replace(Regex("[^A-Za-z0-9]"), "-").take(40)
         val file = File(dir, "znect-ci-report-$stamp.json")
-        file.writeText(report.toString(2), Charsets.UTF_8)
+        file.writeText(report.toString(), Charsets.UTF_8)
         return file
     }
 
@@ -384,6 +389,9 @@ class MainActivity : Activity() {
 
     private fun normalizeOrigin(raw: String): String? = OriginPolicy.normalize(raw)
 
+    private fun isValidBearerToken(value: String): Boolean =
+        value.length in 1..4096 && TOKEN_PATTERN.matches(value)
+
     private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
 
     private fun cleanExpiredReports() {
@@ -416,6 +424,7 @@ class MainActivity : Activity() {
         private const val MAX_REPORT_BYTES = 100 * 1024
         private const val REPORT_TTL_MS = 30 * 60 * 1000L
         private val SAFE_ID = Regex("^[A-Za-z0-9._:-]{1,128}$")
+        private val TOKEN_PATTERN = Regex("^[A-Za-z0-9._~+/-]+=*$")
         private val SENSITIVE_KEY = Regex("(?i)(token|secret|authorization|password|api[_-]?key)")
     }
 }
