@@ -1227,3 +1227,13 @@ For every meaningful feature or fix:
 - [ ] Resolve any failures found by actual execution, then update this roadmap with exact run/job IDs and evidence.
 
 **Verification boundary:** source and documentation corrections are committed. The audit is source-level only. No test suite, dependency audit, typecheck, CircleCI pipeline, Preview deployment, live CircleCI API request, secret access or Production change was performed. Stage 82 implementation items are complete; validation remains open.
+
+
+### Stage 83 — Preserve event-page truncation in assistant-report completeness — 2026-11-18
+
+- [x] Treat a webhook event page that reaches its requested limit as potentially incomplete; expose `completeness.events_limited` in `GET /api/v1/report`.
+- [x] Make dashboard export status remain partial when the event page is saturated, even if the event store is reachable and all linked failed-run diagnostics were fetched.
+- [x] Add API regression coverage for a full 20-event report page and update the dashboard contract test for the new completeness rule.
+- [ ] Execute the focused report/UI tests and full Vitest suite through the authorized CircleCI exact-SHA workflow.
+
+**Verification boundary:** implementation and regression-test source are committed. Tests have not been executed. The change is conservative: a page exactly at its requested limit is marked potentially limited because the bounded report cannot prove that no additional events exist beyond the page.
