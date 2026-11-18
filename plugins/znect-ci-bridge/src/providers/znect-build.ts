@@ -78,16 +78,14 @@ function mapRun(value: unknown, projectId: string): CiRun {
   if (!isRecord(value)) throw new Error("GitHub Actions returned a malformed workflow run.");
   const id = String(safeInteger(value.id, "workflow run ID"));
   const workflowId = String(safeInteger(value.workflow_id, "workflow ID"));
-  const headCommit = isRecord(value.head_commit) ? value.head_commit : {};
   const status = optionalText(value.conclusion) ?? optionalText(value.status) ?? "unknown";
   return {
     id,
     projectId,
     workflowId,
     status,
-    ...(optionalText(value.head_branch) ? { branch: optionalText(value.head_branch) } : {}),
-    ...(optionalText(value.head_sha) ? { commitSha: optionalText(value.head_sha) } : {}),
-    ...(optionalText(headCommit.message) ? { commitMessage: optionalText(headCommit.message) } : {}),
+    // GitHub's head_branch/head_sha belong to the central Build repository,
+    // not the project source. The verified source SHA is added after artifact validation.
     ...(iso(value.run_started_at ?? value.created_at) ? { startedAt: iso(value.run_started_at ?? value.created_at) } : {}),
     ...(safeRunUrl(value.html_url, id) ? { url: safeRunUrl(value.html_url, id) } : {})
   };
