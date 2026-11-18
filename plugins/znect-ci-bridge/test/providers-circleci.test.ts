@@ -69,7 +69,8 @@ describe("CircleCI read-only provider adapter", () => {
             current_outcome: "succeeded",
             branch: "unverified-branch-alias",
             subject: "unverified-subject-alias",
-            vcs_revision: "unverified-revision-alias"
+            vcs_revision: "unverified-revision-alias",
+            web_url: "https://app.circleci.com/pipelines/gh/Znect-god/znect-forge/1"
           }
         }],
         page: { next: null }
@@ -81,6 +82,7 @@ describe("CircleCI read-only provider adapter", () => {
     expect(runs[0]).not.toHaveProperty("commitSha");
     expect(runs[0]).not.toHaveProperty("branch");
     expect(runs[0]).not.toHaveProperty("commitMessage");
+    expect(runs[0]).not.toHaveProperty("url");
   });
 
   it("rejects a scope using a different registered connection before network access", async () => {
