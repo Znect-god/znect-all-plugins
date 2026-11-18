@@ -10,7 +10,7 @@ This repository is the central home for Znect plugins, integrations, developer t
 
 ```text
 plugins/                 Individual plugin projects
-  znect-ci-bridge/       Cloudflare Worker / MCP bridge for CircleCI (prototype)
+  znect-ci-bridge/       Cloudflare Worker / private Browser API for read-only CircleCI diagnostics (prototype)
 documentation/           Repository-wide standards and guides
 templates/               Starter files for new plugins
 ```
@@ -31,7 +31,7 @@ A status describes maturity, not a guarantee of security. Each plugin must docum
 
 | Plugin | Status | Current version | Purpose |
 |---|---|---:|---|
-| [Znect CI Bridge](plugins/znect-ci-bridge/) | `prototype` | `0.1.0` | Read-only MCP bridge to CircleCI build information |
+| [Znect CI Bridge](plugins/znect-ci-bridge/) | `prototype` | `0.1.0` | Read-only CircleCI diagnostics, webhook inbox and private assistant-report API |
 
 ## Required information for every plugin
 
