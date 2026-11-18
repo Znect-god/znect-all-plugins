@@ -825,3 +825,15 @@ For every meaningful feature or fix:
 - [ ] Verify the same report and diagnostic round-trip against the existing Preview; no deployment or live request is performed in this stage.
 
 **Verification boundary:** the source contract and regression-test assertions now agree. This is static/source-level verification only; test execution and live Preview retrieval remain pending.
+
+
+## 49. Reconcile plugin metadata and historical architecture notes — 2026-11-18
+
+- [x] Remove the Android exporter from the current plugin description, platform list, dependencies, security controls and assistant handoff metadata **(выполнено — plugin manifest updated)**.
+- [x] Move old GitHub Actions/Preview test claims into an explicitly historical evidence section and state that they do not validate the current branch HEAD **(выполнено — metadata reconciliation)**.
+- [x] Replace the obsolete CircleCI executor declaration with the central Znect Build target and its current validation command list **(выполнено — metadata reconciliation)**.
+- [x] Mark the old CircleCI-first roadmap and changelog entries as superseded historical snapshots **(выполнено — documentation cleanup)**.
+- [x] Re-scan active plugin metadata and docs for stale Android exporter and CircleCI-executor claims; remaining matches are confined to explicitly historical changelog/roadmap entries **(выполнено — source/documentation scan)**.
+- [ ] Keep the direct ChatGPT authentication limitation explicit until a supported private credential flow is proven; dashboard JSON export remains a manual fallback.
+
+**Verification boundary:** metadata and documentation now describe the current architecture. This does not validate code execution, live Preview behavior, direct ChatGPT authentication or release readiness.
