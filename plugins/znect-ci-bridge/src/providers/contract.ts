@@ -112,7 +112,7 @@ export interface ReadOnlyCiProviderAdapter {
   }): Promise<CiLogOutput>;
   getTestReport(scope: CiProjectScope, jobId: string, maxBytes: number): Promise<CiTestReport>;
   listArtifacts(scope: CiProjectScope, jobId: string): Promise<CiArtifact[]>;
-  getArtifact(scope: CiProjectScope, jobId: string, path: string, maxBytes: number): Promise<CiArtifactContent>;
+  getArtifact(scope: CiProjectScope, jobId: string, path: string, maxBytes: number, execution?: number): Promise<CiArtifactContent>;
   /** Run-level artifact metadata, when the provider does not associate artifacts with jobs. */
   listRunArtifacts?(scope: CiProjectScope, runId: string): Promise<CiArtifact[]>;
 }
