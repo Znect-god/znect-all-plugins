@@ -699,10 +699,22 @@ For every meaningful feature or fix:
 - [x] Re-check the authenticated Browser JSON API status/report routes, bounded query parameters, GET-only access, provider error handling and event-page byte limits **(выполнено — source review)**.
 - [x] Re-check CircleCI adapter construction and cache lifetime; adapter instances are created per selected request, so failed per-instance promise caches do not persist as a cross-request outage **(выполнено — source review)**.
 - [x] Re-check Android temporary report creation, previous-file cleanup, 30-minute expiry enforcement at share time, FileProvider read-only grant and Activity cancellation/disconnection **(выполнено — source review)**.
-- [x] Reconcile the Android test inventory at 45 authored JVM cases; execution remains pending **(выполнено — inventory reconciliation)**.
+- [x] Reconcile the Android test inventory at 48 authored JVM cases (8 origin + 21 report validator + 3 Bearer policy + 11 CircleCI status + 5 report-file expiry); execution remains pending **(выполнено — inventory reconciliation)**.
 - [x] Reconfirm the CircleCI setup guide specifies the connected GitHub project, .circleci/config.yml, allowed feature branch, two jobs, test-result/APK artifact retrieval and no CI secrets for validation **(выполнено — documentation review)**.
 - [ ] Connect/confirm the repository project in CircleCI and obtain an actual workflow run for the exact feature branch HEAD. This session has no CircleCI-specific read integration, so no run can be queried or asserted here.
 - [ ] Inspect CircleCI Worker test/audit/dry-run results and Android JUnit report; retrieve the debug APK only from the completed CircleCI job.
 - [ ] Install and verify the APK on a physical Android device; separately establish whether the intended private Browser JSON API can be authenticated from a ChatGPT session without manual Sharesheet transfer.
 
 **Verification boundary:** this pass found no additional reproducible source defect, so no speculative code change was made. The GitHub workflow files remain inert; CircleCI is the only configured CI Bridge validation executor. No tests, CircleCI run, APK, device test, ChatGPT authentication or deployment are claimed.
+
+
+## 39. Correct Android test inventory across project documentation — 2026-11-18
+
+- [x] Count the actual JUnit `@Test` declarations in all five Android test files: 8 origin-policy + 21 report-validator + 3 Bearer-token-policy + 11 CircleCI connection-status + 5 report-file-expiry = **48 authored tests** **(выполнено — source inventory inspected)**.
+- [x] Identify and correct the stale report-validator count (18 instead of 21) and stale totals (40/45 instead of 48) in the Android README, Assistant Channel, Free Access Plan and Usage Guide **(выполнено — documentation commits)**.
+- [x] Update the current roadmap inventory and keep prior sections as historical snapshots of the test inventory at those earlier stages **(выполнено)**.
+- [ ] Execute all 48 Android JVM tests and assemble the debug APK through CircleCI; no test result or APK is claimed.
+- [ ] Inspect the actual CircleCI Worker and Android job results and retrieve the APK artifact only after a successful run.
+- [ ] Verify the exporter on a physical Android device and continue the separate private Browser JSON API / ChatGPT authentication feasibility work.
+
+**Verification boundary:** 48 is the count of authored JUnit test methods, not a passing-test count. No Android test execution, APK assembly, CircleCI run, device test, ChatGPT session authentication or deployment is established by these documentation corrections.
