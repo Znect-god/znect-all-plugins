@@ -1,6 +1,6 @@
 # Security review notes
 
-**Review date:** 2026-11-17  
+**Review date:** 2026-11-18  
 **Scope:** source-level review of the prototype Worker and its security helpers  
 **Result:** targeted hardening applied; not a complete security audit
 
@@ -106,6 +106,12 @@ The current isolated engineering branch adds a second validation boundary inside
 - Browser/MCP readers also enforce an explicit output-field allowlist, optional string/number bounds and CircleCI-only workflow URLs. Unknown stored properties are rejected rather than serialized, protecting against legacy or corrupted rows that contain unapproved personal data.
 
 Focused regression tests have been authored for these cases. They have **not** been executed on the current branch head; no typecheck, CI workflow, Preview deployment or live provider verification was performed for these changes. This is source-level hardening only, not a claim of validated or deployed behavior.
+
+### 2026-11-18 source review — slug resolution and workflow URL port consistency
+
+- The registry and webhook path explicitly accept both `gh/` and `github/` CircleCI GitHub slug forms. The API v3 resolver previously accepted only `gh/`, creating a configuration that could validate and receive webhooks but fail its live API project-resolution step. The resolver now accepts both forms and rejects other prefixes before network access.
+- Normalized workflow URLs are now restricted to HTTPS `app.circleci.com` on the default HTTPS port. Explicit port 443 is accepted; non-default ports are rejected both before storage and when reading stored events through Browser/MCP.
+- Regression tests were added for the alias resolver and the two URL validation boundaries. They have not been executed on the current head. No CI, Preview, deployment or live CircleCI request was performed.
 
 ### Remaining webhook/notification verification
 
