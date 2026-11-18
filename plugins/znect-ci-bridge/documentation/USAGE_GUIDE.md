@@ -257,6 +257,8 @@ JSON API:
 
 Для всех запросов требуется `Authorization: Bearer <WEB_ACCESS_TOKEN>`. API read-only.
 
+Центральный Znect Build доступен через отдельные read-only Browser API маршруты: `GET /api/v1/build/status?project_id=znect-ci-bridge`, `GET /api/v1/build/runs?project_id=znect-ci-bridge&limit=10` и `GET /api/v1/build/runs/{run_id}?project_id=znect-ci-bridge`. Для них дополнительно требуется настроенный Worker Secret `ZNECT_BUILD_GITHUB_TOKEN`; на текущем этапе он ещё не настроен и live-проверка не выполнена. Эти маршруты используют тот же `WEB_ACCESS_TOKEN` для Browser API.
+
 ### Инструменты MCP
 
 - `check_connection()` — CircleCI API v3 access/project resolution.
