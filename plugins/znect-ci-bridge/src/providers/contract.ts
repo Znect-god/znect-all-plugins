@@ -111,4 +111,6 @@ export interface ReadOnlyCiProviderAdapter {
   getArtifact(scope: CiProjectScope, jobId: string, path: string, maxBytes: number): Promise<CiArtifactContent>;
   /** Run-level artifact metadata, when the provider does not associate artifacts with jobs. */
   listRunArtifacts?(scope: CiProjectScope, runId: string): Promise<CiArtifact[]>;
+  /** Bounded read of the validated central CI Bridge manifest, when supported. */
+  getValidationManifest?(scope: CiProjectScope, runId: string): Promise<Record<string, unknown>>;
 }
