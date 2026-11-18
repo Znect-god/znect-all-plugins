@@ -167,7 +167,7 @@ describe("CI Bridge provenance manifest schema", () => {
       ],
       getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
         path: artifactPath,
-        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(wrongJobManifest) : manifest.source_sha + "\\n",
+        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(wrongJobManifest) : manifest.source_sha + "\n",
         truncated: false
       })
     };
@@ -190,7 +190,7 @@ describe("CI Bridge provenance manifest schema", () => {
       ],
       getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
         path: artifactPath === "ci-bridge-validation-manifest.json" ? "unexpected.json" : artifactPath,
-        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(manifest) : manifest.source_sha + "\\n",
+        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(manifest) : manifest.source_sha + "\n",
         truncated: false
       })
     };
