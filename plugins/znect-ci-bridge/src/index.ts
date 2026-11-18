@@ -702,7 +702,7 @@ function createServer(env: Env) {
             ))
             .map((step) => ({
               name: step.name,
-              execution_index: step.execution,
+              execution_index: step.execution_index,
               actions: step.actions
                 .filter((action) => (action.status === "failed" || action.outcome === "failed") && action.isInsignificant !== true)
                 .map((action) => ({
@@ -734,7 +734,7 @@ function createServer(env: Env) {
                 try {
                   const result = await adapter.getJobLogs(scope, job.id, {
                     step: stepNum,
-                    execution: step.execution,
+                    execution: step.execution_index,
                     stream,
                     maxBytes: 12_000 * 4
                   });
@@ -754,7 +754,7 @@ function createServer(env: Env) {
               }
               failedStepLogs.push({
                 step_num: stepNum,
-                execution: step.execution,
+                execution: step.execution_index,
                 action_name: action.name,
                 stdout: output.stdout,
                 stderr: output.stderr
