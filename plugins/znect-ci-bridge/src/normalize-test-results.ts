@@ -82,7 +82,9 @@ function readExecution(value: unknown): number | undefined {
 }
 
 function testIdentity(test: NormalizedTestCase): string {
-  return JSON.stringify([test.classname, test.name, test.file]);
+  // CircleCI JSONL may omit file while JUnit includes it; classname + name is
+  // the common identity, with file used as a conflict guard when both exist.
+  return JSON.stringify([test.classname, test.name]);
 }
 
 function parseJsonl(content: string | undefined, alreadyTruncated: boolean): ParsedTests {
@@ -337,8 +339,7 @@ function reconcileTests(jsonl: NormalizedTestCase[], junit: NormalizedTestCase[]
     }
     const jsonTest = jsonTests[0];
     const junitTest = junitTests[0];
-    if (jsonTest.execution !== undefined && junitTest.execution !== undefined &&
-        jsonTest.execution !== junitTest.execution) continue;
+    if (jsonTest.execution !== undefined && junitTest.execution !== undefined &&\n        jsonTest.execution !== junitTest.execution) continue;\n    if (jsonTest.file && junitTest.file && jsonTest.file !== junitTest.file) continue;
     removed.add(junitTest);\n    duplicateReportsRemoved++;\n    if (jsonTest.status === "unknown" && junitTest.status !== "unknown") {\n      jsonTest.status = junitTest.status;\n    } else if (jsonTest.status !== "unknown" && junitTest.status !== "unknown" &&\n        jsonTest.status !== junitTest.status) {\n      conflictingStatuses++;\n    }
   }
   return {
