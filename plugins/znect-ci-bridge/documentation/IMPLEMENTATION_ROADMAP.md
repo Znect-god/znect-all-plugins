@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (parallel JUnit artifact identity verification)  
+**Updated:** 2026-11-18 (ChatGPT Free no-MCP platform boundary)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `ci-bridge` (the single permanent CI Bridge development branch)
@@ -28,10 +28,10 @@ No PR merge, Znect Build execution, Preview refresh, Production change, secret a
 
 1. **Core CircleCI diagnostics and private report API — (выполнено):** provider adapter, authenticated bounded Browser API, webhook inbox, event correlation and aggregate `/api/v1/report` source are present.
 2. **Dashboard assistant-report handoff — source implementation (выполнено):** the existing dashboard downloads a bounded aggregate report and up to three failed-run diagnostic bundles; regression-test source and partial-report handling are present.
-3. **Private ChatGPT access and live handoff — in progress:** establish a supported authenticated path to the private Browser API, verify the existing Preview and prove a real report round-trip without MCP, public unauthenticated access or manual secret sharing.
+3. **Private ChatGPT access and live handoff — partially completed / platform-blocked:** the authenticated dashboard export provides the supported free no-MCP manual JSON handoff. Automatic authenticated calls from a personal ChatGPT Free account to the private Browser API are not established by currently documented ChatGPT capabilities; do not weaken authentication or mislabel the manual handoff as automatic. Reassess only when an official compatible connector is available for the target plan and region.
 4. **Znect Build validation and release readiness — pending:** validate the exact source SHA through the central recipe, inspect real test/security results, complete authorized integration checks and prepare Reporting / Diagnostics v1 for transfer to `Znect-god/znect-build`.
 
-**Delivery milestone count:** the roadmap has four high-level delivery milestones, not a fixed 86-stage project plan. Milestones 1–2 have source implementation; milestone 3 (private ChatGPT access and live handoff) is in progress; milestone 4 (validation and release readiness) is pending. Therefore, two high-level milestones remain unfinished, with milestone 3 already underway. The numbered engineering stages below are an incremental audit/change log and do not define a fixed final stage number.
+**Delivery milestone count:** the roadmap has four high-level delivery milestones, not a fixed 86-stage project plan. Milestones 1–2 have source implementation; milestone 3 has a completed manual no-MCP handoff but its automatic private connector is platform-blocked; milestone 4 (validation and release readiness) is pending. Therefore, two high-level milestones remain unfinished, with milestone 3 already underway. The numbered engineering stages below are an incremental audit/change log and do not define a fixed final stage number.
 
 ## 3. Intended result
 
@@ -42,7 +42,7 @@ ChatGPT and authorized users should be able to inspect current Znect project bui
 - structured test results and allowlisted artifacts when the provider exposes them;
 - signed webhook events and conservative event-to-run correlation;
 - a browser dashboard/JSON API and a free private report handoff for ChatGPT (no MCP channel and no GitHub Actions dependency);
-- a bounded assistant-facing report endpoint or equivalent direct private handoff that ChatGPT can consume.
+- a bounded assistant-facing report export for explicit user-reviewed attachment; automatic direct API consumption remains conditional on a supported ChatGPT connector.
 
 The Bridge must remain read-only with respect to CI execution and project source/configuration: no trigger, retry, cancel, deployment, configuration-write or source-modification operations.
 
@@ -1291,6 +1291,17 @@ For every meaningful feature or fix:
 
 **Verification boundary:** the source and regression-test updates are committed on the canonical `ci-bridge` branch. This is source-level work only; no test execution, typecheck, CircleCI API request, CircleCI pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
 
+
+### Stage 90 — Confirm ChatGPT Free no-MCP integration boundary — 2026-11-18
+
+- [x] Audit the existing authenticated Browser API and dashboard export against current official ChatGPT app/plugin, custom MCP and GPT Actions documentation.
+- [x] Confirm that plugin-directory availability does not itself grant a custom private API connector; individual app access remains plan-, region- and interface-dependent.
+- [x] Record that custom MCP server connections are not a supported universal personal-Free route, and GPT Actions are not a viable new personal-Free setup path.
+- [x] Preserve the secure no-MCP free fallback: authenticated dashboard session and bounded user-reviewed JSON attachment; do not weaken Bearer authentication or expose secrets.
+- [x] Update the free-access plan and assistant-channel documentation with the platform boundary and honest completion criteria.
+- [ ] Reassess automatic private access only when an official no-MCP connector is supported for the target ChatGPT plan and region; then perform an end-to-end authorization and report round-trip test.
+
+**Status:** documentation and architecture decision **(выполнено)**. Automatic ChatGPT Free API access remains platform-blocked, not implemented or verified. No CircleCI pipeline, API request, Preview/Production deployment, secret access or runtime configuration change was performed.
 
 ### Stage 88 — Preserve parallel execution identity and honest diagnostic totals — 2026-11-18
 
