@@ -977,9 +977,9 @@ function createServer(env: Env) {
   server.registerTool(
     "list_build_runs",
     {
-      description: "List verified central Znect Build workflow runs for one registered project. Ownership requires the central project/source fingerprint artifact; unverified runs are omitted. Read-only; limit 1–30.",
+      description: "List verified central Znect Build workflow runs for one registered project. Ownership requires the central project/source fingerprint artifact; unverified runs are omitted. Read-only; limit 1–20.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), limit: z.number().int().min(1).max(30).default(10) }
+      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), limit: z.number().int().min(1).max(20).default(10) }
     },
     async ({ project_id, connection_id, limit }) => {
       const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
