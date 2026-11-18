@@ -77,3 +77,8 @@ The registry drives CircleCI webhook allowlisting, project-isolated event inbox 
 Before returning run diagnostics, the Bridge verifies run membership by searching the selected project's documented `filter[project_id]` runs collection, bounded to 400 recent runs. Runs older than this verification window fail closed rather than being fetched by an unscoped UUID alone. Before returning job data, it verifies the detail resource's `references.project.id`; when a job is inspected as part of a run, it also verifies `references.workflow.id`. Missing or mismatched ownership metadata is rejected rather than guessed. This protects against callers supplying a valid UUID belonging to another registered project.
 
 The `znect-build` provider remains a reserved registry identifier only. Do not infer that a project has live Build connectivity merely because it appears in this registry.
+
+
+## Znect Build connection
+
+A project may register a connection with `provider: "znect-build"` and no CircleCI `projectSlug`. The Bridge currently requires exactly one `repositories[].fullName` entry for that project; it is compared against the central Build validation-artifact source-repository fingerprint. The server-side secret `ZNECT_BUILD_GITHUB_TOKEN` must have read-only Actions access to `Znect-god/znect-build`. The adapter uses GitHub Actions REST reads only. It does not dispatch workflows, rerun/cancel jobs, change settings, or deploy. Central validation artifact names must use the validated ownership format documented in [PROVIDER_ADAPTERS.md](PROVIDER_ADAPTERS.md).
