@@ -39,6 +39,7 @@ export interface NormalizeJobTestResultsInput {
   jsonl?: string;
   jsonlTruncated?: boolean;
   jsonlUnavailable?: boolean;
+  junitIncomplete?: boolean;
   junitArtifacts?: JunitReportInput[];
 }
 
@@ -354,7 +355,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
   const junitReports = input.junitArtifacts ?? [];
   const junitTests: NormalizedTestCase[] = [];
   let malformedJunitReports = 0;\n  let junitAvailable = false;\n  let junitChars = 0;
-  let incomplete = json.truncated || json.malformed > 0 || input.jsonlUnavailable === true;
+  let incomplete = json.truncated || json.malformed > 0 || input.jsonlUnavailable === true || input.junitIncomplete === true;
 
   for (const report of junitReports) {
     if (report.error || typeof report.content !== "string") {
