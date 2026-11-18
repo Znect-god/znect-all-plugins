@@ -1108,4 +1108,17 @@ For every meaningful feature or fix:
 - [ ] Execute TypeScript check and focused diagnostics/provider tests through the authorized opt-in CircleCI workflow.
 - [ ] Verify parallel execution log and artifact behavior against a live authorized CircleCI job.
 
-**Verification boundary:** source audit identified a TypeScript excess-property mismatch: the MCP diagnostics artifact collection type omitted the optional `execution` field even though the provider contract and pushed report object include it. The type was corrected. The current diagnostic design deliberately caps JUnit artifact retrieval at one per job and flags multiple eligible reports as incomplete; this does not yet aggregate all per-execution JUnit files. No tests, typecheck, live API request, CircleCI pipeline, deployment or runtime configuration change was performed.
+**Verification boundary:** source audit identified a TypeScript excess-property mismatch: the MCP diagnostics artifact collection type omitted the optional `execution` field even though the provider contract and pushed report object include it. The type was corrected. At the time of this stage, the diagnostic design capped JUnit artifact retrieval at one per job; Stage 74 supersedes that limitation with bounded multi-artifact collection. No tests, typecheck, live API request, CircleCI pipeline, deployment or runtime configuration change was performed.
+
+
+### Stage 74 — Aggregate JUnit reports across parallel executions within a strict byte budget
+- [x] Replace the one-report-per-job behavior in both MCP and Browser JSON API diagnostics with one shared bounded collector.
+- [x] Collect up to four JUnit/test-results XML artifacts per job, preserving each artifact's execution index and exact path.
+- [x] Enforce a shared 500,000-byte aggregate retrieval budget per job; each next download receives only the remaining budget.
+- [x] Mark diagnostics incomplete and set the artifact-limit indicator when the artifact-count or aggregate-byte budget prevents full collection; preserve per-artifact retrieval errors without hiding successful reports.
+- [x] Keep oversized known artifacts out of retrieval and report incompleteness rather than attempting an over-budget download.
+- [ ] Add focused regression tests for multiple executions, same-path artifacts, count cap, aggregate byte cap, unknown sizes and partial retrieval failure.
+- [ ] Execute TypeScript checks and focused tests through the authorized opt-in CircleCI workflow.
+- [ ] Verify multi-execution JUnit collection against a live authorized CircleCI job.
+
+**Verification boundary:** shared collector and both diagnostics call sites updated in source; static review only. The four-artifact and 500,000-byte limits are code-enforced, but TypeScript and runtime behavior remain unverified. No tests, live API requests, CircleCI pipeline, deployment or credential changes were performed.
