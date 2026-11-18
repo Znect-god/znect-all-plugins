@@ -39,7 +39,7 @@
 - The browser downloads one reviewable JSON report for explicit user-controlled handoff to ChatGPT. This does not establish automatic ChatGPT authentication.
 - Added UI regression-test source and updated the assistant-channel guide, README and implementation roadmap. CircleCI test execution and live Preview verification remain pending; no Preview deployment or Production change was performed.
 
-## 2026-11-18 — authoritative architecture correction: CircleCI-only CI execution
+## 2026-11-18 — [SUPERSEDED] intermediate CircleCI-only executor direction
 
 - The current CI Bridge architecture uses CircleCI as the **only CI executor** for CI Bridge source validation and Android exporter checks, via the root `.circleci/config.yml`.
 - Znect Build remains a separate build/orchestration project and is not the CI Bridge validation executor.
@@ -62,7 +62,7 @@
 - Wired the validator into the workflow before CircleCI report collection.
 - Changes are isolated in Forge branch `fix/ci-bridge-free-circleci-report-params`; no workflow run was started and no deployment occurred.
 
-## 2026-11-18 — Free non-MCP ChatGPT channel and CircleCI report-scope fix
+## 2026-11-18 — [HISTORICAL / SUPERSEDED] Free non-MCP ChatGPT channel experiment
 
 - Clarified that the supported ChatGPT access path is the private Forge issue command → GitHub Actions → authenticated CI Bridge Browser API → private short-lived report artifact; MCP is not required or used as the assistant channel.
 - Confirmed Forge PR #9 merged the private report workflow and collector to Forge `main`.
