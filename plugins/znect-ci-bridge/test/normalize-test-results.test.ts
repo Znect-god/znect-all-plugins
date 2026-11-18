@@ -48,6 +48,31 @@ describe("unified CircleCI test result normalization", () => {
     });
   });
 
+
+  it("matches JSONL without a file field to a unique JUnit identity that includes a file", () => {
+    const result = normalizeJobTestResults({
+      jsonl: JSON.stringify({ classname: "pkg.Math", name: "adds", result: "success" }),
+      junitArtifacts: [{
+        content: '<testsuite><testcase classname="pkg.Math" name="adds" file="src/math.test.ts"/></testsuite>'
+      }]
+    });
+    expect(result).toMatchObject({
+      total: 1, passed: 1, duplicate_reports_removed: 1, incomplete: false
+    });
+  });
+
+  it("does not merge same-name tests when both sources identify different files", () => {
+    const result = normalizeJobTestResults({
+      jsonl: JSON.stringify({ classname: "pkg.Math", name: "adds", file: "src/a.test.ts", result: "success" }),
+      junitArtifacts: [{
+        content: '<testsuite><testcase classname="pkg.Math" name="adds" file="src/b.test.ts"/></testsuite>'
+      }]
+    });
+    expect(result).toMatchObject({
+      total: 2, passed: 2, duplicate_reports_removed: 0, incomplete: false
+    });
+  });
+
   it("does not collapse repeated test identities from parallel executions", () => {
     const result = normalizeJobTestResults({
       jsonl: JSON.stringify({ classname: "pkg.Math", name: "same", result: "success" }),
