@@ -981,3 +981,11 @@ For every meaningful feature or fix:
 - [ ] Confirm the v3 run revision and provenance artifacts against a real CircleCI run; documentation/source review is not a runtime round-trip.
 
 **Verification boundary:** the producer, strict parser and fixture now agree on CircleCI API v3 identity fields only. No tests or CircleCI pipeline were run; no runtime, secret or deployment settings were changed.
+## 61. Match the provenance producer to the strict v3 job identity contract — 2026-11-18
+
+- [x] Align the CircleCI manifest producer with the strict parser's four-field identity object: pipeline UUID, workflow UUID, job UUID and configured job name **(выполнено — cross-repository source alignment)**.
+- [x] Ensure the configured job name is emitted deterministically rather than depending on a legacy `CIRCLE_JOB` environment variable **(выполнено — Znect Build config source update)**.
+- [x] Reconfirm that the three dynamic CircleCI UUID variables are captured before project scripts and exported to the manifest process **(выполнено — static config inspection)**.
+- [ ] Execute the provenance schema/adapter tests and validate an actual manifest through the Bridge against live API v3 resources.
+
+**Verification boundary:** producer and consumer schema now agree at source level. No test execution, CircleCI pipeline, runtime configuration change or deployment was performed.
