@@ -101,7 +101,7 @@ node --check scripts/preview-smoke-test.mjs
 npx wrangler deploy --dry-run
 ```
 
-Android ARM64 Termux is not a supported Wrangler/workerd deployment environment for this project. Use the repository's Linux GitHub Actions workflow.
+Android ARM64 Termux is not a supported Wrangler/workerd deployment environment for this project. Use the repository-root CircleCI workflow at `.circleci/config.yml`, which is scoped to `test/ci-bridge-webhook-ingress-contract`. It runs dependency installation, typecheck/unit tests, smoke-test syntax validation and a Wrangler dry-run only; it does not deploy. To run it manually, open the `znect-all-plugins` project in CircleCI, go to **Pipelines → Trigger Pipeline**, select the isolated branch, and trigger the pipeline. The current configuration has not yet been executed.
 
 ## Safety and limitations
 
