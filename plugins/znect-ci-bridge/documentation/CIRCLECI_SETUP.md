@@ -20,7 +20,7 @@ The Android job stores JUnit test results and, when the build succeeds, the APK 
 
 - These jobs do not need `CIRCLECI_TOKEN`, `WEB_ACCESS_TOKEN`, Cloudflare credentials or other project secrets.
 - The workflow does not call CircleCI trigger/retry/cancel/configuration APIs, deploy a Worker, publish an app, sign a release, or install anything on a device.
-- The Android job uses the `medium` resource class to provide sufficient memory for Gradle/Android compilation. CircleCI credit consumption depends on the account's current plan and usage; review the CircleCI usage dashboard and do not enable paid add-ons or automatic credit top-ups.
+- The Android job uses the standard Docker `medium` resource class (2 vCPU / 4 GB RAM). CircleCI currently lists this class on the Free plan at 10 credits/minute; the Free plan includes 30,000 monthly credits for personal usage. Actual consumption depends on job duration and organization eligibility. Review the CircleCI usage dashboard and do not enable paid add-ons or automatic credit top-ups.
 - A configuration commit is not proof of a successful run. Treat tests, APK assembly, artifact availability and device verification as separate results.
 
 ## If no pipeline starts
