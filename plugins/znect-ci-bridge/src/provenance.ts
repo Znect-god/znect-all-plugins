@@ -70,10 +70,11 @@ export function parseCiBridgeManifest(raw: string): Record<string, unknown> {
   const c = m.circleci;
   if (!c || typeof c !== "object" || Array.isArray(c)) throw new Error("manifest_circleci_invalid");
   const ci = c as Record<string, unknown>;
-  const ciKeys = ["pipeline_id", "workflow_id", "job", "build_num", "build_url"];
+  const ciKeys = ["pipeline_id", "workflow_id", "job_id", "job", "build_num", "build_url"];
   if (Object.keys(ci).length !== ciKeys.length || Object.keys(ci).some((key) => !ciKeys.includes(key)) ||
       typeof ci.pipeline_id !== "string" || !UUID_RE.test(ci.pipeline_id) ||
       typeof ci.workflow_id !== "string" || !UUID_RE.test(ci.workflow_id) ||
+      typeof ci.job_id !== "string" || !UUID_RE.test(ci.job_id) ||
       ci.job !== "validate-ci-bridge-source" ||
       typeof ci.build_num !== "string" || !/^[1-9][0-9]{0,11}$/.test(ci.build_num) ||
       typeof ci.build_url !== "string" || ci.build_url.length > 2048) {
@@ -136,7 +137,7 @@ export async function inspectCiBridgeProvenance(
     catch (error) { return { status: "invalid", reason: error instanceof Error ? error.message : "manifest_invalid" }; }
     const ci = manifest.circleci as Record<string, unknown>;
     if (ci.pipeline_id !== run.id || ci.workflow_id !== candidate.workflow.id ||
-        ci.job !== "validate-ci-bridge-source" ||
+        ci.job !== "validate-ci-bridge-source" || ci.job_id !== candidate.jobId ||
         typeof run.commitSha !== "string" || manifest.recipe_sha !== run.commitSha ||
         sourceShaArtifact.content.trim() !== manifest.source_sha) {
       return { status: "invalid", reason: "circleci_identity_or_sha_mismatch" };
