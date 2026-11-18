@@ -1,12 +1,12 @@
-name: Znect CI Bridge Preview (retired — CircleCI only)
+name: Znect CI Bridge Preview (retired — no automatic deployment)
 
 # Retired for the CI Bridge engineering path.
-# CI Bridge validation is owned by .circleci/config.yml and must run in CircleCI.
-# This inert workflow is retained only to avoid deleting repository history.
+# Preview deployment requires a separate explicit authorization and approved process.
+# This inert workflow is retained only for repository history.
 # It performs no checkout, runner allocation, Preview deployment or secret access.
 
 on:
-  workflow_dispatch:
+  workflow_dispatch
 
 permissions: {}
 
@@ -15,4 +15,4 @@ jobs:
     if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
-      - run: echo "This workflow is retired. Use CircleCI for CI Bridge validation."
+      - run: echo "This workflow is retired. Use the approved manual Preview process only after authorization."
