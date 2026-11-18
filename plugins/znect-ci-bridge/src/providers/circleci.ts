@@ -69,7 +69,9 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
     ? vcsRecord.commit as Record<string, unknown>
     : {};
   const branch = text(vcsRecord.branch) ?? text(attrs.branch);
-  const commitSha = text(vcsRecord.revision) ?? text(attrs.vcs_revision);
+  // The API v3 Run schema exposes the revision only at references.event.attributes.vcs.revision.
+  // Do not consume an undocumented top-level alias as trusted provenance.
+  const commitSha = text(vcsRecord.revision);
   const commitMessage = text(commit.subject) ?? text(commit.body) ?? text(attrs.subject);
   // Do not mislabel the source commit URL as a CircleCI run URL.
   const url = text(attrs.web_url);
