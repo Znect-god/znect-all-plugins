@@ -1,5 +1,12 @@
 # Security review notes
 
+> **Current channel boundary (2026-11-18):** ChatGPT-facing access uses the private authenticated Browser JSON API and the Android exporter's explicit manual Sharesheet handoff. MCP is legacy optional functionality, not the ChatGPT channel. CircleCI is the only CI executor for CI Bridge validation. GitHub Actions / Znect Build are not the current CI Bridge runner or report handoff. The MCP-specific findings below apply only to the legacy optional surface; they do not make MCP a requirement.
+
+**Review date:** 2026-11-18  
+**Scope:** source-level review of the prototype Worker and its security helpers  
+**Result:** targeted hardening applied; not a complete security audit
+
+
 **Review date:** 2026-11-18  
 **Scope:** source-level review of the prototype Worker and its security helpers  
 **Result:** targeted hardening applied; not a complete security audit
