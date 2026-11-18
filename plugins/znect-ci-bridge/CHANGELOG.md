@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Consolidated the active development location to the single permanent `ci-bridge` branch. `main` remains the shared plugin repository branch; `znect-build` owns build recipes and configuration; CircleCI is the build execution environment.
+
+## Unreleased
+
 - Clarified that `feature/ci-bridge-android-exporter` is a historical branch name for the single Znect CI Bridge plugin, not a separate Android application; documented that the complete current source is on the feature branch while `main` retains only the earlier prototype registration and README.
 
 ## 2026-11-18 — repair Preview smoke-test API contract
