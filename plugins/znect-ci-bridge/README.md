@@ -92,7 +92,7 @@ The npm `allowScripts` policy is intentionally version-pinned: `esbuild@0.28.2` 
 
 ## Development
 
-Use Node.js 24 on a supported desktop/Linux environment:
+Use Node.js 24 on a supported desktop/Linux environment for local source validation:
 
 ```bash
 npm ci
@@ -101,7 +101,9 @@ node --check scripts/preview-smoke-test.mjs
 npx wrangler deploy --dry-run
 ```
 
-Android ARM64 Termux is not a supported Wrangler/workerd deployment environment for this project. Use the repository-root CircleCI workflow at `.circleci/config.yml`, which is scoped to `test/ci-bridge-webhook-ingress-contract`. It runs dependency installation, typecheck/unit tests, smoke-test syntax validation and a Wrangler dry-run only; it does not deploy. To run it manually, open the `znect-all-plugins` project in CircleCI, go to **Pipelines → Trigger Pipeline**, select the isolated branch, and trigger the pipeline. The current configuration has not yet been executed.
+These commands are local validation steps, not a project build or deployment. Android ARM64 Termux is not a supported Wrangler/workerd deployment environment. **All Znect project builds must be orchestrated through `Znect-god/znect-build`; GitHub Actions is the central executor used by Znect Build.** Do not create or trigger an independent CircleCI workflow for CI Bridge. CircleCI is used here only as a read-only external CI diagnostics provider for projects that already use it.
+
+CI Bridge is not currently an enabled Znect Build target: the central registry currently contains only Forge, its Android debug execution is disabled, and the available central recipe catalog does not yet include this Node.js/Cloudflare Worker package. Before any central validation/build can be run for CI Bridge, Znect Build needs an explicitly reviewed Node/Worker recipe and project onboarding entry. No central workflow or CircleCI pipeline should be triggered as a workaround.
 
 ## Safety and limitations
 
