@@ -48,7 +48,7 @@ The app does not include a default API origin or project identifier. Do not past
 - Strict HTTPS origin policy, fixed report endpoint, GET-only request and redirect rejection.
 - 100 KB response cap, CircleCI report-schema validation, ISO timestamp and bounded collection checks, plus defensive credential-like field scan.
 - Local disconnect action that clears the encrypted credential, Keystore key entry and temporary report.
-- Atomic local JSON export and explicit Android Sharesheet handoff through FileProvider; lifecycle-safe UI completion and selected-connection response binding.
+- Atomic local JSON export and explicit Android Sharesheet handoff through FileProvider; lifecycle-safe UI completion, active HTTPS request cancellation on Activity teardown and selected-connection response binding.
 - Cleartext traffic disabled and system trust anchors required.
 - Gradle 8.9 Wrapper with upstream JAR checksum verification and pinned distribution checksum.
 - Unit-test source for accepted/rejected API origins.
