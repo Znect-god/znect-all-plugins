@@ -257,3 +257,12 @@ For every meaningful feature or fix:
 - Added `scripts/znect-ci-bridge-validate-workflow.sh` and wired it into the report workflow to guard required project/connection parameters and the Browser API response contract **(выполнено — source implementation; script/workflow not executed)**.
 - No Forge `main` update, PR creation, workflow execution, Preview deployment, or live CircleCI request was performed. The correction remains isolated and unvalidated by a workflow run.
 - Next: add/perform source-level workflow contract validation, review secret presence only, then obtain explicit approval before any report workflow run. Live report/artifact retrieval remains pending.
+
+
+## 12. Central build ownership clarification — 2026-11-18
+
+- All Znect project builds, including CI Bridge validation/builds, are owned and executed by the central repository `Znect-god/znect-build` **(выполнено — architecture decision)**.
+- CircleCI remains the external CI provider inspected by CI Bridge in read-only mode. CI Bridge does not dispatch, retry, cancel, or mutate CircleCI pipelines.
+- The free ChatGPT request/report path must be orchestrated and executed through Znect Build. A standalone Forge GitHub Actions workflow must not become an independent build executor or alternative orchestration system.
+- Existing Forge issue #8 and PR #9 workflow are treated as the current report-handoff implementation to be reconciled/migrated into the central Znect Build flow; they do not authorize Forge Actions to own CI Bridge builds.
+- No CI Bridge build or workflow was started during this clarification. Central Build branch changes remain isolated and unexecuted.
