@@ -174,8 +174,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         report.completeness.diagnostics_returned=diagnosticsReturned;
         report.completeness.diagnostics_limited=failedCount>diagnostics.length;
         var serialized=JSON.stringify(report,null,2);
-        if(serialized.length>600000)throw new Error("The combined assistant report exceeds the 600 KB export limit.");
         var blob=new Blob([serialized],{type:"application/json"});
+        if(blob.size>600000)throw new Error("The combined assistant report exceeds the 600 KB export limit.");
         var objectUrl=URL.createObjectURL(blob);
         var link=document.createElement("a");
         var safeProject=currentProject.replace(/[^A-Za-z0-9_-]/g,"-");
