@@ -107,6 +107,29 @@ class ReportValidatorTest {
         }
     }
 
+    @Test fun rejectsNumericStringsInsteadOfJsonNumbers() {
+        val report = validReport()
+        report.getJSONObject("runs").put("returned", "0")
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
+    @Test fun rejectsStringReportVersion() {
+        val report = validReport().put("report_version", "1")
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
+    @Test fun rejectsStringEventCursor() {
+        val report = validReport()
+        report.getJSONObject("events").put("next_cursor", "0")
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
     @Test fun rejectsRequestedLimitsOutsideContract() {
         val report = validReport()
         report.getJSONObject("events").put("requested", 21)
