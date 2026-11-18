@@ -1,66 +1,58 @@
 # Znect CI Bridge — free ChatGPT access channel
 
-**Status:** workflow and collector merged to Forge `main`; live report round-trip still pending.  
-**Primary provider:** CircleCI, read-only.  
-**Transport:** private GitHub issue command + GitHub Actions + authenticated CI Bridge Browser JSON API + private GitHub Actions artifact.  
-**MCP:** not used, not required, and not the ChatGPT communication channel.
+**Status:** authenticated Browser JSON API is implemented; a direct private report handoff still requires completion and live verification.  
+**Primary CI provider:** CircleCI.  
+**ChatGPT transport:** free authenticated Browser JSON API + private report handoff.  
+**MCP:** optional legacy surface only; not required and not the ChatGPT communication channel.  
+**Build executor for CI Bridge:** CircleCI. GitHub Actions / Znect Build are not used for CI Bridge validation.
 
-## Request flow
+## Request and response model
 
-1. ChatGPT/user requests a CircleCI status report.
-2. The owner posts the exact command `/znect-ci-bridge check` to private Forge issue [#8](https://github.com/Znect-god/znect-forge/issues/8).
-3. The merged Forge workflow `.github/workflows/znect-ci-bridge-request.yml` validates the request origin and the configured `ZNECT_CI_BRIDGE_WEB_TOKEN` secret.
-4. The workflow reads CircleCI data through the CI Bridge Browser JSON API. It does not call an MCP endpoint.
-5. The workflow collects project status, recent runs, bounded failed-run diagnostics, webhook events, and the companion GitHub Actions repository report.
-6. The complete JSON report and selected diagnostics are uploaded as a private GitHub Actions artifact with one-day retention. The issue comment contains only a short status and run link.
-7. ChatGPT retrieves the artifact through the already connected GitHub integration and analyzes it.
+1. An authorized user requests a CI Bridge report in ChatGPT.
+2. The report is obtained through the authenticated Browser JSON API, using the separate `WEB_ACCESS_TOKEN`.
+3. The API reads only registered CircleCI projects and connections and returns bounded, redacted status, run, workflow, job, diagnostic, test and event data.
+4. A private report handoff makes the resulting JSON available to ChatGPT without MCP and without a paid intermediary.
+5. ChatGPT analyzes the report; it cannot trigger, retry, cancel or modify CircleCI pipelines through this interface.
 
-## Confirmed repository state
+The direct API endpoints already implemented include:
 
-- Private inbox issue #8 exists.
-- PR #9, **Add private on-demand Znect CI Bridge report channel**, is merged into Forge `main`.
-- Merge commit: `fb226fb25e414f4ce0f53d1b7a8f280b00b2c60a`.
-- Workflow: `.github/workflows/znect-ci-bridge-request.yml`.
-- Collector: `scripts/znect-ci-bridge-collect-github-report.sh`.
-- The workflow calls `/api/v1/status`, `/api/v1/runs`, `/api/v1/events`, and `/api/v1/diagnostics/{run_uuid}` on the Bridge Preview.
-- The workflow is configured for a private artifact with one-day retention.
-- Merge proves the code is on the default branch; it does not prove that a live report has run or that the artifact can be retrieved by ChatGPT.
+- `GET /api/v1/projects`
+- `GET /api/v1/status?project_id=znect-forge&connection_id=circleci-main`
+- `GET /api/v1/runs?project_id=znect-forge&connection_id=circleci-main&limit=10`
+- `GET /api/v1/runs/{run_uuid}?project_id=znect-forge&connection_id=circleci-main`
+- `GET /api/v1/diagnostics/{run_uuid}?project_id=znect-forge&connection_id=circleci-main`
+- `GET /api/v1/events?after=0&limit=20`
+- `GET /api/v1/event-correlations?project_id=znect-forge&connection_id=circleci-main&after=0&event_limit=20&run_limit=20`
+
+All requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`. The token must remain private and must never be placed in a URL, report, repository file or ChatGPT message.
+
+## CircleCI execution for CI Bridge
+
+The root `.circleci/config.yml` in `Znect-god/znect-all-plugins` defines CI Bridge's own validation pipeline. It runs dependency installation, typecheck/unit tests, smoke-script syntax validation and Wrangler dry-run. It does not deploy and does not require CircleCI pipeline mutation credentials.
+
+This execution pipeline is separate from the Bridge's CircleCI API adapter. The adapter is read-only and inspects registered CircleCI projects; it exposes no trigger, retry, cancel or configuration-write operations.
 
 ## Cost and safety boundaries
 
-- Free-tier-first: use only included GitHub Actions quota and Cloudflare Worker free-tier limits; no paid add-ons, auto-refill, or paid MCP service.
-- CircleCI is queried read-only. The report flow does not trigger, retry, cancel, or modify CircleCI pipelines.
-- Read-only CircleCI API calls do not consume CircleCI build minutes.
-- GitHub Actions minutes and Cloudflare usage are still subject to their included quotas and platform limits; do not describe them as unlimited.
-- Reports remain in the private Forge repository. Do not publish raw logs or diagnostics in the public plugin repository or public comments.
-- The current workflow targets the named isolated Preview, not Production.
-- The workflow must remain owner-command-only and narrowly scoped to issue #8.
+- Use CircleCI and Cloudflare included/free-tier quotas only; do not enable paid add-ons, paid intermediaries or automatic credit top-ups.
+- Free-tier quotas are finite, not unlimited. Monitor usage in the provider dashboards.
+- Keep `CIRCLECI_TOKEN`, `WEB_ACCESS_TOKEN`, and `CIRCLECI_WEBHOOK_SECRET` server-side in the Cloudflare environment; never read or disclose secret values.
+- Keep report payloads private, bounded and redacted. Do not post raw logs or diagnostics in public comments or repositories.
+- CircleCI read operations do not consume pipeline execution minutes. CI Bridge's own CircleCI validation pipeline does consume the account's applicable CircleCI credits/quota.
+- No Production deployment is authorized by this document.
 
-## Remaining verification
+## Remaining work
 
-- Confirm the `ZNECT_CI_BRIDGE_WEB_TOKEN` secret by presence/behavior only; never read or reveal its value.
-- Run one fresh owner-requested report and inspect the workflow result.
-- Confirm a private artifact is uploaded with the expected contents and one-day retention.
-- Retrieve and parse the artifact through the existing GitHub integration in ChatGPT.
-- Repeat once to prove freshness and correct latest-run selection.
-- Verify logs and report data remain bounded and redacted.
-- Confirm all usage remains within included/free-tier quotas.
+- Implement a bounded assistant report endpoint or an equivalent private handoff that ChatGPT can consume without MCP and without GitHub Actions.
+- Ensure report requests are authenticated, project-scoped, rate-limited, bounded, redacted and read-only.
+- Verify the direct Browser API and private handoff end-to-end.
+- Confirm CircleCI pipeline execution and its free-tier usage only after an authorized run.
+- Keep source implementation, executed CircleCI checks, live provider verification and deployment as separate statuses.
 
 ## Explicit exclusions
 
-- No MCP endpoint or custom MCP server is part of this channel.
-- No CircleCI build, retry, cancellation, or configuration change.
-- No Production deployment.
-- No report data in public comments or repositories.
-
-
-## Central Build result visibility (source implementation; live verification pending)
-
-For the CI Bridge's own validation target, ChatGPT can use the authenticated Browser JSON API without MCP:
-
-- `/api/v1/build/status?project_id=znect-ci-bridge&connection_id=znect-build-main`
-- `/api/v1/build/runs?project_id=znect-ci-bridge&connection_id=znect-build-main&limit=10`
-- `/api/v1/build/runs/{run_id}?project_id=znect-ci-bridge&connection_id=znect-build-main`
-- `/api/v1/build/runs/{run_id}/validation-manifest?project_id=znect-ci-bridge&connection_id=znect-build-main`
-
-The read-only adapter verifies the central workflow and the request artifact fingerprint before exposing a run. Run details include the exact project source SHA, job/step outcomes, and metadata for the private validation manifest artifact. The dedicated manifest endpoint now has source implementation for bounded retrieval of only the named JSON file, with ownership, redirect-host, size, ZIP integrity and manifest-schema checks. ZIP job logs remain unavailable. Runtime registry and credential configuration are documented in `ZNECT_BUILD_CONNECTION.md`. The target remains disabled; no tests or live API/artifact retrieval have been executed.
+- No MCP requirement or paid MCP service.
+- No GitHub Actions / Znect Build execution for CI Bridge.
+- No CircleCI trigger/retry/cancel/configuration-write API in the assistant-facing Bridge.
+- No paid service, add-on or auto-refill.
+- No Production deployment without separate explicit authorization.
