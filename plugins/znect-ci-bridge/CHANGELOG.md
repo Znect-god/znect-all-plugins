@@ -501,3 +501,10 @@
 - Fixed both post-webhook verification reads to include the required `project_id`: the authenticated Browser API event inbox request and the MCP `list_recent_events` call.
 - Added regression-test source asserting project scope on these follow-up reads, not only the initial inbox checks.
 - Static source change only; tests and live Preview verification remain pending. No webhook was sent and no event store was modified.
+
+
+## 2026-11-18 — Honest assistant export completeness status
+
+- The dashboard now marks an assistant report export as complete only when the run list is not capped, webhook event storage is available, and every listed failed-run diagnostic is successfully included.
+- Partial exports remain downloadable but are explicitly labelled partial, with a prompt to review run, event and diagnostic completeness markers.
+- Added dashboard regression-test source for the combined completeness contract. Tests and live Preview checks remain pending.
