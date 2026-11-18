@@ -1237,3 +1237,14 @@ For every meaningful feature or fix:
 - [ ] Execute the focused report/UI tests and full Vitest suite through the authorized CircleCI exact-SHA workflow.
 
 **Verification boundary:** implementation and regression-test source are committed. Tests have not been executed. The change is conservative: a page exactly at its requested limit is marked potentially limited because the bounded report cannot prove that no additional events exist beyond the page.
+
+
+### Stage 84 — Validate CircleCI artifact byte metadata — 2026-11-18
+
+- [x] Reject negative, fractional, unsafe-integer and non-numeric artifact `size` metadata rather than silently omitting it or using it in aggregate-byte budget decisions.
+- [x] Preserve valid zero-byte and positive safe-integer artifact sizes.
+- [x] Add provider regression-test source for negative artifact sizes.
+- [ ] Execute the provider and artifact-collector Vitest suites plus TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
+
+**Verification boundary:** source-level validation and regression-test source are committed. The CircleCI v3 API remains read-only; no live API request or pipeline was made, and tests/typecheck remain unexecuted.
+
