@@ -1184,10 +1184,10 @@ For every meaningful feature or fix:
 
 
 ### Stage 79 — Harden normalized report parsing before CircleCI validation — 2026-11-18
-- [x] Reject non-whitespace text outside the JUnit XML root element and reject multiple root elements; preserve support for a valid self-closing empty testsuite.
+- [x] Reject non-whitespace text outside the JUnit XML root element, reject multiple roots, require the root to be `testsuite` or `testsuites`, and reject CDATA outside the root; preserve a valid self-closing empty testsuite.
 - [x] Fail closed on malformed JSONL/JUnit parallel execution metadata instead of silently dropping an invalid execution index and risking cross-shard deduplication.
-- [x] Add regression-test source for trailing XML garbage, multiple XML roots and invalid execution indexes in both report formats.
+- [x] Add regression-test source for trailing XML garbage, multiple XML roots, non-JUnit roots, CDATA outside the root and invalid execution indexes in both report formats.
 - [ ] Execute the normalizer Vitest file and TypeScript checks through the explicitly authorized opt-in CircleCI workflow.
 - [ ] Review parser behavior against representative real CircleCI JSONL and JUnit artifacts; adjust only with evidence from the API contract.
 
-**Verification boundary:** parser hardening and regression-test source are committed to the feature branch. The tests and TypeScript checks remain unexecuted; no CircleCI pipeline, API request, deployment or runtime configuration change was performed.
+**Verification boundary:** parser hardening and regression-test source are committed to the feature branch. Static source inspection only; tests and TypeScript checks remain unexecuted. No CircleCI pipeline, API request, deployment or runtime configuration change was performed.
