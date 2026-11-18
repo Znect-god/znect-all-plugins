@@ -85,7 +85,7 @@ function safeCircleCiUrl(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length > 2048) return undefined;
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === "app.circleci.com" && !url.username && !url.password
+    return url.protocol === "https:" && url.hostname === "app.circleci.com" && (url.port === "" || url.port === "443") && !url.username && !url.password
       ? url.toString()
       : undefined;
   } catch {
