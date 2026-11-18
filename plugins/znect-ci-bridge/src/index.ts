@@ -1073,6 +1073,81 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       const projects = getProjectRegistry(env).projects.map(describeProjectStatus);
       return boundedJson(JSON.stringify({ projects }), 20_000);
     }
+
+    if (url.pathname === "/api/v1/build/status") {
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
+      try {
+        const runs = await adapter.listRuns(scope, 1);
+        return json({
+          service: "znect-ci-bridge",
+          connected: true,
+          provider: adapter.provider,
+          project: { id: project.id, name: project.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "available",
+          permissions: "read-only",
+          read_probe: { verified_runs_available: runs.length },
+          status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status"
+        });
+      } catch {
+        return json({
+          service: "znect-ci-bridge",
+          connected: false,
+          provider: adapter.provider,
+          project: { id: project.id, name: project.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "unavailable",
+          error: "Central Build read probe failed; check the repository-scoped read token and connection configuration."
+        });
+      }
+    }
+    if (url.pathname === "/api/v1/build/runs") {
+      const rawLimit = url.searchParams.get("limit");
+      const limit = rawLimit === null ? 10 : Number(rawLimit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 20) return json({ error: "limit must be an integer between 1 and 20." }, 400);
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
+      const runs = await adapter.listRuns(scope, limit);
+      return boundedJson(redactedBoundedJson({
+        project: { id: project.id, name: project.name, provider: adapter.provider },
+        connection: { id: connection.id },
+        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status",
+        runs
+      }, env, 100_000), 100_000);
+    }
+    const buildRunSegments = url.pathname.split("/");
+    if (buildRunSegments.length === 6 && buildRunSegments[1] === "api" &&
+        buildRunSegments[2] === "v1" && buildRunSegments[3] === "build" && buildRunSegments[4] === "runs") {
+      const runId = buildRunSegments[5];
+      if (!/^\\d{1,16}$/.test(runId)) return json({ error: "A numeric central Build run ID is required." }, 400);
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
+      const run = await adapter.getRun(scope, runId);
+      const workflows = await adapter.listWorkflows(scope, runId);
+      const workflowReports: Array<Record<string, unknown>> = [];
+      for (const workflow of workflows.slice(0, 5)) {
+        const jobs = await adapter.listJobs(scope, runId, workflow.id);
+        workflowReports.push({ workflow, jobs: jobs.slice(0, 40), jobs_truncated: jobs.length > 40 });
+      }
+      const artifacts = adapter.listRunArtifacts ? await adapter.listRunArtifacts(scope, runId) : [];
+      return boundedJson(redactedBoundedJson({
+        project: { id: project.id, name: project.name, provider: adapter.provider },
+        connection: { id: connection.id },
+        run,
+        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status; validation artifact JSON is not parsed in this adapter iteration.",
+        workflows: workflowReports,
+        artifacts: { scope: "workflow_run", items: artifacts },
+        capabilities: {
+          job_logs: "unavailable_zip_archive",
+          test_reports: "not_exposed_by_generic_github_actions_api",
+          artifact_content: "zip_archive_not_extracted"
+        }
+      }, env, 120_000), 120_000);
+    }
     if (url.pathname === "/api/v1/events") {
       if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
       const afterRaw = url.searchParams.get("after") ?? "0";
