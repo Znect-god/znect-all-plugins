@@ -477,3 +477,10 @@ For every meaningful feature or fix:
 - Added three JVM regression tests for numeric strings in counters, string report versions and string event cursors **(выполнено — test source added; execution pending)**.
 - Updated Android exporter documentation to 17 report-schema/privacy test cases. Across the module, 8 origin + 17 report + 3 Bearer policy tests are authored (28 total); none has been executed.
 - No Gradle build, CircleCI run, APK creation, live API request, deployment or secret access was performed.
+
+
+## 18. Android disconnect cleanup verification — 2026-11-18
+
+- Hardened Disconnect so cached report deletion is checked instead of assuming every file was removed; the UI now distinguishes verified cleanup from a failed cache-deletion attempt **(выполнено — source fix)**.
+- Keystore alias deletion and cached-report deletion are reported independently, while preferences and encrypted credential clearing remain synchronous and checked.
+- No Android runtime, filesystem fault-injection, Gradle test or CircleCI execution was performed; source behavior still requires device verification.
