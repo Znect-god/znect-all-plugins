@@ -59,7 +59,7 @@ describe("diagnostic source completeness", () => {
     expect(buildDiagnosticsSummary({ ...base, reportArtifactLimitReached: true }).incomplete).toBe(true);
   });
 
-  it("keeps the artifact-limit indicator distinct while incomplete report data controls overall completeness", () => {
+  it("ensures the artifact-limit indicator independently forces overall incompleteness", () => {
     const summary = buildDiagnosticsSummary({
       workflowsTotal: 1,
       workflowsInspected: 1,
