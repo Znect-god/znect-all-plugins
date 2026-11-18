@@ -759,6 +759,10 @@ For every meaningful feature or fix:
 - [x] Review request cancellation and Activity teardown: the active HTTPS connection is disconnected and the single-thread executor is shut down when the Activity is destroyed **(выполнено — source review)**.
 - [x] Review report-file lifecycle: private cache creation, previous-report cleanup, 30-minute expiry at share time, startup cleanup and read-only FileProvider sharing **(выполнено — source review)**.
 - [x] Reconcile CircleCI configuration with the setup guide: the Worker validation and Android test/APK jobs are separate, branch-filtered, non-deploying jobs; Android JUnit results and the debug APK are configured as artifacts **(выполнено — configuration/documentation review)**.
+- [x] Audit Android credential and platform boundaries: RFC 6750 Bearer-token character validation, AES-GCM with Android Keystore, app-private preferences, disabled Android backup/cleartext traffic, system-only trust anchors and cache-only FileProvider scope **(выполнено — source/configuration review)**.
+- [x] Audit project-registry validation and regression coverage: duplicate project/component/connection identifiers, globally unique CircleCI slugs, provider-specific connection requirements, bounded JSON input, repository/component references and malformed configuration cases **(выполнено — source/test review; test execution pending)**.
+- [x] Reconfirm both legacy GitHub Actions workflows are inert (`if: ${{ false }}`) and CircleCI remains the sole configured CI Bridge validation executor **(выполнено — workflow/configuration review)**.
+- [x] Complete this extended source/configuration pass without finding another reproducible defect; no speculative source edits were made **(выполнено — review outcome)**.
 - [x] Correct the duplicated roadmap section number so the Android connection-check scope item follows sections 40 and 41 **(выполнено — documentation correction)**.
 - [ ] Execute Worker validation and all 48 authored Android JVM tests in CircleCI; inspect the actual job results.
 - [ ] Retrieve the debug APK from a successful CircleCI job and verify installation and behavior on a physical Android device.
