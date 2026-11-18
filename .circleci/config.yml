@@ -24,7 +24,31 @@ jobs:
           command: cd plugins/znect-ci-bridge && npx --no-install wrangler deploy --dry-run
           no_output_timeout: 10m
 
+  ci-bridge-android-exporter:
+    docker:
+      - image: cimg/android:2024.01.1
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify upstream Gradle Wrapper JAR checksum
+          command: |
+            cd plugins/znect-ci-bridge/android-exporter
+            echo '498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check -
+      - run:
+          name: Install Android SDK 35 components
+          command: |
+            yes | sdkmanager --licenses >/dev/null
+            sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          no_output_timeout: 10m
+      - run:
+          name: Run Android unit tests and assemble debug APK
+          command: cd plugins/znect-ci-bridge/android-exporter && ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug
+          no_output_timeout: 20m
+
 workflows:
   ci-bridge-validation:
     jobs:
       - ci-bridge-validation
+      - ci-bridge-android-exporter
