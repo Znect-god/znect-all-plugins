@@ -19,7 +19,7 @@ Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for inspecting
 
 - The existing Worker and provider-neutral CircleCI read-only adapter are preserved.
 - The Browser JSON API provides project-scoped status, runs, run details, diagnostics, events, event correlations and aggregate reports.
-- The dashboard exports one bounded JSON report, including up to three failed-run diagnostic bundles, with a 600 KB byte-size ceiling and partial-data markers.
+- The dashboard exports one bounded JSON report, including up to three failed-run diagnostic bundles, with a 600 KB byte-size ceiling and partial-data markers. Each job diagnostic includes normalized JSONL/JUnit test counts; the report declares that handoff is a user-reviewed JSON attachment, not automatic ChatGPT API access.
 - Znect Build's CircleCI exact-SHA workflow and the central validation recipe are implemented on an isolated feature branch. The workflow defaults to disabled and records source SHA, recipe SHA and CircleCI pipeline identity.
 - The Znect Build CircleCI project has not yet been configured or live-verified. No CircleCI pipeline or current-head test suite has been run.
 - The separate GitHub Actions-based Znect Build adapter, provider type, Browser/MCP routes and GitHub token requirement have been removed. Znect Build must be registered as an ordinary CircleCI project connection.
