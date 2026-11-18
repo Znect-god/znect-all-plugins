@@ -1,3 +1,14 @@
+## 2026-11-18 — CircleCI slug and workflow URL validation alignment
+
+### Fixed
+- API v3 project resolution now accepts both explicitly supported CircleCI GitHub slug forms, `gh/` and `github/`, matching project-registry validation and webhook normalization.
+- Reject non-default ports on HTTPS `app.circleci.com` workflow URLs at event normalization/storage and Browser/MCP output validation boundaries.
+
+### Regression coverage
+- Added API v3 resolver tests for the `github/` alias and unsupported slug prefixes.
+- Added webhook-normalization and event-reader tests for non-default workflow URL ports.
+- Tests and typecheck have not been executed on this branch head; no CI, Preview or deployment was started.
+
 ## 2026-11-17 — Durable Object append boundary hardening
 
 - Enforce an 8 KiB streaming request-body limit and JSON media type for internal event appends.
