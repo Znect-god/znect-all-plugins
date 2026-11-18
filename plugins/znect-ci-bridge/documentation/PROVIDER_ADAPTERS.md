@@ -84,3 +84,6 @@ CircleCI v3 requests are GET-only and are not automatically retried. HTTP 401/40
 
 
 The event inbox cursor is always derived from the SQLite `seq` column. Stored event JSON is treated as payload only and cannot override the cursor returned to clients. Initial reads return the newest bounded snapshot; subsequent reads with `after` return events whose database sequence is greater than that cursor, in ascending sequence order.
+
+
+**Build ownership:** CI Bridge validation and builds are executed only through central `Znect-god/znect-build`. CircleCI is an inspected read-only provider, not the CI Bridge build executor.
