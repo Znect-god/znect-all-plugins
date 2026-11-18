@@ -95,7 +95,7 @@ export async function inspectCiBridgeProvenance(
   workflows: CiWorkflow[]
 ): Promise<ProvenanceSummary> {
   try {
-    if (workflows.length > 5) return { status: "unavailable", reason: "workflow_scan_limit_reached" };
+    if (workflows.length > 40) return { status: "unavailable", reason: "workflow_scan_limit_reached" };
     const targetWorkflows = workflows.filter((workflow) =>
       workflow.name === "ci-bridge-exact-sha-validation"
     );
