@@ -11,7 +11,7 @@ class BearerTokenPolicyTest {
 
     @Test fun rejectsWhitespaceAndHeaderInjection() {
         assertFalse(BearerTokenPolicy.isValid("token with spaces"))
-        assertFalse(BearerTokenPolicy.isValid("token\\r\\nX-Injected: yes"))
+        assertFalse(BearerTokenPolicy.isValid("token\r\nX-Injected: yes"))
     }
 
     @Test fun rejectsEmptyAndOversizedValues() {
