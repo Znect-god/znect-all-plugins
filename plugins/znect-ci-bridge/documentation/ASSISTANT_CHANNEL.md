@@ -58,3 +58,19 @@ This execution pipeline is separate from the Bridge's CircleCI API adapter. The 
 - No CircleCI trigger/retry/cancel/configuration-write API in the assistant-facing Bridge.
 - No paid service, add-on or auto-refill.
 - No Production deployment without separate explicit authorization.
+
+## ChatGPT platform limitation and manual fallback
+
+Current OpenAI documentation confirms that the Apps SDK is built on MCP. Custom MCP server connections are documented for Business and Enterprise/Edu workspaces and are web-only. This does not provide a direct custom REST/Bearer connector for a personal Free account.
+
+Accordingly:
+- The private Browser JSON API remains the canonical report source and stays Bearer-protected.
+- Direct automatic ChatGPT retrieval is currently blocked by the available account/platform integration path; do not claim it is working.
+- The next fallback under design is a user-operated Android report exporter. It should keep the credential in Android Keystore, fetch only the bounded read-only report, save a redacted JSON file locally, and invoke the Android Sharesheet only after explicit user action.
+- The user then explicitly attaches the report to ChatGPT. This is a manual secure handoff, not direct automatic API access.
+- No credential is placed in chat, URL, report, source or logs. No public endpoint, MCP dependency, GitHub Actions runner, paid intermediary or background upload is introduced.
+- The exporter is not implemented or verified yet. No live API request, secret read, test, pipeline, build or deployment has been performed.
+
+Official platform references:
+- https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt
+- https://help.openai.com/en/articles/12515353-building-with-the-apps-sdk
