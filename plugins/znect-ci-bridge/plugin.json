@@ -105,21 +105,21 @@
     "historical_note": "All GitHub Actions run records and historical Preview checks listed here predate the current central Znect Build validation policy. They are retained as historical evidence only and do not validate the current feature-branch HEAD.",
     "current_branch": {
       "source_changes": "Committed on feature/ci-bridge-android-exporter; current source/test execution pending.",
-      "worker_typecheck": "pending through central Znect Build",
-      "vitest_suite": "pending through central Znect Build",
-      "dependency_audit": "pending through central Znect Build",
-      "wrangler_dry_run": "pending through central Znect Build",
-      "central_build_run": "not triggered; registered target remains disabled",
+      "worker_typecheck": "pending through the opt-in CircleCI exact-SHA validation workflow",
+      "vitest_suite": "pending through the opt-in CircleCI exact-SHA validation workflow",
+      "dependency_audit": "pending through the opt-in CircleCI exact-SHA validation workflow",
+      "wrangler_dry_run": "pending through the opt-in CircleCI exact-SHA validation workflow",
+      "central_build_run": "no CircleCI validation run yet; exact-SHA workflow defaults to disabled",
       "preview": "not updated or verified for current branch",
       "production": "not changed"
     },
     "pending": [
-      "Review and approve the isolated central Znect Build Node/Cloudflare Worker recipe and disabled target before enabling execution.",
-      "Run dependency install, npm audit --audit-level=high, TypeScript typecheck, full Vitest suite, smoke-script syntax check and Wrangler deploy --dry-run through central Znect Build on the exact source SHA.",
-      "Retrieve the private run-scoped validation manifest through the read-only Znect Build adapter and verify source SHA and recipe provenance.",
+      "Verify the Znect Build CircleCI project connection and free-plan resource availability without enabling paid add-ons.",
+      "After explicit authorization, run dependency install, npm audit --audit-level=high, TypeScript typecheck, full Vitest suite, smoke-script syntax check and Wrangler deploy --dry-run through the CircleCI exact-SHA workflow.",
+      "Replace or retire the legacy GitHub Actions-based Znect Build adapter and routes; verify CircleCI run, job, log and artifact reads through the existing read-only CircleCI adapter.",
       "Verify the existing isolated Cloudflare Preview against the exact reviewed source after separate explicit deployment authorization.",
       "Verify real CircleCI workflow webhook delivery, event inbox persistence, correlation and bounded diagnostics.",
-      "Establish a supported private ChatGPT access mechanism without public unauthenticated access, query-string secrets or manual secret sharing.",
+      "Establish a supported private ChatGPT Free access mechanism without MCP, public unauthenticated access, query-string secrets or manual secret sharing.",
       "Complete independent security review and release readiness."
     ]
   },
@@ -137,17 +137,18 @@
     "assistant_permissions": "Read-only. No CircleCI pipeline/job trigger, rerun, cancel, or settings mutation capability."
   },
   "ci_execution_policy": {
-    "executor": "Znect Build",
+    "executor": "CircleCI",
     "repository": "Znect-god/znect-build",
-    "target": "znect-ci-bridge/worker-validation",
-    "scope": "Validation of CI Bridge source in Znect All Plugins",
+    "workflow": "ci-bridge-exact-sha-validation",
+    "scope": "Validation of CI Bridge source in Znect All Plugins using the centrally maintained Znect Build recipe",
+    "trigger": "Explicit CircleCI pipeline parameter run_ci_bridge_validation=true; defaults to false and requires a full source SHA",
     "prohibited_runners": [
-      "Repository-local CircleCI workflow",
-      "Repository-local GitHub Actions workflow"
+      "GitHub Actions workflows",
+      "Repository-local CI Bridge executor"
     ],
-    "provider_boundary": "CircleCI remains a read-only external CI provider observed by the Bridge; it is not the executor for validating the Bridge itself.",
-    "assistant_access": "Read-only inspection of central workflow runs, jobs and run-scoped validation manifest; no workflow dispatch, rerun, cancellation or settings mutation.",
-    "current_state": "Central recipe and target exist on an isolated Znect Build feature branch; execution_enabled remains false and no current-head validation run is claimed.",
+    "provider_boundary": "CircleCI executes source validation. CI Bridge observes CircleCI through its existing read-only API v3 adapter and must not trigger, retry, cancel, approve or modify pipelines.",
+    "assistant_access": "Read-only inspection of CircleCI runs, workflows, jobs, logs, tests and allowlisted artifacts; no pipeline mutation.",
+    "current_state": "CircleCI configuration, exact-SHA checkout, provenance manifest and source contract tests are committed on the isolated Znect Build feature branch. CircleCI project connectivity and live execution remain unverified; no pipeline has been triggered.",
     "checks": [
       "npm ci",
       "npm audit --audit-level=high",
