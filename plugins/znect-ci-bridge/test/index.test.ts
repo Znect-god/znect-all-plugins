@@ -148,7 +148,7 @@ describe("Browser API aggregate CircleCI assistant report", () => {
       permissions?: string;
       assistant_handoff?: { mode?: string; automatic_api_access?: boolean; mcp_required?: boolean; bearer_token_included?: boolean; test_summary_count_scope?: string };
       runs?: { returned?: number; failed_count?: number; items?: Array<{ commitMessage?: string }>; diagnostics?: Array<{ run_id: string; status: string; endpoint: string }> };
-      completeness?: { diagnostics_included?: boolean; diagnostics_note?: string };
+      completeness?: { diagnostics_included?: boolean; diagnostics_note?: string; events_limited?: boolean };
       events?: { available?: boolean; returned?: number; next_cursor?: number };
       correlations?: Array<{ status: string; candidate_count: number }>;
       read_only?: boolean;
@@ -177,7 +177,8 @@ describe("Browser API aggregate CircleCI assistant report", () => {
       },
       completeness: {
         diagnostics_included: false,
-        diagnostics_note: "Fetch the listed diagnostics endpoints for failed runs; each response is separately bounded and redacted."
+        diagnostics_note: "Fetch the listed diagnostics endpoints for failed runs; each response is separately bounded and redacted.",
+        events_limited: false
       },
       events: { available: true, returned: 1, next_cursor: 1 },
       correlations: [{ status: "candidate", candidate_count: 1 }],
@@ -186,6 +187,42 @@ describe("Browser API aggregate CircleCI assistant report", () => {
     expect(JSON.stringify(payload)).not.toContain(CIRCLE_TOKEN);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls.every((call) => call[1]?.method === "GET")).toBe(true);
+  });
+
+  it("marks a full webhook event page as limited rather than complete", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174010";
+    const events = Array.from({ length: 20 }, (_, index) => ({
+      cursor: 20 - index,
+      id: "3888f21b-eaa7-38e3-8f3d-" + (20 - index).toString(16).padStart(12, "0"),
+      type: "workflow-completed",
+      happened_at: "2026-11-18T08:00:00.000Z",
+      project_slug: "gh/Znect-god/znect-forge"
+    }));
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => Response.json({ events, next_cursor: 20 })
+      })
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({
+        data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+      }))
+      .mockResolvedValueOnce(Response.json({ data: [], page: { next: null } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report?project_id=znect-forge&event_limit=20",
+      { headers: { authorization: "Bearer web-test-token" } }
+    ), { ...env, EVENT_STORE: namespace } as Parameters<typeof worker.fetch>[1], ctx);
+    const payload = await response.json() as {
+      events?: { returned?: number };
+      completeness?: { events_limited?: boolean };
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.events?.returned).toBe(20);
+    expect(payload.completeness?.events_limited).toBe(true);
   });
 
   it("returns a usable partial report when webhook event storage is unavailable", async () => {
