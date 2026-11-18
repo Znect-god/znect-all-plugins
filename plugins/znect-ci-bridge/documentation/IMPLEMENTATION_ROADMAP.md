@@ -628,3 +628,15 @@ For every meaningful feature or fix:
 - [ ] Verify Android behavior on a physical device and separately resolve the supported automatic ChatGPT-to-private-API authentication limitation.
 
 **Verification boundary:** these are documentation/source commits only. They do not establish that tests passed, CircleCI ran, an APK was assembled, ChatGPT authenticated to the API, or any Preview/Production deployment occurred.
+
+## 33. Android configuration mutation guard and source security review — 2026-11-18
+
+- [x] Review CircleCI v3 request construction, fixed API origin, GET-only behavior, redirect handling, bounded JSON/text reads, project/run/workflow/job ownership checks, artifact path matching and artifact-host allowlisting **(выполнено — source review)**.
+- [x] Review the CircleCI adapter's scope checks and its run/workflow/job relationship validation **(выполнено — source review)**.
+- [x] Add an Android guard that prevents saving or replacing the locally encrypted credential/configuration while a status or report request is in flight; this closes a UI race where a request could combine captured project/origin values with a newly saved token **(выполнено — source fix)**.
+- [ ] Add focused automated coverage for configuration mutation/request coordination where the Android architecture permits it.
+- [ ] Continue source review of Worker auth/routing and Android report lifecycle; fix only concrete findings.
+- [ ] Execute Worker and Android suites in CircleCI, inspect test reports and retrieve the debug APK. No execution or APK artifact is claimed by this source change.
+- [ ] Verify the connection check and manual report handoff on a physical Android device; direct ChatGPT session authentication remains unproven.
+
+**Verification boundary:** the Android configuration guard is committed source code, not an executed test result. CircleCI has not been queried from this session and no CI run is asserted.
