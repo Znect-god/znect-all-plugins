@@ -307,6 +307,35 @@ describe("read-only browser event correlation API", () => {
     expect(response.status).toBe(503);
   });
 
+  it("rejects stale event cursors at or before a requested incremental cursor", async () => {
+    const eventStore = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => new Response(JSON.stringify({
+          events: [{
+            cursor: 4,
+            id: EVENT_ID,
+            type: "workflow-completed",
+            project_slug: "gh/Znect-god/znect-forge",
+            happened_at: "2026-11-17T18:00:30.000Z"
+          }],
+          next_cursor: 4
+        }), { status: 200 })
+      })
+    };
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge&after=5", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      { ...env, EVENT_STORE: eventStore } as Parameters<typeof worker.fetch>[1],
+      ctx
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Event storage is temporarily unavailable or returned invalid data."
+    });
+  });
+
   it("rejects out-of-range event and run limits before contacting CircleCI", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
