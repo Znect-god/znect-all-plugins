@@ -27,7 +27,7 @@ describe("project registry", () => {
           name: "Znect AI",
           repositories: [{ fullName: "Znect-god/znect-ai" }],
           components: [],
-          connections: [{ id: "build-main", provider: "znect-build" }]
+          connections: [{ id: "circleci-main", provider: "circleci", projectSlug: "gh/Znect-god/znect-ai" }]
         }
       ]
     }));
@@ -142,7 +142,7 @@ describe("project registry", () => {
         components: [],
         connections: [
           { id: "circleci-main", provider: "circleci", projectSlug: "gh/Znect-god/znect-ai" },
-          { id: "build-main", provider: "znect-build" }
+          { id: "circleci-tools", provider: "circleci", projectSlug: "gh/Znect-god/znect-ai-tools" }
         ]
       }]
     }));
@@ -180,13 +180,6 @@ describe("project registry", () => {
       status: "configured",
       provider_availability: "not_checked"
     }]);
-    const buildProject = parseProjectRegistry(JSON.stringify({
-      version: 1,
-      projects: [{ ...forge, connections: [{ id: "build-main", provider: "znect-build" }] }]
-    })).projects[0];
-    const buildStatus = describeProjectStatus(buildProject);
-    expect(buildStatus.connections[0].provider).toBe("znect-build");
-    expect(buildStatus.connections[0].provider_availability).toBe("not_checked");
   });
 
   it("requires explicit connection selection when a project has multiple CircleCI connections", () => {
