@@ -20,6 +20,7 @@ export interface NormalizedTestSummary {
   junit_records: number;
   duplicate_reports_removed: number;
   duplicate_identities_retained: number;
+  ambiguous_duplicate_groups: number;
   conflicting_statuses: number;
   malformed_jsonl_records: number;
   malformed_junit_reports: number;
@@ -278,6 +279,7 @@ function parseJunitXml(content: string, execution?: number): ParsedTests {
         current = null;
         if (tests.length > MAX_TEST_CASES) throw new Error("JUnit testcase limit exceeded.");
       }
+      if (selfClosing && stack.length === 0) rootClosed = true;
     }
     if (!rootSeen || !rootClosed || stack.length !== 0 || current) {
       throw new Error("Incomplete JUnit XML document.");
@@ -305,11 +307,16 @@ function reconcileTests(jsonl: NormalizedTestCase[], junit: NormalizedTestCase[]
   const removed = new Set<NormalizedTestCase>();
   let duplicateReportsRemoved = 0;
   let conflictingStatuses = 0;
+  let ambiguousDuplicateGroups = 0;
   for (const [key, jsonTests] of jsonByIdentity) {
     const junitTests = junitByIdentity.get(key) ?? [];
     // Only reconcile a one-to-one identity. Repeated names can be real retries
     // or executions on separate shards, so ambiguous groups are never collapsed.
-    if (jsonTests.length !== 1 || junitTests.length !== 1) continue;
+    if (junitTests.length === 0) continue;
+    if (jsonTests.length !== 1 || junitTests.length !== 1) {
+      ambiguousDuplicateGroups++;
+      continue;
+    }
     const jsonTest = jsonTests[0];
     const junitTest = junitTests[0];
     if (jsonTest.execution !== undefined && junitTest.execution !== undefined &&
@@ -322,6 +329,7 @@ function reconcileTests(jsonl: NormalizedTestCase[], junit: NormalizedTestCase[]
   return {
     tests: [...jsonl, ...junit.filter((test) => !removed.has(test))],
     duplicateReportsRemoved,
+    ambiguousDuplicateGroups,
     conflictingStatuses
   };
 }
@@ -368,7 +376,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
     identityCounts.set(key, (identityCounts.get(key) ?? 0) + 1);
   }
   const duplicateIdentitiesRetained = [...identityCounts.values()].filter((count) => count > 1).length;
-  if (reconciled.conflictingStatuses > 0) incomplete = true;
+  if (reconciled.conflictingStatuses > 0 || reconciled.ambiguousDuplicateGroups > 0) incomplete = true;
 
   const total = reconciled.tests.length;
   const hasSource = json.tests.length > 0 || junitTests.length > 0;
@@ -384,6 +392,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
     junit_records: junitTests.length,
     duplicate_reports_removed: reconciled.duplicateReportsRemoved,
     duplicate_identities_retained: duplicateIdentitiesRetained,
+    ambiguous_duplicate_groups: reconciled.ambiguousDuplicateGroups,
     conflicting_statuses: reconciled.conflictingStatuses,
     malformed_jsonl_records: json.malformed,
     malformed_junit_reports: malformedJunitReports,
