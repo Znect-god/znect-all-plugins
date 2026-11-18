@@ -292,6 +292,13 @@ describe("MCP tool schemas and error boundary", () => {
         max_chars: { type: "integer", minimum: 1, maximum: 80_000 }
       }
     });
+    expect(byName.get_job_artifact.inputSchema).toMatchObject({
+      type: "object",
+      properties: {
+        artifact_path: { type: "string" },
+        execution: { type: "integer", minimum: 0 }
+      }
+    });
     expect(byName.get_run_details.inputSchema?.properties?.run_id).toMatchObject({
       type: "string",
       format: "uuid"
