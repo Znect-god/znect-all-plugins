@@ -88,6 +88,14 @@ describe("CircleCI webhook verification", () => {
     expect(event?.workflow_url).toBeUndefined();
   });
 
+  it("rejects CircleCI workflow URLs that use a non-default HTTPS port", () => {
+    const event = normalizeCircleCiWebhook({
+      ...workflowPayload,
+      workflow: { ...workflowPayload.workflow, url: "https://app.circleci.com:8443/pipelines/run" }
+    }, "workflow-completed");
+    expect(event?.workflow_url).toBeUndefined();
+  });
+
   it("ignores stale webhook events rather than asking CircleCI to retry them", () => {
     expect(normalizeCircleCiWebhook({
       ...workflowPayload,
