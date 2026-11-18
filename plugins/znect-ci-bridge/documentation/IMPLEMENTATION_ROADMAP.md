@@ -519,3 +519,9 @@ For every meaningful feature or fix:
 - Startup TTL cleanup now checks whether expired cached report files/directories were actually removed and surfaces a warning when cleanup cannot be verified **(выполнено — source fix)**.
 - Before a new report is accepted, the exporter now requires the private cache directory to be inspectable and verifies removal of prior temporary reports; it does not silently treat a failed directory listing as successful cleanup **(выполнено — source fix)**.
 - No Android filesystem fault-injection, Gradle test, APK build, CircleCI run or device verification was performed.
+
+## 24. Android request cancellation on Activity teardown — 2026-11-18
+
+- The exporter now tracks its active HTTPS connection and disconnects it when the Activity is destroyed, in addition to interrupting the executor and suppressing late UI callbacks **(выполнено — source fix; Android runtime verification pending)**.
+- A queued request exits before decrypting the local credential when its Activity has already been destroyed. An in-flight request is disconnected on teardown; network cancellation behavior still requires device verification.
+- No Gradle test, APK build, CircleCI run or device verification was performed.
