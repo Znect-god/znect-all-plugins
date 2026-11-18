@@ -1118,6 +1118,25 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         runs
       }, env, 100_000), 100_000);
     }
+    const manifestSegments = url.pathname.split("/");
+    if (manifestSegments.length === 7 && manifestSegments[1] === "api" &&
+        manifestSegments[2] === "v1" && manifestSegments[3] === "build" &&
+        manifestSegments[4] === "runs" && manifestSegments[6] === "validation-manifest") {
+      const runId = manifestSegments[5];
+      if (!/^\\d{1,16}$/.test(runId)) return json({ error: "A numeric central Build run ID is required." }, 400);
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
+      if (!adapter.getValidationManifest) return json({ error: "This provider does not expose validation manifests." }, 501);
+      const manifest = await adapter.getValidationManifest(scope, runId);
+      return boundedJson(redactedBoundedJson({
+        project: { id: project.id, name: project.name, provider: adapter.provider },
+        connection: { id: connection.id },
+        run_id: runId,
+        validation_manifest: manifest,
+        evidence: "Downloaded from the exact run-scoped private central artifact after request-fingerprint ownership verification; only the named JSON manifest was extracted."
+      }, env, 20_000), 20_000);
+    }
     const buildRunSegments = url.pathname.split("/");
     if (buildRunSegments.length === 6 && buildRunSegments[1] === "api" &&
         buildRunSegments[2] === "v1" && buildRunSegments[3] === "build" && buildRunSegments[4] === "runs") {
