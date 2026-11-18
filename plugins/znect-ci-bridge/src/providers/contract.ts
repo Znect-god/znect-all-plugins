@@ -1,8 +1,8 @@
 /**
  * Provider-neutral, read-only CI model.
  *
- * This is the adapter boundary for CircleCI and the future native Znect Build
- * integration. It deliberately contains no provider credentials or write methods.
+ * This is the adapter boundary for CircleCI and central Znect Build via GitHub Actions.
+ * It deliberately contains no provider credentials or write methods.
  */
 export type CiProviderId = "circleci" | "znect-build";
 
