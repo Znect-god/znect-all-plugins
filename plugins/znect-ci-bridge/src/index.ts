@@ -1270,6 +1270,92 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         });
       }
     }
+    if (url.pathname === "/api/v1/report") {
+      const projectId = url.searchParams.get("project_id");
+      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
+      const runLimit = Number(url.searchParams.get("run_limit") ?? "10");
+      const eventLimit = Number(url.searchParams.get("event_limit") ?? "20");
+      const after = Number(url.searchParams.get("after") ?? "0");
+      if (!Number.isInteger(runLimit) || runLimit < 1 || runLimit > 10 ||
+          !Number.isInteger(eventLimit) || eventLimit < 1 || eventLimit > 20 ||
+          !Number.isSafeInteger(after) || after < 0) {
+        return json({ error: "run_limit must be 1–10, event_limit must be 1–20 and after must be a non-negative integer." }, 400);
+      }
+
+      const { project, connection, scope, adapter } = getCircleCiAdapter(
+        env, projectId, url.searchParams.get("connection_id") ?? undefined
+      );
+      const generatedAt = new Date().toISOString();
+      let runs: Awaited<ReturnType<typeof adapter.listRuns>>;
+      try {
+        runs = await adapter.listRuns(scope, runLimit);
+      } catch {
+        return json({ error: "CircleCI report could not retrieve recent runs for the selected project connection." }, 502);
+      }
+
+      let events: Record<string, unknown>[] = [];
+      let nextCursor = after;
+      let eventsAvailable = false;
+      let eventsError: string | undefined;
+      if (env.EVENT_STORE) {
+        try {
+          const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
+            .fetch(`https://event-store/events?after=${after}&limit=${eventLimit}`);
+          const page = await readEventPage(
+            response, eventLimit, after,
+            new Set(project.connections.filter((item) => item.provider === "circleci").map((item) => item.projectSlug!))
+          );
+          events = page.events as Record<string, unknown>[];
+          nextCursor = page.next_cursor as number;
+          eventsAvailable = true;
+        } catch {
+          eventsError = "CircleCI webhook event history is temporarily unavailable.";
+        }
+      } else {
+        eventsError = "CircleCI webhook event storage is not configured.";
+      }
+
+      const failedRuns = runs.filter((run) => run.status === "failed" || run.status === "failure");
+      const payload = {
+        service: "znect-ci-bridge",
+        report_version: 1,
+        generated_at: generatedAt,
+        provider: "circleci",
+        permissions: "read-only",
+        project: { id: project.id, name: project.name, status: "registered" },
+        connection: { id: connection.id, status: "configured", provider: "circleci" },
+        provider_status: "available",
+        runs: {
+          items: runs,
+          returned: runs.length,
+          requested: runLimit,
+          failed_count: failedRuns.length,
+          diagnostics: failedRuns.slice(0, 3).map((run) => ({
+            run_id: run.id,
+            status: run.status,
+            endpoint: `/api/v1/diagnostics/${encodeURIComponent(run.id)}?project_id=${encodeURIComponent(project.id)}&connection_id=${encodeURIComponent(connection.id)}`
+          }))
+        },
+        events: {
+          available: eventsAvailable,
+          items: events,
+          returned: events.length,
+          next_cursor: nextCursor,
+          requested: eventLimit,
+          ...(eventsError ? { error: eventsError } : {})
+        },
+        correlations: eventsAvailable ? correlateEventsWithRuns(events, runs) : [],
+        completeness: {
+          runs_limited: runs.length === runLimit,
+          events_available: eventsAvailable,
+          diagnostics_included: false,
+          diagnostics_note: "Fetch the listed diagnostics endpoints for failed runs; each response is separately bounded and redacted."
+        },
+        limits: { max_runs: 10, max_events: 20, max_failed_run_diagnostic_links: 3 },
+        read_only: true
+      };
+      return boundedJson(redactedBoundedJson(payload, env, 100_000), 100_000);
+    }
     if (url.pathname === "/api/v1/runs") {
       const rawLimit = url.searchParams.get("limit");
       const limit = rawLimit === null ? 10 : Number(rawLimit);
