@@ -209,7 +209,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         var main=element("div","run-main");
         var title=run.commitMessage||run.branch||run.commitSha||run.id;
         main.appendChild(element("div","run-title",title));
-        main.appendChild(element("div","meta","Run "+run.id+" · "+(run.startedAt||"date unavailable")));
+        main.appendChild(element("div","meta","Run "+run.id+" · "+(run.createdAt||"date unavailable")));
         var button=element("button","","Open");
         button.type="button";
         button.addEventListener("click",function(){loadDetails(run.id);});
