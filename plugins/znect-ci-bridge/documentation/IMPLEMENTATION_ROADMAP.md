@@ -1077,3 +1077,13 @@ For every meaningful feature or fix:
 - [ ] Execute focused provider/API tests and typecheck through the authorized CircleCI validation workflow.
 - [ ] Verify live pagination and 429 response behavior against an authorized CircleCI project.
 - **Verification boundary:** official documentation and source/tests inspected; documentation correction only. No tests, live API calls, pipeline, deployment or credentials accessed.
+
+### Stage 71 — Match job parallel-execution parsing to CircleCI's actual v3 wire shape
+- [x] Cross-check the job detail model against CircleCI's public CLI v3 acceptance-fixture types: `parallel_executions` is an array of step arrays (`[][]JobStep`), not an array of `{ steps: [...] }` objects.
+- [x] Update the adapter to iterate nested step arrays and use each outer-array position as the zero-based execution index.
+- [x] Stop requiring `is_insignificant` on every step; preserve it only when the response actually supplies a boolean value.
+- [x] Correct provider regression fixtures for single and multiple executions, and retain malformed-step rejection coverage.
+- [x] Document the corrected response shape and queued-job omission behavior.
+- [ ] Execute focused provider tests and TypeScript checks through the authorized opt-in CircleCI workflow.
+- [ ] Verify the mapping against a live authorized CircleCI job detail response.
+- **Verification boundary:** source and regression-test fixtures corrected using CircleCI's public CLI v3 acceptance-fixture model; no tests, live API calls, pipeline, deployment or credentials accessed.
