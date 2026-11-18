@@ -96,3 +96,10 @@ The read-only adapter validates the central repository identity, workflow path, 
 The Browser API exposes `/api/v1/build/status`, `/api/v1/build/runs` and `/api/v1/build/runs/{run_id}`. Run details include the verified project source SHA, request-fingerprint artifact metadata, the `znect-ci-bridge-validation-{run_id}` manifest artifact when present, and central job/step outcomes. Artifact contents remain private and are not downloaded/unpacked by this iteration; per-step logs and generic test reports remain unsupported. See `ZNECT_BUILD_CONNECTION.md` for the runtime registry entry and token permissions.
 
 The central recipe and target remain on an isolated Znect Build branch with `execution_enabled: false`. These source changes do not establish live provider availability or successful artifact publication.
+
+
+## Central Znect Build validation manifest
+
+The Znect Build adapter exposes a separate read-only manifest operation for verified central runs. It first validates the central run's project/source ownership fingerprint, then downloads only the exact run-scoped `znect-ci-bridge-validation-{run_id}` artifact. The ZIP reader is intentionally narrow: bounded archive and manifest sizes, a capped entry count, exact manifest path, no encrypted entries, CRC verification, and no extraction of unrelated files. The GitHub API bearer token is used only for the GitHub redirect request; the signed Azure Blob storage request receives no GitHub Authorization header. The JSON manifest is then checked against the registered project, source repository and SHA, central run ID/URL, expected validation recipe, and explicit no-deploy/no-CircleCI-mutation flags.
+
+This is source implementation only until the tests/typecheck and an explicitly authorized live read-only retrieval are completed. It does not enable or trigger the central build target.
