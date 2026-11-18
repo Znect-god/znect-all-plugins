@@ -41,6 +41,12 @@ function statusOf(resource: V3Resource): string {
   return text(attrs.outcome) ?? text(attrs.current_outcome) ?? text(attrs.status) ?? text(attrs.phase) ?? "unknown";
 }
 
+/** CircleCI Run outcomes can change on reruns; current_outcome is authoritative. */
+function runStatusOf(resource: V3Resource): string {
+  const attrs = attributes(resource);
+  return text(attrs.current_outcome) ?? text(attrs.phase) ?? text(attrs.status) ?? "unknown";
+}
+
 function iso(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length === 0) return undefined;
   const date = new Date(value);
@@ -77,7 +83,7 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
   return {
     id: resource.id,
     projectId,
-    status: statusOf(resource),
+    status: runStatusOf(resource),
     ...(branch ? { branch } : {}),
     ...(commitSha ? { commitSha } : {}),
     ...(commitMessage ? { commitMessage } : {}),
