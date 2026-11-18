@@ -43,6 +43,7 @@ class MainActivity : Activity() {
 
     @Volatile private var latestReportFile: File? = null
     @Volatile private var fetching = false
+    @Volatile private var destroyed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -248,20 +249,29 @@ class MainActivity : Activity() {
                 val token = decryptToken(prefs.getString(TOKEN_CIPHERTEXT, "") ?: "")
                 if (!isValidBearerToken(token)) throw IllegalStateException("Stored credential is invalid. Re-enter it in the app.")
                 val report = requestReport(origin, project, connection, token)
+                if (destroyed || Thread.currentThread().isInterrupted) return@execute
                 val file = writePrivateReport(report)
+                if (destroyed || Thread.currentThread().isInterrupted) {
+                    file.delete()
+                    return@execute
+                }
                 latestReportFile = file
                 runOnUiThread {
-                    statusText.text = buildReportSummary(report)
-                    shareButton.isEnabled = true
-                    fetchButton.isEnabled = true
-                    fetching = false
+                    if (!destroyed) {
+                        statusText.text = buildReportSummary(report)
+                        shareButton.isEnabled = true
+                        fetchButton.isEnabled = true
+                        fetching = false
+                    }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    statusText.text = safeErrorMessage(e)
-                    fetchButton.isEnabled = true
-                    shareButton.isEnabled = false
-                    fetching = false
+                    if (!destroyed) {
+                        statusText.text = safeErrorMessage(e)
+                        fetchButton.isEnabled = true
+                        shareButton.isEnabled = false
+                        fetching = false
+                    }
                 }
             }
         }
@@ -290,6 +300,10 @@ class MainActivity : Activity() {
             if (code != HttpsURLConnection.HTTP_OK) {
                 throw IllegalStateException("Report request failed with HTTP $code. Check the local configuration and API availability.")
             }
+            val mediaType = conn.contentType?.substringBefore(';')?.trim()?.lowercase()
+            if (mediaType != "application/json" && mediaType?.endsWith("+json") != true) {
+                throw IllegalStateException("The API returned an unexpected content type; JSON was required.")
+            }
             val body = conn.inputStream.use { input ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(4096)
@@ -306,7 +320,7 @@ class MainActivity : Activity() {
             val raw = String(body, StandardCharsets.UTF_8)
             if (raw.contains(token)) throw IllegalStateException("The response unexpectedly contained credential material; export was blocked.")
             val report = JSONObject(raw)
-            ReportValidator.validate(report, project)
+            ReportValidator.validate(report, project, connection.takeIf { it.isNotBlank() })
             if (ReportValidator.containsSensitiveKey(report)) {
                 throw IllegalStateException("The response contains a credential-like field; export was blocked.")
             }
@@ -336,12 +350,29 @@ class MainActivity : Activity() {
     }
 
     private fun writePrivateReport(report: JSONObject): File {
-        val dir = File(cacheDir, "reports").apply { mkdirs() }
-        dir.listFiles()?.forEach { it.delete() }
-        val stamp = report.optString("generated_at").replace(Regex("[^A-Za-z0-9]"), "-").take(40)
-        val file = File(dir, "znect-ci-report-$stamp.json")
-        file.writeText(report.toString(), Charsets.UTF_8)
-        return file
+        val dir = File(cacheDir, "reports")
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw IllegalStateException("Private report storage could not be created.")
+        }
+        val temporary = File.createTempFile("znect-ci-report-", ".tmp", dir)
+        try {
+            temporary.writeText(report.toString(), Charsets.UTF_8)
+            val stamp = report.optString("generated_at").replace(Regex("[^A-Za-z0-9]"), "-").take(40)
+            val destination = File(dir, "znect-ci-report-$stamp-${System.currentTimeMillis()}.json")
+            if (!temporary.renameTo(destination)) {
+                throw IllegalStateException("The private report could not be finalized safely.")
+            }
+            dir.listFiles()?.filter { it != destination }?.forEach { oldFile ->
+                val removed = if (oldFile.isDirectory) oldFile.deleteRecursively() else oldFile.delete()
+                if (!removed && oldFile.exists()) {
+                    destination.delete()
+                    throw IllegalStateException("Previous temporary report cleanup could not be verified.")
+                }
+            }
+            return destination
+        } finally {
+            if (temporary.exists()) temporary.delete()
+        }
     }
 
     private fun shareReport() {
@@ -423,6 +454,8 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        destroyed = true
+        latestReportFile = null
         executor.shutdownNow()
         super.onDestroy()
     }
