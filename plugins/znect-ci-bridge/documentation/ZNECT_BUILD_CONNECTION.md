@@ -1,6 +1,6 @@
 # Znect Build read-only Browser API connection
 
-This connection lets the authenticated CI Bridge Browser JSON API expose central Znect Build workflow metadata to ChatGPT without MCP. It is a read-only consumer; it never dispatches or changes workflows.
+This connection lets the authenticated CI Bridge Browser JSON API expose central Znect Build workflow metadata to ChatGPT without MCP. It is a read-only consumer; it never dispatches or changes workflows. Znect Build is also the sole intended executor for CI Bridge source validation; the Bridge repository must not define a parallel CircleCI or GitHub Actions validation workflow.
 
 ## Runtime configuration
 
@@ -50,5 +50,5 @@ The run-details response exposes the verified source SHA, request-fingerprint ar
 - The adapter only issues authenticated GitHub API GET requests; the signed artifact-storage GET carries no GitHub Authorization header.
 - ZIP parsing rejects encrypted, Zip64/oversized, duplicate, malformed or path-mismatched manifest entries; decompressed output is capped at 64 KiB.
 - No workflow dispatch, build, retry, cancellation, artifact deletion, deployment, or CircleCI mutation is exposed.
-- The central validation recipe must be merged to Znect Build `main` through the approved process before the adapter can verify new runs against it.
+- The central Node/Cloudflare Worker validation recipe currently lives on the isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`, and the registry target remains `execution_enabled: false`. The recipe must be reviewed and merged to Znect Build `main` through the approved process before the adapter can verify new runs against it. Its declared checks are `npm ci`, `npm audit --audit-level=high`, `npm run check` (TypeScript plus full Vitest suite), `node --check scripts/preview-smoke-test.mjs`, and `npx --no-install wrangler deploy --dry-run`. The dry-run does not deploy.
 - A configured token or registry entry does not prove live connectivity. Keep provider availability unverified until a separately authorized read-only probe succeeds.
