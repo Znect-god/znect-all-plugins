@@ -25,7 +25,7 @@ function crc32(bytes: Uint8Array): number {
 async function inflateRaw(bytes: Uint8Array, maxOutput: number): Promise<Uint8Array> {
   let stream: ReadableStream<Uint8Array>;
   try {
-    stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    stream = new Blob([bytes.slice().buffer as ArrayBuffer]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
   } catch {
     throw new Error("The validation manifest ZIP uses an unsupported compression format.");
   }
