@@ -11,7 +11,7 @@ describe("unified CircleCI test result normalization", () => {
       ].join("\n")
     });
     expect(result).toMatchObject({
-      status: "available", sources: "jsonl_only", total: 3, passed: 1, failed: 1, skipped: 1, unknown: 0,
+      status: "available", sources: "jsonl_only", count_scope: "observed_records", total: 3, passed: 1, failed: 1, skipped: 1, unknown: 0,
       jsonl_records: 3, junit_records: 0, incomplete: false
     });
   });
