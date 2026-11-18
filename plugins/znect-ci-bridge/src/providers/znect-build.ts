@@ -14,6 +14,7 @@ const API_ORIGIN = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 const MAX_JSON_BYTES = 1_000_000;
 const MAX_PAGES = 5;
+const MAX_RUN_OWNERSHIP_PROBES = 20;
 const REQUEST_TIMEOUT_MS = 15_000;
 
 type JsonRecord = Record<string, unknown>;
@@ -537,8 +538,9 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
 
   async listRuns(scope: CiProjectScope, limit: number): Promise<CiRun[]> {
     this.assertScope(scope);
-    if (!Number.isInteger(limit) || limit < 1 || limit > 30) throw new Error("Run limit must be 1–30.");
+    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_RUN_OWNERSHIP_PROBES) throw new Error("Run limit must be 1–20.");
     const runs: CiRun[] = [];
+    let ownershipProbes = 0;
     for (let page = 1; page <= MAX_PAGES && runs.length < limit; page++) {
       const result = await this.request(`/repos/Znect-god/znect-build/actions/runs?per_page=100&page=${page}`);
       if (!isRecord(result) || !Array.isArray(result.workflow_runs)) {
@@ -547,6 +549,8 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
       if (result.workflow_runs.length > 100) throw new Error("GitHub Actions exceeded the requested run page size.");
       for (const raw of result.workflow_runs) {
         if (!isRecord(raw) || !runTitle(raw).startsWith(`Znect Build / ${scope.projectId} /`)) continue;
+        if (ownershipProbes >= MAX_RUN_OWNERSHIP_PROBES) break;
+        ownershipProbes++;
         try {
           runs.push(await this.verifyOwnership(scope, raw));
         } catch (error) {
@@ -555,7 +559,7 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
         }
         if (runs.length >= limit) break;
       }
-      if (result.workflow_runs.length < 100) break;
+      if (result.workflow_runs.length < 100 || ownershipProbes >= MAX_RUN_OWNERSHIP_PROBES) break;
     }
     return runs;
   }
