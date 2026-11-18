@@ -491,6 +491,11 @@ export async function getCircleCiJobArtifact(
       : "The requested artifact path is ambiguous; specify its parallel execution index.");
   }
   const selected = matches[0];
+  const selectedExecution = selected.attributes?.execution;
+  if (selectedExecution !== undefined &&
+      (typeof selectedExecution !== "number" || !Number.isInteger(selectedExecution) || selectedExecution < 0)) {
+    throw new Error("CircleCI API v3 returned an invalid artifact execution index.");
+  }
   const rawUrl = selected.attributes?.url;
   if (typeof rawUrl !== "string") throw new Error("CircleCI artifact does not include a download URL.");
   const url = allowedArtifactUrl(rawUrl);
@@ -503,7 +508,7 @@ export async function getCircleCiJobArtifact(
   const bounded = await readBoundedText(response, maxBytes);
   return {
     path: artifactPath,
-    ...(typeof selected.attributes?.execution === "number" ? { execution: selected.attributes.execution } : {}),
+    ...(typeof selectedExecution === "number" ? { execution: selectedExecution } : {}),
     ...bounded
   };
 }
