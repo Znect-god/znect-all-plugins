@@ -494,3 +494,10 @@
 - Reject malformed execution indexes in JSONL records and JUnit artifact metadata instead of silently treating the records as unscoped.
 - Added regression-test source for malformed XML document boundaries and invalid execution metadata.
 - Tests and typecheck remain pending CircleCI opt-in authorization; no pipeline or live API call was made.
+
+
+## 2026-11-18 — Preview smoke event-scope follow-up
+
+- Fixed both post-webhook verification reads to include the required `project_id`: the authenticated Browser API event inbox request and the MCP `list_recent_events` call.
+- Added regression-test source asserting project scope on these follow-up reads, not only the initial inbox checks.
+- Static source change only; tests and live Preview verification remain pending. No webhook was sent and no event store was modified.
