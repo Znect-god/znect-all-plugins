@@ -67,3 +67,16 @@ Bearer credentials are validated against the RFC 6750 `b64token` character set (
 The report validator also checks strict JSON primitive types (not numeric strings), requested limits, returned counts, failed-run counts, JSON item types, JSON-safe event cursor and completeness flags are mutually consistent before the file can be shared.
 
 Event-cursor integer bounds use exact decimal comparisons, avoiding floating-point rounding at JavaScript's maximum safe-integer boundary.
+
+
+## CircleCI and ChatGPT handoff connection check
+
+The app includes **Check CircleCI ↔ ChatGPT handoff**. It uses the locally stored Bearer credential to:
+
+1. Call the authenticated `GET /api/v1/status` endpoint over HTTPS.
+2. Verify the selected project and optional connection ID, CircleCI provider, read-only permission and a live recent-run probe.
+3. Call `GET /api/v1/report` and run the normal bounded report/schema/privacy checks. This tests the private assistant-facing report endpoint without MCP.
+
+A successful result means the Android app reached the CI Bridge and the Bridge successfully read CircleCI and returned a valid assistant report. It does **not** prove that a separate ChatGPT conversation is currently authenticated; the Android app cannot inspect ChatGPT's session. Direct ChatGPT authentication for the private Bearer-protected API remains a separate integration gate.
+
+The check is read-only. It does not trigger, retry, cancel or modify CircleCI pipelines. No token is displayed or exported.
