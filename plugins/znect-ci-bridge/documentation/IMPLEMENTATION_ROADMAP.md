@@ -31,6 +31,8 @@ No PR merge, Znect Build execution, Preview refresh, Production change, secret a
 3. **Private ChatGPT access and live handoff — in progress:** establish a supported authenticated path to the private Browser API, verify the existing Preview and prove a real report round-trip without MCP, public unauthenticated access or manual secret sharing.
 4. **Znect Build validation and release readiness — pending:** validate the exact source SHA through the central recipe, inspect real test/security results, complete authorized integration checks and prepare Reporting / Diagnostics v1 for transfer to `Znect-god/znect-build`.
 
+**Delivery milestone count:** the roadmap has four high-level delivery milestones, not a fixed 86-stage project plan. Milestones 1–2 have source implementation; milestone 3 (private ChatGPT access and live handoff) is in progress; milestone 4 (validation and release readiness) is pending. Therefore, two high-level milestones remain unfinished, with milestone 3 already underway. The numbered engineering stages below are an incremental audit/change log and do not define a fixed final stage number.
+
 ## 3. Intended result
 
 ChatGPT and authorized users should be able to inspect current Znect project build health through a private, bounded report containing:
@@ -1268,3 +1270,13 @@ For every meaningful feature or fix:
 - [ ] Execute focused CircleCI client tests, full Vitest suite and TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
 
 **Verification boundary:** implementation and regression-test source are committed. This prevents invalid internal budgets from causing unnecessary authenticated API or artifact requests before the existing bounded-reader validation runs. No tests, CircleCI API request, CircleCI pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
+
+
+### Stage 87 — Reject duplicate resources in paginated CircleCI collections — 2026-11-18
+
+- [x] Detect repeated run IDs while traversing project-scoped run ownership pages and recent-run pages; fail closed instead of returning duplicated or ambiguous run records.
+- [x] Detect repeated workflow IDs while traversing workflow pages, including duplicates returned within one page.
+- [x] Add regression-test source for duplicate run and workflow records returned on distinct cursor pages.
+- [ ] Execute focused CircleCI client tests, the full Vitest suite and TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
+
+**Verification boundary:** the source and regression-test updates are committed on the canonical `ci-bridge` branch. This is source-level work only; no test execution, typecheck, CircleCI API request, CircleCI pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
