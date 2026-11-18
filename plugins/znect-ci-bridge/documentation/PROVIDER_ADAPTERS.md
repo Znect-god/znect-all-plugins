@@ -1,6 +1,6 @@
 # CI provider adapter architecture
 
-**Status:** CircleCI adapter implemented for core MCP reads; migration remains in progress. Znect Build's executor is GitHub Actions. There is no separate Znect Build read API; the planned Bridge integration should use GitHub Actions' documented read-only REST API.
+**Status:** CircleCI adapter implemented for core MCP reads. A source-level Znect Build adapter is now implemented against GitHub Actions' documented read-only REST API; live credential, workflow and artifact verification remains pending. There is no separate Znect Build read API.
 
 ## Shared contract
 
@@ -38,9 +38,21 @@ The browser JSON API and dashboard now consume the provider-neutral run/workflow
 
 ## Znect Build adapter
 
-The shared contract can be implemented as a `ZnectBuildReadOnlyAdapter` backed by GitHub Actions REST endpoints in `Znect-god/znect-build`, not by speculative routes hosted by Znect Build. The adapter must use a repository-scoped read-only token and the documented endpoints for workflow runs, run details, jobs and job logs. Run-level artifacts must remain explicitly run-scoped; do not attach them to a job unless the API provides a verifiable relationship. GitHub Actions does not expose CircleCI-style per-step stdout/stderr or a generic per-job test-report endpoint in the same shape, so unsupported fields must be omitted or marked unavailable rather than fabricated.
+`src/providers/znect-build.ts` implements `ZnectBuildReadOnlyAdapter` against the fixed GitHub Actions repository `Znect-god/znect-build`. It uses only GET requests, a repository-scoped `ZNECT_BUILD_GITHUB_TOKEN`, fixed-origin API paths, manual redirect rejection, a 15-second timeout, bounded JSON responses, numeric resource-ID validation and safe upstream error messages.
 
-Before enabling this integration, define and test the mapping for workflow runs, jobs, logs and run artifacts; verify project ownership against the fixed registered repository; apply pagination, byte limits, redirect-host checks and secret redaction. A registry entry with provider `znect-build` is only configuration metadata; it does not activate a working adapter.
+Implemented MCP reads:
+- `check_znect_build_connection`;
+- `list_build_runs`;
+- `get_build_run_details`;
+- `list_build_run_artifacts`.
+
+Run discovery is only a candidate filter. Before a run is returned, the adapter requires the central run display title to match the selected project and an unexpired validation artifact whose name contains the project ID, SHA-256 fingerprint of the registered source repository, validated 40-character source commit SHA and exact run ID. The central workflow computes these values only after its registry validator accepts the request. The adapter reports the validated source SHA as the project commit; the central workflow's own head SHA is not substituted.
+
+The validation artifact naming/fingerprint change is present on the isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`, not merged into `main`. Until that change is merged and executed, no live run can satisfy the new ownership proof. The adapter therefore fails closed and has not been live-verified.
+
+GitHub Actions artifacts are run-scoped, so the shared artifact model now allows `runId` without inventing a `jobId`. The adapter exposes artifact metadata only and never returns archive download URLs. GitHub Actions job logs are ZIP archives rather than per-step stdout/stderr, and the generic API does not provide a standard job test-report endpoint. Those methods return explicit unsupported errors; run details describe the capability gaps. ZIP extraction and structured report ingestion remain future work.
+
+Before enabling the connection, provision only read permissions for Actions metadata and logs on the central repository, verify the exact registry source repository, and complete tests/live verification. A registry entry alone does not establish provider availability.
 
 ## Migration order
 
