@@ -284,7 +284,6 @@ class MainActivity : Activity() {
                         checkConnectionButton.isEnabled = true
                         fetchButton.isEnabled = true
                         shareButton.isEnabled = false
-                        checkConnectionButton.isEnabled = true
                         fetching = false
                     }
                 }
@@ -394,6 +393,7 @@ class MainActivity : Activity() {
                     if (!destroyed) {
                         statusText.text = safeErrorMessage(e)
                         fetchButton.isEnabled = true
+                        checkConnectionButton.isEnabled = true
                         shareButton.isEnabled = false
                         fetching = false
                     }
