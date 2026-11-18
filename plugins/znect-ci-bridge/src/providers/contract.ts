@@ -81,6 +81,8 @@ export interface CiArtifact {
   runId?: string;
   path: string;
   size?: number;
+  /** Zero-based CircleCI parallel execution that produced the artifact, when supplied. */
+  execution?: number;
   contentType?: string;
 }
 
@@ -88,6 +90,7 @@ export interface CiArtifactContent {
   path: string;
   content: string;
   truncated: boolean;
+  execution?: number;
 }
 
 /**
