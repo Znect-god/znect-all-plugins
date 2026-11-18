@@ -1,3 +1,9 @@
+## 2026-11-18 — central Build recipe contract coverage
+
+- Added central Znect Build tests for exact CI Bridge recipe/manifest step ordering, the disabled validation target, and no-deploy dry-run behavior.
+- Added shell syntax validation for the central Node/Cloudflare Worker recipe to Znect Build's own validation workflow and aligned the request fixture with the current Bridge branch.
+- These are source-level changes only; no Znect Build workflow was run.
+
 ## 2026-11-18 — enforce byte-accurate assistant report size limit
 
 - Changed the dashboard's 600 KB export ceiling from JavaScript string length to the actual JSON Blob byte size, preventing multi-byte UTF-8 content from exceeding the advertised file-size bound.
