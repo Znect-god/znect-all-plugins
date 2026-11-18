@@ -4,10 +4,10 @@
 **Updated:** 2026-11-18 (normalized test summaries and assistant handoff contract)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
-**Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)
+**Active working branch:** `ci-bridge` (the single permanent CI Bridge development branch)
 
-**Repository/branch clarification:** CI Bridge is one plugin in the shared `znect-all-plugins` repository, not a separate Android application. Its complete current implementation is on this feature branch. `main` contains an earlier prototype registration (`plugin.json` and README), but not the current runnable project (`package.json`, `src/`, tests, and scripts). The Android exporter branch name is historical and must not be interpreted as a separate product or as evidence that only an Android exporter is present.  
-**Previous engineering base:** `test/ci-bridge-webhook-ingress-contract`  
+**Repository/branch clarification:** CI Bridge is one plugin in the shared `znect-all-plugins` repository, not a separate Android application. Its complete current implementation is on the `ci-bridge` branch. `main` contains an earlier prototype registration (`plugin.json` and README), but not the current runnable project (`package.json`, `src/`, tests, and scripts). Legacy CI Bridge branches are consolidation sources only; all ongoing development belongs on `ci-bridge`.  
+**Consolidation source:** `feature/ci-bridge-android-exporter` (legacy branch; retained temporarily until obsolete branch cleanup is available)  
 **Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
 
 This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness. Historical sections preserve earlier decisions and intermediate architecture. Current architecture: CircleCI executes CI Bridge validation; Znect Build owns the central recipe, registry policy and development workflow; Znect All Plugins owns Bridge source; the Bridge observes CircleCI through a read-only adapter. Any earlier statement that CI Bridge validation executes through GitHub Actions or that Znect Build is the execution platform is superseded.
