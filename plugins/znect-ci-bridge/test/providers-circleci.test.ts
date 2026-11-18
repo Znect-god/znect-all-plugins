@@ -184,6 +184,34 @@ describe("CircleCI read-only provider adapter", () => {
     });
   });
 
+  it("does not mislabel job creation or undocumented time aliases as execution timestamps", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: {
+          id: JOB_ID,
+          references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
+          attributes: {
+            name: "queued-job",
+            phase: "queued",
+            created_at: "2026-11-15T10:00:00Z",
+            start_time: "2026-11-15T10:01:00Z",
+            stop_time: "2026-11-15T10:04:00Z",
+            stopped_at: "2026-11-15T10:04:00Z"
+          }
+        }
+      })));
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.getJob(scope, JOB_ID)).resolves.toMatchObject({
+      id: JOB_ID,
+      status: "queued"
+    });
+    const job = await adapter.getJob(scope, JOB_ID);
+    expect(job).not.toHaveProperty("startedAt");
+    expect(job).not.toHaveProperty("completedAt");
+  });
+
   it("uses the parallel-execution array index and API v3 step num", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(projectResponse())
