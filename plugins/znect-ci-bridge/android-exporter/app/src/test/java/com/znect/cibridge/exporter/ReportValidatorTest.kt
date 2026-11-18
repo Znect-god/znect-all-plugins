@@ -32,6 +32,16 @@ class ReportValidatorTest {
         }
     }
 
+    @Test fun acceptsTheSelectedConnection() {
+        ReportValidator.validate(validReport(), "project-1", "connection-1")
+    }
+
+    @Test fun rejectsAReportFromAnotherConnection() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(validReport(), "project-1", "connection-2")
+        }
+    }
+
     @Test fun rejectsMoreThanTenRuns() {
         val report = validReport()
         val items = JSONArray()
