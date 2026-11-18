@@ -3,17 +3,16 @@
   "name": "Znect CI Bridge",
   "version": "0.1.0",
   "status": "in-development",
-  "description": "In-development CircleCI read-only bridge with a primary authenticated Browser JSON API and private Android report handoff; optional MCP compatibility is not required for ChatGPT access.",
+  "description": "In-development CircleCI read-only diagnostics bridge with a private authenticated Browser JSON API and bounded dashboard report export; optional MCP compatibility is not required for ChatGPT access.",
   "platforms": {
     "intended": [
       "Cloudflare Workers",
       "Authenticated Browser JSON API clients",
-      "Android manual report exporter",
+      "Browser dashboard and manual JSON report handoff",
       "Optional MCP-compatible clients"
     ],
     "tested": [
-      "Worker test suite historically passed on GitHub Actions before the CircleCI-only CI policy; current CircleCI execution is pending",
-      "Android exporter source implementation only; APK build and device verification pending"
+      "Historical Worker tests and Preview smoke checks exist on earlier revisions; current feature-branch source has not yet been validated through central Znect Build."
     ]
   },
   "permissions": [
@@ -28,8 +27,7 @@
     "Zod 4.6.7",
     "Wrangler 4.160.0",
     "CircleCI API v3 (current), with legacy API v1.1 compatibility tools",
-    "MCP TypeScript server/client SDK 2.4.0 (optional compatibility interface; not required for ChatGPT Browser API access)",
-    "Android Gradle Plugin 8.7.2, Kotlin Gradle Plugin 2.1.10 and Gradle 8.9 Wrapper for the optional Android report exporter"
+    "MCP TypeScript server/client SDK 2.4.0 (optional compatibility interface; not required for ChatGPT Browser API access)"
   ],
   "security_controls": [
     "Bearer authentication for /mcp with fixed-length digest comparison",
@@ -53,24 +51,22 @@
     "CircleCI outbound webhook ingress verifies v1 HMAC-SHA256 signatures against the exact raw request body",
     "Webhook events are correlated to API v3 runs only by exact commit revision, compatible branch, and bounded event/run execution interval; ambiguous candidates are not silently selected",
     "Webhook payloads are capped at 64 KiB, filtered to CircleCI project slugs explicitly registered in the project registry, normalized to allowlisted fields, and deduplicated by CircleCI event ID",
-    "SQLite-backed Durable Object stores at most 500 normalized events and prunes events older than 30 days",
-    "Android report handoff requires a JSON media type, strict UTF-8 decoding, exact selected-connection binding and report-schema validation before export",
-    "Android report cache uses temporary-file finalization, verified cleanup and a 30-minute startup retention policy; Activity teardown cancels active HTTPS requests"
+    "SQLite-backed Durable Object stores at most 500 normalized events and prunes events older than 30 days"
   ],
   "limitations": [
     "In development; not production-ready",
-    "Production Cloudflare deployment and end-to-end production MCP behavior are not verified; the current feature-branch head has passed an isolated Cloudflare Preview deployment and authenticated smoke test.",
+    "The current feature-branch head has not been deployed to Preview or Production; earlier Preview smoke checks are historical evidence only.",
     "CircleCI API v3 project resolution and read-only access to the fixed Forge project were verified by the authenticated Preview smoke test; broader live run/job/log/artifact response coverage remains to be verified.",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
-    "Wrangler/workerd unsupported in the current Android ARM64 Termux environment",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit; dedicated edge WAF hardening remains advisable.",
     "Rate-limit namespace ID must be unique within the user's Cloudflare account",
     "Heuristic log-secret redaction cannot guarantee detection of all custom or encoded credentials",
     "Event inbox is queryable through MCP and browser API but does not push unsolicited messages into an open ChatGPT conversation; a supported notification delivery or polling channel remains to be implemented",
-    "CircleCI project webhook registration and automatic Add Webhook ping/check succeeded; an actual CircleCI workflow-completed delivery and end-to-end inbox retrieval remain unverified."
+    "CircleCI project webhook registration and automatic Add Webhook ping/check succeeded; an actual CircleCI workflow-completed delivery and end-to-end inbox retrieval remain unverified.",
+    "The dashboard can download a bounded JSON report for manual review and attachment; direct ChatGPT-session authentication to the private Browser JSON API remains an unresolved platform integration requirement."
   ],
   "testing": {
-    "performed": [
+    "historical_evidence": [
       "Local archive extraction in Termux",
       "npm install completed after direct dependency version adjustments",
       "npm run typecheck completed successfully in Termux",
@@ -106,26 +102,26 @@
       "GitHub Actions run 43568774133 passed the same isolated Preview validation on the latest test/documentation revision.",
       "CircleCI project webhook was registered successfully; CircleCI's automatic Add Webhook ping/check received a 2xx response from the isolated Preview endpoint."
     ],
+    "historical_note": "All GitHub Actions run records and historical Preview checks listed here predate the current central Znect Build validation policy. They are retained as historical evidence only and do not validate the current feature-branch HEAD.",
+    "current_branch": {
+      "source_changes": "Committed on feature/ci-bridge-android-exporter; current source/test execution pending.",
+      "worker_typecheck": "pending through central Znect Build",
+      "vitest_suite": "pending through central Znect Build",
+      "dependency_audit": "pending through central Znect Build",
+      "wrangler_dry_run": "pending through central Znect Build",
+      "central_build_run": "not triggered; registered target remains disabled",
+      "preview": "not updated or verified for current branch",
+      "production": "not changed"
+    },
     "pending": [
-      "Verify the first CircleCI Worker and Android exporter jobs after the project is connected; fix only failures supported by actual logs.",
-      "Retrieve and verify CircleCI test results and the debug APK artifact through read-only access; no manual pipeline trigger is permitted.",
-      "Complete Android device installation/runtime verification separately after reviewing the debug APK.",
-      "Wait for and verify a real CircleCI workflow-completed delivery from an ordinary Znect Forge workflow, correlate CircleCI delivery history with the durable inbox, verify event-ID deduplication, and retrieve the event through Browser API.",
-      "Implement and verify a supported polling/delivery path from the event inbox to the assistant workflow before claiming proactive notifications.",
-      "Complete broader live CircleCI API v3 run/workflow/job/log/artifact parity checks and an independent security review before any Production deployment.",
-      "Consider a dedicated Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects."
-    ],
-    "historical_ci_note": "The GitHub Actions runs listed in performed are historical evidence from before the CircleCI-only CI policy. They are not the current executor and must not be used for ongoing CI Bridge development or validation.",
-    "current_branch_validation": {
-      "android_jvm_test_sources_authored": 32,
-      "android_jvm_test_execution": "pending",
-      "worker_regression_tests_added_in_current_hardening": 2,
-      "worker_test_execution": "pending",
-      "circleci_execution": "unverified",
-      "android_debug_apk": "not built or verified",
-      "device_verification": "pending",
-      "deployment": "not performed"
-    }
+      "Review and approve the isolated central Znect Build Node/Cloudflare Worker recipe and disabled target before enabling execution.",
+      "Run dependency install, npm audit --audit-level=high, TypeScript typecheck, full Vitest suite, smoke-script syntax check and Wrangler deploy --dry-run through central Znect Build on the exact source SHA.",
+      "Retrieve the private run-scoped validation manifest through the read-only Znect Build adapter and verify source SHA and recipe provenance.",
+      "Verify the existing isolated Cloudflare Preview against the exact reviewed source after separate explicit deployment authorization.",
+      "Verify real CircleCI workflow webhook delivery, event inbox persistence, correlation and bounded diagnostics.",
+      "Establish a supported private ChatGPT access mechanism without public unauthenticated access, query-string secrets or manual secret sharing.",
+      "Complete independent security review and release readiness."
+    ]
   },
   "secrets": [
     "CIRCLECI_TOKEN",
@@ -135,28 +131,29 @@
   ],
   "license": "undecided",
   "integration_architecture": {
-    "primary_assistant_access": "Authenticated GET-only Browser JSON API at /api/v1/* using WEB_ACCESS_TOKEN; Android exporter provides an explicit private report handoff to ChatGPT.",
-    "mcp_requirement": "MCP is optional compatibility functionality and is not required as the ChatGPT-to-CircleCI access channel.",
+    "primary_assistant_access": "Private authenticated GET-only Browser JSON API at /api/v1/* using WEB_ACCESS_TOKEN. The existing dashboard can export a bounded JSON report for explicit manual handoff; direct ChatGPT-session authentication remains unverified.",
+    "mcp_requirement": "MCP is optional compatibility functionality and is not required as the intended ChatGPT-to-CircleCI access channel.",
     "credential_separation": "WEB_ACCESS_TOKEN and MCP_ACCESS_TOKEN remain separate; neither token is interchangeable or stored in repository files.",
     "assistant_permissions": "Read-only. No CircleCI pipeline/job trigger, rerun, cancel, or settings mutation capability."
   },
   "ci_execution_policy": {
-    "executor": "CircleCI",
-    "scope": "Development and validation of Znect CI Bridge itself",
+    "executor": "Znect Build",
+    "repository": "Znect-god/znect-build",
+    "target": "znect-ci-bridge/worker-validation",
+    "scope": "Validation of CI Bridge source in Znect All Plugins",
     "prohibited_runners": [
-      "GitHub Actions",
-      "Znect Build"
+      "Repository-local CircleCI workflow",
+      "Repository-local GitHub Actions workflow"
     ],
-    "assistant_access": "Read-only status, logs and artifacts only; no pipeline/job mutation or manual triggering",
-    "current_state": "CircleCI configuration is committed; execution result remains unverified.",
+    "provider_boundary": "CircleCI remains a read-only external CI provider observed by the Bridge; it is not the executor for validating the Bridge itself.",
+    "assistant_access": "Read-only inspection of central workflow runs, jobs and run-scoped validation manifest; no workflow dispatch, rerun, cancellation or settings mutation.",
+    "current_state": "Central recipe and target exist on an isolated Znect Build feature branch; execution_enabled remains false and no current-head validation run is claimed.",
     "checks": [
       "npm ci",
       "npm audit --audit-level=high",
       "npm run check",
-      "smoke-test script syntax validation",
-      "Wrangler deploy --dry-run",
-      "Android JVM unit tests",
-      "Android debug APK assembly"
+      "node --check scripts/preview-smoke-test.mjs",
+      "npx --no-install wrangler deploy --dry-run"
     ]
   }
 }
