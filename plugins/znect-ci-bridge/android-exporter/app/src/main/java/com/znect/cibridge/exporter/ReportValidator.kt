@@ -40,23 +40,46 @@ internal object ReportValidator {
             ?: throw IllegalArgumentException("The report is missing its run section.")
         val runItems = runs.optJSONArray("items")
             ?: throw IllegalArgumentException("The report run list is invalid.")
-        require(runItems.length() <= 10 && runs.optInt("returned", -1) == runItems.length()) {
-            "The report run list exceeds its bounds or has an invalid count."
-        }
+        val runCount = runs.optInt("returned", -1)
+        val requestedRuns = runs.optInt("requested", -1)
+        val failedRuns = runs.optInt("failed_count", -1)
+        require(
+            runItems.length() <= 10 &&
+                requestedRuns in 1..10 &&
+                runItems.length() == runCount &&
+                runCount <= requestedRuns &&
+                failedRuns in 0..runCount &&
+                containsOnlyObjects(runItems)
+        ) { "The report run list exceeds its bounds or has inconsistent counts." }
 
         val events = report.optJSONObject("events")
             ?: throw IllegalArgumentException("The report is missing its event section.")
         val eventItems = events.optJSONArray("items")
             ?: throw IllegalArgumentException("The report event list is invalid.")
-        require(eventItems.length() <= 20 &&
-            events.optInt("returned", -1) == eventItems.length() &&
-            events.opt("available") is Boolean
+        val eventCount = events.optInt("returned", -1)
+        val requestedEvents = events.optInt("requested", -1)
+        val nextCursor = events.optLong("next_cursor", -1L)
+        require(
+            eventItems.length() <= 20 &&
+                requestedEvents in 1..20 &&
+                eventCount == eventItems.length() &&
+                eventCount <= requestedEvents &&
+                nextCursor >= 0 &&
+                events.opt("available") is Boolean &&
+                containsOnlyObjects(eventItems)
         ) { "The report event list exceeds its bounds or has invalid metadata." }
 
-        require(report.optJSONObject("completeness") != null) {
-            "The report is missing completeness metadata."
-        }
+        val completeness = report.optJSONObject("completeness")
+            ?: throw IllegalArgumentException("The report is missing completeness metadata.")
+        require(
+            completeness.opt("runs_limited") is Boolean &&
+                completeness.opt("events_available") is Boolean &&
+                completeness.optBoolean("events_available") == events.optBoolean("available")
+        ) { "The report completeness metadata is inconsistent." }
     }
+
+    private fun containsOnlyObjects(items: JSONArray): Boolean =
+        (0 until items.length()).all { items.opt(it) is JSONObject }
 
     fun containsSensitiveKey(value: Any?): Boolean = when (value) {
         is JSONObject -> {
