@@ -449,5 +449,7 @@
 - Centralized diagnostic summary construction so MCP and Browser JSON API apply the same overall incompleteness rules.
 - Ensured artifact-count/byte-limit indicators independently force the overall diagnostic `incomplete` flag.
 - Added per-job source statuses for structured test results, JUnit artifacts and failed-step logs, distinguishing available, partial, empty/not-found, unavailable and not-applicable states.
+- Corrected MCP failed-step log retrieval to pass the parallel execution index from its normalized failed-step record; previously that path read the wrong property name.
+- Distinguish wholly unavailable failed-step logs from partially retrieved logs when every output stream request fails.
 - Added focused regression-test source for source classification and shared completeness semantics.
 - Tests and TypeScript checks were not executed. No CircleCI API requests, pipeline execution, deployment or runtime configuration changes were performed.
