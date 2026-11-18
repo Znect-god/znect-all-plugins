@@ -174,8 +174,7 @@ describe("CircleCI read-only provider adapter", () => {
           status: "failed",
           outcome: "failed",
           exitCode: 1,
-          stepNumber: 4,
-          isInsignificant: false
+          stepNumber: 4
         }]
       }]
     });
@@ -238,6 +237,45 @@ describe("CircleCI read-only provider adapter", () => {
         ] }
       ]
     });
+  });
+
+  it("preserves parallel execution identity for artifacts and requires it to disambiguate duplicate paths", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: {
+          id: JOB_ID,
+          references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
+          attributes: { name: "parallel-tests", phase: "completed", outcome: "success" }
+        }
+      }))
+      .mockResolvedValueOnce(response({
+        data: [
+          { id: "artifact-zero", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/zero.xml", execution: 0 } },
+          { id: "artifact-one", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/one.xml", execution: 1 } }
+        ]
+      }))
+      .mockResolvedValueOnce(response({
+        data: [
+          { id: "artifact-zero", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/zero.xml", execution: 0 } },
+          { id: "artifact-one", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/one.xml", execution: 1 } }
+        ]
+      }))
+      .mockResolvedValueOnce(new Response("<testsuite name=\"worker-one\"/>", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.listArtifacts(scope, JOB_ID)).resolves.toMatchObject([
+      { path: "reports/junit.xml", execution: 0 },
+      { path: "reports/junit.xml", execution: 1 }
+    ]);
+    await expect(adapter.getArtifact(scope, JOB_ID, "reports/junit.xml", 256, 1)).resolves.toEqual({
+      path: "reports/junit.xml",
+      content: "<testsuite name=\"worker-one\"/>",
+      truncated: false,
+      execution: 1
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("rejects malformed API v3 step records instead of dropping diagnostics", async () => {
