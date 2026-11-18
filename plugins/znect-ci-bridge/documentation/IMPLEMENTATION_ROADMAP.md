@@ -1010,3 +1010,12 @@ For every meaningful feature or fix:
 - [ ] Execute the CircleCI adapter tests and verify any explicit run `web_url` behavior against a real API v3 response.
 
 **Verification boundary:** this prevents a misleading link from being presented as a CircleCI run. No tests or pipeline were run.
+
+## Stage 65 — Recover read-only CircleCI lookups after transient failures — 2026-11-18
+
+- [x] Keep concurrent requests deduplicated while a CircleCI project, run, workflow or job lookup is in flight **(выполнено — source implementation)**.
+- [x] Evict rejected in-flight cache promises so temporary API/network/auth failures do not permanently poison the adapter instance; allow the next read request to retry **(выполнено — source implementation)**.
+- [x] Add an adapter regression test proving a failed run lookup is retried and can subsequently return the CircleCI run **(выполнено — test source added; execution pending)**.
+- [ ] Execute the adapter test suite and verify retry behavior against a real CircleCI read-only connection after explicit authorization.
+
+**Verification boundary:** this is a source-level resilience improvement only. No tests were executed, no CircleCI request was sent from this development session, and no pipeline or CircleCI resource was modified.
