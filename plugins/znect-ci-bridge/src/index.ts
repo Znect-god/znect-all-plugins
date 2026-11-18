@@ -1434,7 +1434,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
     }
     return json({ error: "API route not found." }, 404);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "CircleCI request failed.";
+    const message = error instanceof Error ? error.message : "CI provider request failed.";
     return json({ error: limitText(redactKnownSecrets(message, env), 500).text }, 502);
   }
 }
