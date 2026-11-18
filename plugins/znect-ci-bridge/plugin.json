@@ -12,7 +12,7 @@
       "Optional MCP-compatible clients"
     ],
     "tested": [
-      "Historical Worker tests and Preview smoke checks exist on earlier revisions; canonical ci-bridge head 922dc13bbcd379d7a65f6d911455f072001372ca has not yet been validated through the opt-in CircleCI exact-SHA workflow."
+      "Historical Worker tests and Preview smoke checks exist on earlier revisions; the current canonical ci-bridge branch head has not yet been validated through the opt-in CircleCI exact-SHA workflow."
     ]
   },
   "permissions": [
