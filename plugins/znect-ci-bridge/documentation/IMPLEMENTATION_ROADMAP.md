@@ -779,6 +779,7 @@ For every meaningful feature or fix:
 - [x] Preserve Bearer authentication in the request header only, GET-only access, in-memory token handling, and scope isolation when the user switches project/connection or disconnects **(выполнено — source implementation)**.
 - [x] Mark missing/limited diagnostics in the exported report, enforce a 600 KB total JSON ceiling, and download a single reviewable JSON file for explicit user handoff to ChatGPT **(выполнено — source implementation)**.
 - [x] Add dashboard regression coverage for report endpoint use, UUID validation, selected-scope diagnostics, size ceiling, partial-report state and download behavior **(выполнено — test source added; execution pending)**.
+- [x] Confirm the existing CircleCI Worker job runs `npm run check`, which invokes TypeScript typecheck and the complete Vitest suite including the new dashboard regression tests **(выполнено — config/package-script review; execution pending)**.
 - [x] Update the assistant-channel guide and README to describe the existing web-dashboard handoff and keep Android as an optional companion path **(выполнено — documentation updated)**.
 - [ ] Execute the Worker/dashboard regression suite through the configured CircleCI validation pipeline; no test execution is claimed.
 - [ ] Verify the export action against the existing isolated Cloudflare Preview, including one failed run with diagnostic output and a partial/unavailable diagnostic case. Do not create a new Worker or touch Production.
