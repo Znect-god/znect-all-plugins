@@ -304,3 +304,24 @@ For every meaningful feature or fix:
 - Tightened artifact expiry and downloaded-size checks; corrected stale run-details capability descriptions **(выполнено)**.
 - Confirmed the central registry still has `execution_enabled: false`; no workflow was dispatched.
 - Typecheck, unit tests, ZIP decompression execution, and live artifact retrieval remain **not executed / not verified**.
+
+
+## 17. CircleCI-first development direction — 2026-11-18
+
+**This section supersedes the earlier Znect Build / GitHub Actions alignment recorded in sections 3, 8–16 wherever it conflicts with the user's latest direction.**
+
+- **CI Bridge source and validation executor:** CircleCI. The Bridge repository will own a CircleCI configuration and use CircleCI pipelines to run its own dependency, typecheck, unit-test, smoke-script and Wrangler dry-run checks. Znect Build / GitHub Actions is not the executor for CI Bridge validation.
+- **CircleCI as observed provider:** the Bridge's CircleCI API v3 adapter remains read-only for inspecting registered projects' runs, workflows, jobs, logs, test reports, artifacts and webhook events. ChatGPT access must not expose trigger/retry/cancel/configuration-write operations.
+- **ChatGPT channel:** free authenticated Browser JSON API plus a private report handoff. MCP is not required and is not the supported channel. Do not rely on GitHub Actions as a report runner or on paid services.
+- **Znect Build:** retain its own separate role for other Znect projects. The znect-ci-bridge/worker-validation GitHub Actions target/recipe is superseded for CI Bridge and must not be enabled or executed. Preserve the Forge android-debug execution freeze.
+- **Repository inventory — (выполнено):** inspected the active All Plugins engineering branch, the CI Bridge source/docs/package and the isolated Znect Build registry/workflow/roadmap. The Build repository currently contains a disabled CI Bridge target and a Node/Worker GitHub Actions recipe; these are existing source changes, not executed validation.
+- **CircleCI config discovery — (выполнено):** no .circleci/config.yml exists at the inspected paths on the active CI Bridge branch; the roadmap records that the previous standalone CircleCI config was removed. A CircleCI-native validation pipeline therefore still needs to be authored and reviewed.
+- **Documentation conflict inventory — (выполнено):** README, assistant-channel guide, usage guide and earlier roadmap sections still contain stale GitHub Actions/Znect Build ChatGPT-handoff or validation statements. They must be reconciled to this section.
+- **No execution claim:** no CircleCI pipeline, GitHub Actions workflow, tests, typecheck, deployment or live provider request was run as part of this audit.
+
+### Compact remaining stages
+
+1. **CircleCI pipeline and project integration:** add a minimal CircleCI config for CI Bridge validation, pin Node/toolchain and commands, define safe workflow filters and free-tier constraints; document required CircleCI project setup. Do not enable paid add-ons or auto-refill.
+2. **ChatGPT private access path:** make the authenticated Browser API the primary interface, add a bounded assistant report endpoint/handoff if needed, and remove the GitHub Actions report-runner dependency. Keep MCP optional/legacy.
+3. **Architecture cleanup and hardening:** remove or clearly retire the CI Bridge Znect Build adapter/routes/registry instructions that are no longer part of this plugin's role; preserve CircleCI read-only boundaries, project ownership, webhook security, redaction and response limits.
+4. **Verification and handoff:** validate source and CircleCI pipeline results only after the pipeline is configured and explicitly authorized; distinguish source review, executed CircleCI checks, live CircleCI API verification and deployment. Update this roadmap at each stage and mark completed source work (выполнено).
