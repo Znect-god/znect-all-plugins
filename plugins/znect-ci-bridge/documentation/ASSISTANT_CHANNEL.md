@@ -44,7 +44,7 @@ This execution pipeline is separate from the Bridge's CircleCI API adapter. The 
 
 ## Current source validation state — 2026-11-18
 
-- Android exporter: 40 JVM test cases are authored (8 origin, 18 report/privacy, 3 Bearer-token policy, 11 CircleCI connection-status); none has been executed. APK assembly and device verification remain pending.
+- Android exporter: 48 JVM test cases are authored (8 origin, 21 report-schema/privacy, 3 Bearer-token policy, 11 CircleCI connection-status, 5 report-file expiry); none has been executed. APK assembly and device verification remain pending.
 - Worker Browser API regression source additionally covers token separation, authenticated GET-only enforcement, scoped CircleCI status and safe handling of an unavailable provider read probe. Worker suite execution remains pending on the current branch.
 - The Android client now checks the selected connection ID against the returned report, requires JSON media type, writes report files through temporary-file finalization, and suppresses late Activity UI callbacks after teardown.
 - Integer bounds for the event cursor use exact decimal comparison, including the JavaScript maximum-safe-integer edge.
