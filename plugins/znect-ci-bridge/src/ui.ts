@@ -40,7 +40,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
 <p id="message" class="status" role="status" aria-live="polite">Your web token stays in this tab's memory and is not saved to browser storage.</p>
 </section>
 <section class="panel" id="runs-panel" hidden>
-<div class="actions" style="justify-content:space-between;margin-top:0"><h2 style="font-size:1.05rem;margin:0">Recent runs</h2><button id="refresh">Refresh</button></div>
+<div class="actions" style="justify-content:space-between;margin-top:0"><h2 style="font-size:1.05rem;margin:0">Recent runs</h2><div class="actions" style="margin-top:0"><button id="refresh">Refresh</button><button id="export-report" type="button">Export assistant report</button></div></div>
 <div class="actions"><label for="project" style="margin:0">Project</label><select id="project" aria-label="Select Znect project"></select><label for="connection" style="margin:0">CI connection</label><select id="connection" aria-label="Select CircleCI connection"></select></div>
 <div id="runs" style="margin-top:12px"></div>
 </section>
@@ -142,6 +142,52 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
       token="";tokenInput.value="";setMessage(error.message,"error");
     });
   }
+  function exportAssistantReport(){
+    if(!token||!currentProject||!currentConnection){setMessage("Connect to a registered CircleCI project first.","error");return;}
+    var version=sessionVersion;
+    var button=document.getElementById("export-report");
+    button.disabled=true;
+    setMessage("Building the bounded assistant report…");
+    request("/api/v1/report?run_limit=10&event_limit=20&after=0&"+scopeQuery()).then(function(report){
+      if(version!==sessionVersion)return null;
+      var links=report&&report.runs&&Array.isArray(report.runs.diagnostics)?report.runs.diagnostics.slice(0,3):[];
+      return Promise.all(links.map(function(item){
+        var runId=item&&item.run_id;
+        if(typeof runId!=="string"||! /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(runId)){
+          return Promise.resolve({run_id:null,error:"The Bridge returned an invalid diagnostic run identifier."});
+        }
+        return request("/api/v1/diagnostics/"+encodeURIComponent(runId)+"?"+scopeQuery()).then(function(data){
+          return {run_id:runId,report:data};
+        }).catch(function(error){
+          return {run_id:runId,error:error.message};
+        });
+      })).then(function(diagnostics){
+        if(version!==sessionVersion)return null;
+        report.diagnostics=diagnostics;
+        if(!report.completeness||typeof report.completeness!=="object")report.completeness={};
+        report.completeness.diagnostics_included=diagnostics.every(function(item){return !!item.report;});
+        report.completeness.diagnostics_returned=diagnostics.filter(function(item){return !!item.report;}).length;
+        var serialized=JSON.stringify(report,null,2);
+        if(serialized.length>600000)throw new Error("The combined assistant report exceeds the 600 KB export limit.");
+        var blob=new Blob([serialized],{type:"application/json"});
+        var objectUrl=URL.createObjectURL(blob);
+        var link=document.createElement("a");
+        var safeProject=currentProject.replace(/[^A-Za-z0-9_-]/g,"-");
+        var stamp=new Date().toISOString().replace(/[:.]/g,"-");
+        link.href=objectUrl;
+        link.download="znect-ci-report-"+safeProject+"-"+stamp+".json";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(function(){URL.revokeObjectURL(objectUrl);},1000);
+        setMessage("Assistant report exported. Review the JSON before sharing it with ChatGPT.","good");
+      });
+    }).catch(function(error){
+      if(version===sessionVersion)setMessage(error.message,"error");
+    }).then(function(){
+      if(version===sessionVersion)button.disabled=false;
+    });
+  }
   function loadRuns(){
     if(!token)return;
     var version=sessionVersion;
@@ -237,6 +283,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   }
   document.getElementById("connect").addEventListener("click",connect);
   document.getElementById("refresh").addEventListener("click",loadRuns);
+  document.getElementById("export-report").addEventListener("click",exportAssistantReport);
   document.getElementById("refresh-events").addEventListener("click",loadEventCorrelations);
   function refreshSelectedScope(){
     eventsRequestId++;
