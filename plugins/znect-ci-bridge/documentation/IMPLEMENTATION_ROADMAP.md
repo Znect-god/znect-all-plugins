@@ -611,6 +611,7 @@ For every meaningful feature or fix:
 
 - [x] Remove the stale statement that a current GitHub Actions Preview workflow installs `CIRCLECI_WEBHOOK_SECRET`; the GitHub Actions workflow is retired/inert and is not a secret-delivery path **(выполнено — README corrected)**.
 - [x] Reconcile the Android README test breakdown to 8 origin + 18 report/privacy + 3 Bearer-token + 11 CircleCI status cases = 40 authored JVM tests **(выполнено — documentation corrected; execution pending)**.
+- [x] Correct the active Android inventory's report-schema/privacy test count from 10 to 18; preserve earlier 17/21/32 counts only as dated historical snapshots **(выполнено — roadmap reconciled)**.
 - [x] Keep the CircleCI setup guide explicit that validation jobs require no CircleCI API token and that a configuration commit alone is not proof of a successful run **(выполнено — reviewed)**.
 - [x] Recheck the Android README and assistant-channel guide: both correctly describe the app as a manual Sharesheet report exporter and distinguish its CircleCI read-path check from ChatGPT session authentication **(выполнено — reviewed)**.
 - [ ] Continue checking older README/roadmap passages for historical claims that could be mistaken for current CI executor, secret-delivery or ChatGPT authentication behavior.
