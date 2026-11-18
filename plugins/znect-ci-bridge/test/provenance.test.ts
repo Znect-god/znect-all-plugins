@@ -95,7 +95,7 @@ describe("CI Bridge provenance manifest schema", () => {
       { id: "sha", jobId, path: "resolved-source-sha.txt", size: 41 }
     ];
     const adapter = {
-      listJobs: async () => [{ id: jobId, projectId: "znect-build", workflowId, name: "validate-ci-bridge-source", status: "success" }],
+      listJobs: async () => [{ id: jobId, projectId: "znect-build", workflowId, name: "validate-ci-bridge-source", status: "succeeded" }],
       listArtifacts: async () => artifacts,
       getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
         path: artifactPath,
