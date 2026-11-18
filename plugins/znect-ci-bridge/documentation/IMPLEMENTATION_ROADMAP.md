@@ -325,3 +325,12 @@ For every meaningful feature or fix:
 2. **ChatGPT private access path:** make the authenticated Browser API the primary interface, add a bounded assistant report endpoint/handoff if needed, and remove the GitHub Actions report-runner dependency. Keep MCP optional/legacy.
 3. **Architecture cleanup and hardening:** remove or clearly retire the CI Bridge Znect Build adapter/routes/registry instructions that are no longer part of this plugin's role; preserve CircleCI read-only boundaries, project ownership, webhook security, redaction and response limits.
 4. **Verification and handoff:** validate source and CircleCI pipeline results only after the pipeline is configured and explicitly authorized; distinguish source review, executed CircleCI checks, live CircleCI API verification and deployment. Update this roadmap at each stage and mark completed source work (выполнено).
+
+
+### Stage 2 progress — CircleCI pipeline source added (2026-11-18)
+
+- Added the root `.circleci/config.yml` to the isolated CI Bridge engineering branch. It pins the CircleCI Node image to 24.11.0 and defines dependency installation, typecheck/unit tests, smoke-script syntax validation and Wrangler dry-run **(выполнено — source configuration)**.
+- The validation job uses a small resource class, requires no secrets, and has no deploy step or CircleCI API mutation capability **(выполнено — source configuration review)**.
+- Updated the README and ChatGPT channel guide to remove GitHub Actions as the active CI Bridge validation/report executor and document the free Browser API + private report handoff direction **(выполнено — documentation source update)**.
+- The new config has not yet been confirmed by a CircleCI run. The GitHub commit currently has no reported status checks; no typecheck, unit tests, smoke check, Wrangler dry-run or live CircleCI API request is claimed as passed.
+- Remaining in this stage: verify CircleCI project integration/branch checkout and the first pipeline result, then address any actual failure. Do not enable paid features or auto-refill.
