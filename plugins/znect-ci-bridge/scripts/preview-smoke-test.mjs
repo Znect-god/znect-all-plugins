@@ -419,7 +419,7 @@ async function main() {
     }
 
     const afterCursor = eventCursor;
-    const storedResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?after=" + afterCursor + "&limit=10", {
+    const storedResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?after=" + afterCursor + "&limit=10&project_id=" + encodeURIComponent(PROJECT_ID), {
       headers: { authorization: "Bearer " + webToken }
     });
     if (!storedResponse.ok) throw new Error("Event inbox read after webhook returned HTTP " + storedResponse.status + ".");
@@ -430,7 +430,7 @@ async function main() {
 
     const mcpStored = await rpc(mcpToken, 5, "tools/call", {
       name: "list_recent_events",
-      arguments: { after: afterCursor, limit: 10 }
+      arguments: { project_id: PROJECT_ID, after: afterCursor, limit: 10 }
     });
     const mcpStoredText = mcpStored?.content?.find((item) => item.type === "text")?.text ?? "";
     let mcpStoredData;
