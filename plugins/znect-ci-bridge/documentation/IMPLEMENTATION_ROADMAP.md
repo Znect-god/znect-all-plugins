@@ -526,3 +526,8 @@ For every meaningful feature or fix:
 - A queued request exits before decrypting the local credential when its Activity has already been destroyed. An in-flight request is disconnected on teardown; network cancellation behavior still requires device verification.
 - The response decoder now rejects malformed UTF-8 rather than silently replacing invalid byte sequences before JSON validation **(выполнено — source fix)**.
 - No Gradle test, APK build, CircleCI run or device verification was performed.
+
+## 25. CircleCI dependency audit coverage — 2026-11-18
+
+- Added `npm audit --audit-level=high` to the CircleCI Worker validation job immediately after deterministic `npm ci`, so dependency advisories are checked by the current CircleCI executor rather than relying only on historical GitHub Actions evidence **(выполнено — CircleCI config source)**.
+- Updated the CircleCI setup guide and project README. No audit command or CircleCI job has been run on the current branch; result remains unverified.
