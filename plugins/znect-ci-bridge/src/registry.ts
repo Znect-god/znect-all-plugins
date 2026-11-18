@@ -1,4 +1,4 @@
-export type CiProvider = "circleci" | "znect-build";
+export type CiProvider = "circleci";
 
 export interface ProjectRepository {
   fullName: string;
@@ -135,7 +135,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
       const connectionId = requiredString(item.id, `projects[${projectIndex}].connections[${index}].id`, 63);
       if (!ID_PATTERN.test(connectionId)) throw new Error(`Invalid connection ID: ${connectionId}.`);
       const provider = item.provider;
-      if (provider !== "circleci" && provider !== "znect-build") throw new Error(`Unsupported CI provider: ${String(provider)}.`);
+      if (provider !== "circleci") throw new Error(`Unsupported CI provider: ${String(provider)}.`);
       const key = `${id}:${connectionId}`;
       if (connectionIds.has(key)) throw new Error(`Duplicate connection ID: ${connectionId} in project ${id}.`);
       connectionIds.add(key);
@@ -144,9 +144,6 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
         : requiredString(item.projectSlug, `projects[${projectIndex}].connections[${index}].projectSlug`, 256);
       if (provider === "circleci" && (!projectSlug || !CIRCLECI_SLUG_PATTERN.test(projectSlug))) {
         throw new Error(`CircleCI connection ${connectionId} requires a valid projectSlug.`);
-      }
-      if (provider === "znect-build" && projectSlug !== undefined) {
-        throw new Error("Znect Build connections must not use a CircleCI projectSlug.");
       }
       return { id: connectionId, provider, ...(projectSlug ? { projectSlug } : {}) };
     });
