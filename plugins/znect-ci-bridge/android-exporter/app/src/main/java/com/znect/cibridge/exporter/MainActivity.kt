@@ -284,6 +284,7 @@ class MainActivity : Activity() {
                         checkConnectionButton.isEnabled = true
                         fetchButton.isEnabled = true
                         shareButton.isEnabled = false
+                        checkConnectionButton.isEnabled = true
                         fetching = false
                     }
                 }
@@ -360,6 +361,7 @@ class MainActivity : Activity() {
         }
 
         fetching = true
+        checkConnectionButton.isEnabled = false
         fetchButton.isEnabled = false
         shareButton.isEnabled = false
         latestReportFile = null
@@ -382,6 +384,7 @@ class MainActivity : Activity() {
                     if (!destroyed) {
                         statusText.text = buildReportSummary(report)
                         shareButton.isEnabled = true
+                        checkConnectionButton.isEnabled = true
                         fetchButton.isEnabled = true
                         fetching = false
                     }
