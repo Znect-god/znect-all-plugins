@@ -29,7 +29,7 @@ ChatGPT and authorized users should be able to inspect current Znect project bui
 - failed-step metadata and bounded/redacted logs;
 - structured test results and allowlisted artifacts when the provider exposes them;
 - signed webhook events and conservative event-to-run correlation;
-- a browser dashboard and read-only MCP/API access;
+- a browser dashboard/JSON API and a free private GitHub Actions report handoff for ChatGPT (no MCP channel);
 - eventually, a free request/response handoff that can deliver a private report for ChatGPT to inspect.
 
 The Bridge must remain read-only with respect to CI execution and project source/configuration: no trigger, retry, cancel, deployment, configuration-write or source-modification operations.
@@ -113,24 +113,26 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [ ] Verify dashboard behavior using real inbox events and live correlation results.
 - [ ] Accessibility, narrow-screen/mobile layout and broader usability review.
 
-### 3.7 MCP and assistant access
+### 3.7 MCP (not the product access channel)
 
-- [x] Streamable HTTP MCP endpoint and read-only tool surface **(выполнено)**.
-- [x] Project catalog, CircleCI diagnostics and event inbox tools **(выполнено)**.
-- [x] `correlate_recent_events` MCP tool **(выполнено)**.
-- [ ] Verify MCP initialization, tool discovery, auth and all relevant tools against current Preview/head.
-- [ ] Implement and verify a supported polling/request-response mechanism for proactive report retrieval; the inbox itself does not push unsolicited messages into an open ChatGPT conversation.
-- [ ] Keep paid MCP distribution separate from the free/manual access channel.
+- [x] Historical Streamable HTTP MCP surface exists in the source **(выполнено — legacy implementation only)**.
+- [x] Core CircleCI diagnostics are also available independently through the authenticated Browser JSON API **(выполнено)**.
+- [x] Free ChatGPT access does not depend on MCP, a custom MCP server, or a paid MCP distribution channel **(выполнено — architecture decision)**.
+- [ ] Remove MCP from the supported product/runtime path and prune its dependencies after confirming no non-MCP route or test relies on MCP-specific modules.
+- [ ] Keep all user-facing ChatGPT access on the private GitHub report handoff and authenticated Browser API.
 
-### 3.8 Free report handoff
+### 3.8 Free ChatGPT report handoff (primary assistant channel)
 
-- [x] Free-channel architecture documented: private request/inbox → report workflow → private short-lived artifact → ChatGPT reads report **(выполнено как архитектура/документация)**.
-- [x] Companion private Forge report workflow was previously merged to Forge main, according to the earlier implementation record **(выполнено)**.
-- [ ] Diagnose the historical GitHub Actions runner failures using current run evidence; do not assume billing or runner cause.
-- [ ] Confirm required private secrets by presence only; never retrieve or expose values.
-- [ ] Prove one fresh request produces a private artifact with intended retention and no secret leakage.
-- [ ] Prove ChatGPT can retrieve and analyse that artifact; repeat once to prove freshness.
-- [ ] If GitHub-hosted report execution remains blocked, evaluate a CircleCI read-only poller as a separate design decision. Any webhook-driven pipeline trigger changes the read-only boundary and requires explicit approval.
+- [x] Private Forge inbox issue #8 and exact command `/znect-ci-bridge check` **(выполнено)**.
+- [x] Private Forge GitHub Actions request workflow merged to Forge `main` in PR #9 (`.github/workflows/znect-ci-bridge-request.yml`) **(выполнено)**.
+- [x] Collector script merged to Forge `main` (`scripts/znect-ci-bridge-collect-github-report.sh`) **(выполнено)**.
+- [x] Workflow collects read-only CircleCI status, recent runs, failed-run diagnostics and webhook events through the Bridge Browser API **(выполнено — source/configuration)**.
+- [x] Workflow stores the report as a private artifact with one-day retention and posts only a short status/link to the private inbox **(выполнено — source/configuration)**.
+- [ ] Confirm the `ZNECT_CI_BRIDGE_WEB_TOKEN` secret exists by presence only; never retrieve or expose its value.
+- [ ] Run one fresh owner-requested report and verify the private artifact round-trip.
+- [ ] Verify ChatGPT can retrieve, parse and analyze the private artifact through the existing GitHub integration.
+- [ ] Repeat the request to prove freshness and verify no stale artifact is mistaken for the latest report.
+- [ ] Confirm the complete workflow remains within included/free-tier quotas; do not enable paid add-ons or auto-refill.
 
 ## 4. Validation and release gates
 
@@ -149,7 +151,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 
 ### Gate C — real CircleCI integration
 - [ ] Confirm real workflow-completed delivery in CircleCI delivery history.
-- [ ] Match the delivery to a durable inbox record and retrieve through MCP and Browser API.
+- [ ] Match the delivery to a durable inbox record and retrieve through the Browser API and private report artifact.
 - [ ] Verify representative run/job/log/test/artifact diagnostics.
 - **Current state:** earlier webhook registration ping was accepted, but this is not proof of a real workflow delivery. Real end-to-end delivery remains pending.
 
@@ -236,3 +238,12 @@ For every meaningful feature or fix:
 - Removed the standalone root `.circleci/config.yml` previously added for CI Bridge checks. It created an independent CircleCI workflow and was not the correct route for Znect project build orchestration.
 - No CircleCI pipeline, Znect Build workflow, Forge build, test suite, typecheck, Wrangler dry-run, Preview deployment or Production action was triggered by this correction.
 - Added the central Node/Worker recipe, safe onboarding entry and validated-source fingerprint artifact on an isolated Znect Build branch; it remains unmerged and disabled. Added a source-level GitHub Actions read-only adapter, MCP tools and authenticated Browser JSON API routes in CI Bridge. Live credential/workflow verification, central branch review and repository-scoped token permission review remain pending. GitHub Actions job logs and artifacts remain ZIP archives; the adapter does not fabricate per-step text logs or job-level artifact links.
+
+
+## 10. Free ChatGPT channel correction — 2026-11-18
+
+- The supported ChatGPT ↔ CircleCI path is **not MCP**. It is the private Forge issue #8 command → Forge GitHub Actions workflow → authenticated CI Bridge Browser JSON API → private one-day report artifact → ChatGPT via the existing GitHub integration.
+- PR #9 is confirmed merged into Forge `main` at merge commit `fb226fb25e414f4ce0f53d1b7a8f280b00b2c60a`. The workflow and collector are present on Forge `main`.
+- This proves the source/configuration handoff is merged, not that a report has run successfully. No fresh report artifact or live end-to-end handoff has been verified in this audit.
+- The workflow uses GitHub Actions included quota and Cloudflare Worker free-tier limits; it does not consume CircleCI build minutes. No paid MCP channel is required.
+- Existing MCP source is legacy/optional and is not part of the supported ChatGPT channel. Removal from runtime/dependencies remains a separate cleanup task after dependency and route analysis.
