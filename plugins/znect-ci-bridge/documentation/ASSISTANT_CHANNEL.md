@@ -52,3 +52,14 @@
 - No CircleCI build, retry, cancellation, or configuration change.
 - No Production deployment.
 - No report data in public comments or repositories.
+
+
+## Central Build result visibility (source implementation; live verification pending)
+
+For the CI Bridge's own validation target, ChatGPT can use the authenticated Browser JSON API without MCP:
+
+- `/api/v1/build/status?project_id=znect-ci-bridge&connection_id=znect-build-main`
+- `/api/v1/build/runs?project_id=znect-ci-bridge&connection_id=znect-build-main&limit=10`
+- `/api/v1/build/runs/{run_id}?project_id=znect-ci-bridge&connection_id=znect-build-main`
+
+The read-only adapter verifies the central workflow and the request artifact fingerprint before exposing a run. Run details include the exact project source SHA, job/step outcomes, and metadata for the private validation manifest artifact. Artifact contents and ZIP job logs are not yet returned by the Browser API. Runtime registry and credential configuration are documented in `ZNECT_BUILD_CONNECTION.md`. The target remains disabled; live API access and artifact retrieval have not been verified.
