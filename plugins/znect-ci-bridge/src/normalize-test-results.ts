@@ -12,6 +12,7 @@ export interface NormalizedTestCase {
 export interface NormalizedTestSummary {
   status: "available" | "partial" | "unavailable" | "empty";
   sources: "jsonl_and_junit" | "jsonl_only" | "junit_only" | "none";
+  count_scope: "observed_records";
   total: number;
   passed: number;
   failed: number;
@@ -407,6 +408,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
   return {
     status,
     sources,
+    count_scope: "observed_records",
     total,
     ...counts,
     jsonl_records: json.tests.length,
