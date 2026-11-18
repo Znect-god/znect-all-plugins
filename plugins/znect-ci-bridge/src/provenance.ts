@@ -2,6 +2,7 @@ import type { CiProjectScope, CiRun, CiWorkflow, ReadOnlyCiProviderAdapter } fro
 
 const MANIFEST_PATH = "ci-bridge-validation-manifest.json";
 const SOURCE_SHA_PATH = "resolved-source-sha.txt";
+const CANONICAL_SOURCE_REF = "ci-bridge";
 const MAX_MANIFEST_BYTES = 32_768;
 const SHA1_RE = /^[0-9a-f]{40}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -50,8 +51,7 @@ export function parseCiBridgeManifest(raw: string): Record<string, unknown> {
   }
   if (m.schema_version !== 1 || m.project_id !== "znect-ci-bridge" ||
       m.source_repository !== "Znect-god/znect-all-plugins" ||
-      typeof m.source_ref !== "string" || m.source_ref.length < 1 || m.source_ref.length > 256 ||
-      /[\u0000-\u001f\u007f]/.test(m.source_ref) ||
+      m.source_ref !== CANONICAL_SOURCE_REF ||
       typeof m.source_sha !== "string" || !SHA1_RE.test(m.source_sha) ||
       m.build_target !== "worker-validation" || m.build_profile !== "debug" ||
       m.recipe !== "node-cloudflare-worker-validation" ||
