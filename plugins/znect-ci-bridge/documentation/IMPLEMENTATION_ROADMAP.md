@@ -8,7 +8,7 @@
 **Previous engineering base:** `test/ci-bridge-webhook-ingress-contract`  
 **Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
 
-This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness.
+This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness. Historical sections may preserve earlier decisions and intermediate architecture; the current boundaries above and stages 45 onward supersede conflicting CircleCI-executor, Android-exporter and old GitHub Actions handoff instructions.
 
 ## 1. Project boundaries
 
@@ -326,7 +326,7 @@ For every meaningful feature or fix:
 - Typecheck, unit tests, ZIP decompression execution, and live artifact retrieval remain **not executed / not verified**.
 
 
-## 17. CircleCI-first development direction — 2026-11-18
+## 17. [SUPERSEDED] CircleCI-first development direction — historical architecture snapshot
 
 **This section supersedes the earlier Znect Build / GitHub Actions alignment recorded in sections 3, 8–16 wherever it conflicts with the user's latest direction.**
 
@@ -516,7 +516,7 @@ For every meaningful feature or fix:
 - The response decoder now rejects malformed UTF-8 rather than silently replacing invalid byte sequences before JSON validation **(выполнено — source fix)**.
 - No Gradle test, APK build, CircleCI run or device verification was performed.
 
-## 25. CircleCI dependency audit coverage — 2026-11-18
+## 25. [SUPERSEDED] CircleCI dependency audit coverage — historical executor snapshot
 
 - Added `npm audit --audit-level=high` to the CircleCI Worker validation job immediately after deterministic `npm ci`, so dependency advisories are checked by the current CircleCI executor rather than relying only on historical GitHub Actions evidence **(выполнено — CircleCI config source)**.
 - Updated the CircleCI setup guide and project README. No audit command or CircleCI job has been run on the current branch; result remains unverified.
