@@ -65,9 +65,10 @@ The adapter now maps branch, revision and commit message only from those documen
 - strict UUID validation for project, run, workflow and job identifiers;
 - exact project-slug resolution that requires exactly one result and validates the returned slug when present;
 - project-scoped run listing with a maximum of 30 items, using at most two v3 pages and treating cursors as opaque values;
-- run → workflow → job traversal; workflow and job collections follow opaque cursors with a 20-item page size and a 200-resource hard ceiling; repeated cursors and over-limit collections fail explicitly;
+- run → workflow → job traversal; workflow collections follow opaque cursors with a 20-item page size and a bounded page ceiling; the documented jobs collection is a single unpaginated response with a 200-job hard ceiling; repeated workflow cursors and over-limit collections fail explicitly;
 - bounded stdout/stderr retrieval using the documented step and execution filters;
 - sanitized 401/403/404/429 and other upstream errors.
+- CircleCI API v3 `429` responses are surfaced with a sanitized, parsed `Retry-After` interval when available; the adapter does not sleep or retry internally, leaving retry scheduling to the caller/runtime rather than holding a Worker request open.
 
 The v3 adapter is exposed through the authenticated Browser JSON API and nine optional MCP compatibility tools, kept separate from the legacy v1.1 tools:
 - `check_connection()` verifies read access to the fixed project and returns its UUID and slug.
