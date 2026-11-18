@@ -1014,13 +1014,13 @@ function createServer(env: Env) {
         project: { id: project.id, name: project.name, provider: "znect-build" },
         connection: { id: connection.id },
         run,
-        status_semantics: "GitHub Actions workflow status/conclusion; the verified request artifact binds the run to the project source SHA, and job step outcomes expose recipe progress. Private manifest contents are not parsed by this adapter.",
+        status_semantics: "GitHub Actions workflow status/conclusion; the verified request artifact binds the run to the project source SHA, and job step outcomes expose recipe progress. Use the dedicated Browser API endpoint /api/v1/build/runs/{run_id}/validation-manifest for bounded, validated manifest content.",
         workflows: workflowReports,
         artifacts: { scope: "workflow_run", items: artifacts },
         capabilities: {
           job_logs: "unavailable_zip_archive",
           test_reports: "not_exposed_by_generic_github_actions_api",
-          artifact_content: "zip_archive_not_extracted"
+          artifact_content: "validation_manifest_available_via_dedicated_endpoint; other_zip_content_not_extracted"
         }
       }, env, 120_000) }] };
     }
