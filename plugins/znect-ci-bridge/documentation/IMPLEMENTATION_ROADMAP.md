@@ -596,3 +596,12 @@ For every meaningful feature or fix:
 - [x] Confirmed that Znect Build documents its own central orchestration through GitHub Actions and explicitly states that it performs no CircleCI actions; it is a separate system and is not the CI executor for CI Bridge validation **(выполнено — boundary documented)**.
 - [x] Keep CI Bridge validation isolated to the CircleCI workflow in `.circleci/config.yml`; do not treat Znect Build or GitHub Actions statuses as CircleCI evidence **(выполнено — scope confirmed)**.
 - [ ] Verify that the CircleCI project is connected to `Znect-god/znect-all-plugins` and obtain actual CircleCI job results. No CircleCI-specific connected action is available in this session, so this operational verification remains pending.
+
+
+## 30. Current-state documentation reconciliation — 2026-11-18
+
+- [x] Refresh the README's authoritative snapshot to report 40 authored Android JVM tests (not the obsolete 32-case count) and the expanded Worker regression coverage **(выполнено — documentation updated)**.
+- [x] Reframe the historical Forge GitHub Actions report-collector experiment as superseded; it is not the active ChatGPT channel or CI Bridge executor **(выполнено — documentation clarified)**.
+- [x] Correct the assistant-channel guide: Android authenticates to the private Bridge API and shares a validated report manually through Sharesheet; it does not authenticate a ChatGPT conversation or provide automatic direct API access **(выполнено — documentation corrected)**.
+- [ ] Continue reviewing historical roadmap entries and supporting docs for stale architecture statements; latest CircleCI-first sections remain authoritative where older notes conflict.
+- [ ] Execute the current source on CircleCI and retrieve actual Worker test results, Android test results and the debug APK artifact.
