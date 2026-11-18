@@ -52,6 +52,56 @@ function getCircleCiAdapter(env: Env, projectId: string, connectionId?: string) 
   };
 }
 
+const MAX_REPORT_ARTIFACTS_PER_JOB = 4;
+const MAX_REPORT_BYTES_PER_JOB = 500_000;
+
+async function collectJobReportArtifacts(
+  adapter: ReturnType<typeof createCircleCiReadOnlyAdapter>,
+  scope: { projectId: string; connectionId: string },
+  jobId: string
+): Promise<{
+  artifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }>;
+  incomplete: boolean;
+  limitReached: boolean;
+}> {
+  const artifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }> = [];
+  let incomplete = false;
+  let limitReached = false;
+  let remainingBytes = MAX_REPORT_BYTES_PER_JOB;
+  const listed = await adapter.listArtifacts(scope, jobId);
+  const candidates = listed.filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path));
+  if (candidates.length > MAX_REPORT_ARTIFACTS_PER_JOB) {
+    incomplete = true;
+    limitReached = true;
+  }
+  for (const artifact of candidates.slice(0, MAX_REPORT_ARTIFACTS_PER_JOB)) {
+    if (remainingBytes <= 0 || (typeof artifact.size === "number" && artifact.size > remainingBytes)) {
+      incomplete = true;
+      continue;
+    }
+    try {
+      const report = await adapter.getArtifact(scope, jobId, artifact.path, remainingBytes, artifact.execution);
+      remainingBytes = Math.max(0, remainingBytes - new TextEncoder().encode(report.content).byteLength);
+      artifacts.push({
+        path: artifact.path,
+        ...(typeof artifact.size === "number" ? { size: artifact.size } : {}),
+        ...(typeof report.execution === "number" ? { execution: report.execution } : {}),
+        content: report.content
+      });
+      if (report.truncated) incomplete = true;
+    } catch {
+      artifacts.push({
+        path: artifact.path,
+        ...(typeof artifact.size === "number" ? { size: artifact.size } : {}),
+        ...(typeof artifact.execution === "number" ? { execution: artifact.execution } : {}),
+        error: "Unable to retrieve this report artifact."
+      });
+      incomplete = true;
+    }
+  }
+  return { artifacts, incomplete, limitReached };
+}
+
 function circleCiV1ProjectPath(projectSlug: string): string {
   const match = /^(?:gh|github)\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/.exec(projectSlug);
   if (!match) throw new Error("Invalid registered CircleCI project slug.");
@@ -767,29 +817,10 @@ function createServer(env: Env) {
 
           let artifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }> = [];
           try {
-            const listed = await adapter.listArtifacts(scope, job.id);
-            const reportCandidates = listed.filter((artifact) =>
-              /(?:junit|test-results).*\.xml$/i.test(artifact.path)
-            );
-            if (reportCandidates.some((artifact) => (artifact.size ?? 0) > 500_000)) {
-              reportDataIncomplete = true;
-            }
-            const eligibleReports = reportCandidates.filter((artifact) => (artifact.size ?? 0) <= 500_000);
-            if (eligibleReports.length > 1) {
-              reportArtifactLimitReached = true;
-              reportDataIncomplete = true;
-            }
-            const reports = eligibleReports.slice(0, 1);
-            for (const artifact of reports) {
-              try {
-                const report = await adapter.getArtifact(scope, job.id, artifact.path, 500_000, artifact.execution);
-                artifacts.push({ path: artifact.path, size: artifact.size, execution: report.execution, content: report.content });
-                if (report.truncated) reportDataIncomplete = true;
-              } catch {
-                artifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." });
-                reportDataIncomplete = true;
-              }
-            }
+            const collected = await collectJobReportArtifacts(adapter, scope, job.id);
+            artifacts = collected.artifacts;
+            if (collected.incomplete) reportDataIncomplete = true;
+            if (collected.limitReached) reportArtifactLimitReached = true;
           } catch {
             artifacts = [{ error: "Unable to list job artifacts." }];
             reportDataIncomplete = true;
@@ -838,7 +869,7 @@ function createServer(env: Env) {
           log_actions_inspected: logActionsInspected,
           log_action_limit_reached: logActionLimitReached
         },
-        limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
+        limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: MAX_REPORT_ARTIFACTS_PER_JOB, max_report_bytes_per_job: MAX_REPORT_BYTES_PER_JOB }
       }, null, 2), env);
       const diagnosticData = JSON.parse(safePayload) as Record<string, unknown>;
       return { content: [{ type: "text", text: stringifyBoundedJson(diagnosticData, 120_000) }] };
@@ -1224,32 +1255,12 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             reportDataIncomplete = true;
             incomplete = true;
           }
-          const reportArtifacts: Array<Record<string, unknown>> = [];
+          let reportArtifacts: Array<Record<string, unknown>> = [];
           try {
-            const reportCandidates = (await adapter.listArtifacts(scope, job.id))
-              .filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path));
-            if (reportCandidates.some((artifact) => (artifact.size ?? 0) > 500_000)) {
-              reportDataIncomplete = true;
-              incomplete = true;
-            }
-            const eligibleArtifacts = reportCandidates.filter((artifact) => (artifact.size ?? 0) <= 500_000);
-            if (eligibleArtifacts.length > 1) {
-              reportArtifactLimitReached = true;
-              reportDataIncomplete = true;
-              incomplete = true;
-            }
-            const artifacts = eligibleArtifacts.slice(0, 1);
-            for (const artifact of artifacts) {
-              try {
-                const content = await adapter.getArtifact(scope, job.id, artifact.path, 500_000, artifact.execution);
-                reportArtifacts.push({ path: artifact.path, size: artifact.size, execution: content.execution, content: content.content });
-                if (content.truncated) { reportDataIncomplete = true; incomplete = true; }
-              } catch {
-                reportArtifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." });
-                reportDataIncomplete = true;
-                incomplete = true;
-              }
-            }
+            const collected = await collectJobReportArtifacts(adapter, scope, job.id);
+            reportArtifacts = collected.artifacts;
+            if (collected.incomplete) { reportDataIncomplete = true; incomplete = true; }
+            if (collected.limitReached) reportArtifactLimitReached = true;
           } catch {
             reportArtifacts.push({ error: "Unable to list job artifacts." });
             reportDataIncomplete = true;
