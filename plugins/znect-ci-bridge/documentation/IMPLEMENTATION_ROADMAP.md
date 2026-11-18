@@ -563,3 +563,11 @@ For every meaningful feature or fix:
 - [ ] Execute all 40 Android JVM tests and assemble the debug APK through CircleCI; no successful CircleCI result has been retrieved.
 - [ ] Verify the status and report calls against a real configured CircleCI connection and test the manual report handoff on Android.
 - [ ] Direct ChatGPT authentication remains an explicit platform integration blocker; do not describe manual Sharesheet handoff as automatic ChatGPT connectivity.
+
+
+## 9. CI executor isolation — 2026-11-18
+
+- [x] Retire the legacy GitHub Actions Cloudflare Preview workflow on this engineering branch. It is now inert: its job is hard-disabled and it performs no checkout, runner allocation, Preview deployment or secret access **(выполнено — workflow source updated)**.
+- [x] Keep `.circleci/config.yml` as the only CI Bridge validation workflow definition; it contains Worker validation and Android test/APK jobs and no deployment command **(выполнено — source inspection)**.
+- [ ] Confirm CircleCI project integration recognizes this repository and branch, then retrieve actual CircleCI job/test/artifact results. No CircleCI run result is currently available.
+- Note: externally configured Cloudflare Workers Builds may still react to repository commits independently; such activity is not CI Bridge validation and must not be treated as CircleCI evidence. Do not change Cloudflare account settings from this workflow.
