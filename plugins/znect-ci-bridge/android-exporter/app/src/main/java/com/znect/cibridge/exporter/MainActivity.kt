@@ -269,22 +269,46 @@ class MainActivity : Activity() {
     }
 
     private fun validateReport(report: JSONObject, expectedProject: String) {
-        if (report.optString("service") != "znect-ci-bridge") {
-            throw IllegalStateException("The response is not a Znect CI Bridge report.")
+        if (report.optString("service") != "znect-ci-bridge" ||
+            report.optInt("report_version", -1) != 1 ||
+            report.optString("provider") != "circleci" ||
+            report.optString("permissions") != "read-only" ||
+            !report.optBoolean("read_only", false)
+        ) {
+            throw IllegalStateException("Unsupported report identity, version or permissions.")
         }
-        if (report.optInt("report_version", -1) != 1 || report.optBoolean("read_only", false).not()) {
-            throw IllegalStateException("Unsupported report version or non-read-only response.")
-        }
-        if (report.optString("generated_at").isBlank()) {
-            throw IllegalStateException("The report has no generation timestamp.")
+        val generatedAt = report.optString("generated_at")
+        if (generatedAt.isBlank() || runCatching { java.time.Instant.parse(generatedAt) }.isFailure) {
+            throw IllegalStateException("The report has an invalid generation timestamp.")
         }
         val project = report.optJSONObject("project")
             ?: throw IllegalStateException("The report has no project metadata.")
         if (project.optString("id") != expectedProject) {
             throw IllegalStateException("The returned project does not match the selected project.")
         }
-        if (report.optJSONObject("runs") == null || report.optJSONObject("events") == null) {
-            throw IllegalStateException("The report is missing required run or event sections.")
+        val connection = report.optJSONObject("connection")
+            ?: throw IllegalStateException("The report has no connection metadata.")
+        if (connection.optString("provider") != "circleci" || connection.optString("id").isBlank()) {
+            throw IllegalStateException("The report has invalid CircleCI connection metadata.")
+        }
+        val runs = report.optJSONObject("runs")
+            ?: throw IllegalStateException("The report is missing its run section.")
+        val runItems = runs.optJSONArray("items")
+            ?: throw IllegalStateException("The report run list is invalid.")
+        if (runItems.length() > 10 || runs.optInt("returned", -1) != runItems.length()) {
+            throw IllegalStateException("The report run list exceeds its bounds or has an invalid count.")
+        }
+        val events = report.optJSONObject("events")
+            ?: throw IllegalStateException("The report is missing its event section.")
+        val eventItems = events.optJSONArray("items")
+            ?: throw IllegalStateException("The report event list is invalid.")
+        if (eventItems.length() > 20 || events.optInt("returned", -1) != eventItems.length() ||
+            events.opt("available") !is Boolean
+        ) {
+            throw IllegalStateException("The report event list exceeds its bounds or has invalid metadata.")
+        }
+        if (report.optJSONObject("completeness") == null) {
+            throw IllegalStateException("The report is missing completeness metadata.")
         }
     }
 
