@@ -507,3 +507,9 @@ For every meaningful feature or fix:
 - Added a regression test for a floating-point event cursor at (2^{53}), in addition to the existing oversized-Long test **(выполнено — test source added; execution pending)**.
 - Android test sources now total 32 cases: 8 origin + 21 report-schema/privacy + 3 Bearer-token tests. None has been executed.
 - No build, CircleCI run, APK, live API call, deployment or device verification was performed.
+
+## 22. Browser API authentication boundary regression tests — 2026-11-18
+
+- Added Worker tests proving the MCP bearer token cannot authenticate to the separate Browser JSON API, and that an authenticated POST is rejected with `405 Allow: GET` before provider access **(выполнено — test source added; execution pending)**.
+- These tests preserve the separate `WEB_ACCESS_TOKEN` boundary and GET-only report handoff. They do not add MCP-based CircleCI access or any write capability.
+- The Android module has 32 authored JVM test cases; Worker tests have been extended by two cases. No test suite or CircleCI job has been executed.
