@@ -135,6 +135,11 @@ export async function inspectCiBridgeProvenance(
         sourceShaArtifact.content.trim() !== manifest.source_sha) {
       return { status: "invalid", reason: "circleci_identity_or_sha_mismatch" };
     }
+    const jobStatus = candidates[0].status.toLowerCase();
+    const jobOutcomeMatches = manifest.recipe_outcome === "success"
+      ? jobStatus === "success" || jobStatus === "succeeded"
+      : jobStatus === "failed";
+    if (!jobOutcomeMatches) return { status: "invalid", reason: "job_outcome_mismatch" };
     const result: ProvenanceSummary = {
       status: manifest.recipe_outcome === "success" ? "validated" : "failed_recipe",
       source_repository: manifest.source_repository as string,
