@@ -313,7 +313,7 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
     expect(result.recipe_outcome).toBe("success");
     expect(result.source_sha).toBe(SOURCE_SHA);
     expect(fetchMock).toHaveBeenCalledTimes(5);
-    expect((fetchMock.mock.calls[3][1] as RequestInit).headers).toBeUndefined();
+    expect((fetchMock.mock.calls[4][1] as RequestInit).headers).toBeUndefined();
   });
 
   it("rejects a validation manifest that omits the dependency audit step", async () => {
