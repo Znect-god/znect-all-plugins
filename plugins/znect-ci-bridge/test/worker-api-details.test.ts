@@ -297,7 +297,16 @@ describe("Read-only browser API run details", () => {
     expect(body).toContain('"failed_steps"');
     expect(body).toContain("[REDACTED]");
     expect(body).not.toContain("web-test-token");
-    expect(JSON.parse(body).diagnostics_summary).toMatchObject({
+    const payload = JSON.parse(body);
+    expect(payload.workflows[0].failed_jobs[0].test_summary).toMatchObject({
+      status: "partial",
+      sources: "jsonl_only",
+      count_scope: "observed_records",
+      total: 1,
+      failed: 1,
+      incomplete: true
+    });
+    expect(payload.diagnostics_summary).toMatchObject({
       report_artifact_limit_reached: true,
       report_data_incomplete: true,
       incomplete: true
