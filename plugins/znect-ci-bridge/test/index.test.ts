@@ -196,7 +196,8 @@ describe("Browser API aggregate CircleCI assistant report", () => {
     const payload = await response.json() as {
       provider?: string;
       permissions?: string;
-      runs?: { returned?: number; failed_count?: number; items?: Array<{ commitMessage?: string }> };
+      runs?: { returned?: number; failed_count?: number; items?: Array<{ commitMessage?: string }>; diagnostics?: Array<{ run_id: string; status: string; endpoint: string }> };
+      completeness?: { diagnostics_included?: boolean; diagnostics_note?: string };
       events?: { available?: boolean; returned?: number; next_cursor?: number };
       correlations?: Array<{ status: string; candidate_count: number }>;
       read_only?: boolean;
@@ -206,7 +207,20 @@ describe("Browser API aggregate CircleCI assistant report", () => {
     expect(payload).toMatchObject({
       provider: "circleci",
       permissions: "read-only",
-      runs: { returned: 1, failed_count: 1, items: [{ commitMessage: "[REDACTED]" }] },
+      runs: {
+        returned: 1,
+        failed_count: 1,
+        items: [{ commitMessage: "[REDACTED]" }],
+        diagnostics: [{
+          run_id: RUN_ID,
+          status: "failed",
+          endpoint: `/api/v1/diagnostics/${RUN_ID}?project_id=znect-forge&connection_id=forge-circleci`
+        }]
+      },
+      completeness: {
+        diagnostics_included: false,
+        diagnostics_note: "Fetch the listed diagnostics endpoints for failed runs; each response is separately bounded and redacted."
+      },
       events: { available: true, returned: 1, next_cursor: 1 },
       correlations: [{ status: "candidate", candidate_count: 1 }],
       read_only: true
