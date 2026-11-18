@@ -529,7 +529,7 @@ describe("Worker HTTP boundary", () => {
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const response = await worker.fetch(
-      new Request("https://bridge.example/api/v1/status", {
+      new Request("https://bridge.example/api/v1/status?project_id=znect-forge", {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
