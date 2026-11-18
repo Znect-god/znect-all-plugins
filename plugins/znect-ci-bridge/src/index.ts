@@ -1014,6 +1014,7 @@ function createServer(env: Env) {
         project: { id: project.id, name: project.name, provider: "znect-build" },
         connection: { id: connection.id },
         run,
+        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status; validation artifact JSON is not parsed in this adapter iteration.",
         workflows: workflowReports,
         artifacts: { scope: "workflow_run", items: artifacts },
         capabilities: {
