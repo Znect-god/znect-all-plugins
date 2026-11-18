@@ -131,12 +131,17 @@ function parseJsonl(content: string | undefined, alreadyTruncated: boolean): Par
     }
     const classname = typeof classnameValue === "string" ? classnameValue.trim().slice(0, 1024) : "";
     const file = typeof fileValue === "string" ? fileValue.trim().slice(0, 2048) : "";
+    const execution = readExecution(record.execution);
+    if (record.execution !== undefined && execution === undefined) {
+      malformed++;
+      continue;
+    }
     tests.push({
       name,
       classname,
       file,
       status: normalizeStatus(record.result ?? record.status),
-      ...(readExecution(record.execution) !== undefined ? { execution: readExecution(record.execution) } : {}),
+      ...(execution !== undefined ? { execution } : {}),
       source: "circleci_jsonl"
     });
   }
@@ -395,8 +400,14 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
       incomplete = true;
       continue;
     }
+    const execution = readExecution(report.execution);
+    if (report.execution !== undefined && execution === undefined) {
+      malformedJunitReports++;
+      incomplete = true;
+      continue;
+    }
     junitChars += report.content.length;
-    const parsed = parseJunitXml(report.content, readExecution(report.execution));
+    const parsed = parseJunitXml(report.content, execution);
     malformedJunitReports += parsed.malformed;
     if (parsed.malformed || parsed.truncated) incomplete = true;
     else junitAvailable = true;
