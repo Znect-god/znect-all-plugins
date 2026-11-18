@@ -285,4 +285,28 @@ describe("CircleCI read-only provider adapter", () => {
     })).rejects.toThrow("does not belong to the selected project");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("retries a run lookup after a transient CircleCI API failure", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({ message: "temporary failure" }, 503))
+      .mockResolvedValueOnce(response({
+        data: [{
+          id: RUN_ID,
+          references: { project: { id: PROJECT_ID } },
+          attributes: { phase: "ended", current_outcome: "succeeded" }
+        }],
+        page: { next: null }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.getRun(scope, RUN_ID)).rejects.toThrow("HTTP 503");
+    await expect(adapter.getRun(scope, RUN_ID)).resolves.toMatchObject({
+      id: RUN_ID,
+      projectId: "znect-forge",
+      status: "succeeded"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });
