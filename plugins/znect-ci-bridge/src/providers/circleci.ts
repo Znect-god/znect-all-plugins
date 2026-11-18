@@ -173,6 +173,19 @@ function mapJob(resource: V3Resource, projectId: string, workflowId?: string, ru
   };
 }
 
+function cachedPromise<T>(cache: Map<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> {
+  const existing = cache.get(key);
+  if (existing) return existing;
+  const pending = load();
+  cache.set(key, pending);
+  // A transient API/auth/network failure must not poison this adapter instance.
+  // Concurrent callers still share the in-flight request; only rejected work is evicted.
+  void pending.catch(() => {
+    if (cache.get(key) === pending) cache.delete(key);
+  });
+  return pending;
+}
+
 function mapArtifact(artifact: CircleCiArtifact, jobId: string): CiArtifact | undefined {
   const path = text(artifact.attributes?.path);
   if (!path) return undefined;
@@ -212,8 +225,12 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
 
   private async project(scope: CiProjectScope) {
     this.assertScope(scope);
-    this.projectPromise ??= resolveCircleCiProject(this.token, this.projectSlug);
-    return this.projectPromise;
+    const pending = this.projectPromise ??= resolveCircleCiProject(this.token, this.projectSlug);
+    // Project resolution is shared while in flight, but a rejected lookup can be retried.
+    void pending.catch(() => {
+      if (this.projectPromise === pending) this.projectPromise = undefined;
+    });
+    return pending;
   }
 
   async listRuns(scope: CiProjectScope, limit: number): Promise<CiRun[]> {
@@ -224,30 +241,20 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
 
   async getRun(scope: CiProjectScope, runId: string): Promise<CiRun> {
     this.assertScope(scope);
-    let pending = this.runCache.get(runId);
-    if (!pending) {
-      pending = (async () => {
-        const project = await this.project(scope);
-        const run = await getCircleCiRunForProject(this.token, runId, project.id);
-        return mapRun(run, scope.projectId);
-      })();
-      this.runCache.set(runId, pending);
-    }
-    return pending;
+    return cachedPromise(this.runCache, runId, async () => {
+      const project = await this.project(scope);
+      const run = await getCircleCiRunForProject(this.token, runId, project.id);
+      return mapRun(run, scope.projectId);
+    });
   }
 
   async listWorkflows(scope: CiProjectScope, runId: string): Promise<CiWorkflow[]> {
     await this.getRun(scope, runId);
-    let pending = this.workflowCache.get(runId);
-    if (!pending) {
-      pending = listCircleCiWorkflows(this.token, runId, 2)
-        .then((workflows) => {
-          for (const workflow of workflows) assertCircleCiWorkflowOwnership(workflow, runId);
-          return workflows.map((workflow) => mapWorkflow(workflow, runId));
-        });
-      this.workflowCache.set(runId, pending);
-    }
-    return pending;
+    return cachedPromise(this.workflowCache, runId, async () => {
+      const workflows = await listCircleCiWorkflows(this.token, runId, 2);
+      for (const workflow of workflows) assertCircleCiWorkflowOwnership(workflow, runId);
+      return workflows.map((workflow) => mapWorkflow(workflow, runId));
+    });
   }
 
   async listJobs(scope: CiProjectScope, runId: string, workflowId: string): Promise<CiJob[]> {
@@ -263,21 +270,16 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
 
   async getJob(scope: CiProjectScope, jobId: string): Promise<CiJob> {
     this.assertScope(scope);
-    let pending = this.jobCache.get(jobId);
-    if (!pending) {
-      pending = (async () => {
-        const project = await this.project(scope);
-        const job = await getCircleCiJob(this.token, jobId);
-        assertCircleCiJobOwnership(job, project.id);
-        const workflowId = workflowReference(job);
-        if (workflowId && !isCircleCiUuid(workflowId)) {
-          throw new Error("CircleCI job contains an invalid workflow ownership reference.");
-        }
-        return mapJob(job, scope.projectId, workflowId);
-      })();
-      this.jobCache.set(jobId, pending);
-    }
-    return pending;
+    return cachedPromise(this.jobCache, jobId, async () => {
+      const project = await this.project(scope);
+      const job = await getCircleCiJob(this.token, jobId);
+      assertCircleCiJobOwnership(job, project.id);
+      const workflowId = workflowReference(job);
+      if (workflowId && !isCircleCiUuid(workflowId)) {
+        throw new Error("CircleCI job contains an invalid workflow ownership reference.");
+      }
+      return mapJob(job, scope.projectId, workflowId);
+    });
   }
 
   async getJobLogs(scope: CiProjectScope, jobId: string, options: {
