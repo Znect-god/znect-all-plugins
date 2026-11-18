@@ -53,7 +53,7 @@ describe("central validation manifest ZIP extraction", () => {
 
   it("rejects a corrupt manifest entry by CRC", async () => {
     const archive = storedZip("ci-bridge-validation-manifest.json", "{}");
-    archive[archive.length - 24] ^= 1;
+    archive[30 + new TextEncoder().encode("ci-bridge-validation-manifest.json").length] ^= 1;
     await expect(extractValidationManifest(archive)).rejects.toThrow();
   });
 });
