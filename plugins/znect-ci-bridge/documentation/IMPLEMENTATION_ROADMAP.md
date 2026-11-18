@@ -580,3 +580,11 @@ For every meaningful feature or fix:
 - [x] Fix the Worker CircleCI status API test to provide its required `project_id=znect-forge` query parameter. The previous test invoked the endpoint without required project scope and expected a success response, inconsistent with the handler's 400 validation **(выполнено — test source fix)**.
 - [x] Strengthen the status API test to assert `provider_availability`, read-only permission and the exact registered CircleCI connection ID/status **(выполнено — test source fix)**.
 - [ ] Execute Worker and Android test suites in CircleCI. Source corrections are not evidence of passing tests.
+
+
+## 28. CircleCI connection-check clarity and provider-failure coverage — 2026-11-18
+
+- [x] Correct Android connection-check progress text: it now describes checking the CircleCI read connection and private report endpoint, not authenticating a ChatGPT conversation **(выполнено — UI wording corrected)**.
+- [x] Add Worker coverage for an unavailable CircleCI read probe, including safe generic error output, absence of false read-only/connected claims, and GET-only upstream calls **(выполнено — test source added)**.
+- [ ] Run the updated Worker and Android suites in CircleCI and inspect the actual test results and APK artifact.
+- Note: the Android check verifies the app's authenticated Bridge → CircleCI read path and report endpoint. It does not prove a separate ChatGPT session has connected or consumed the report.
