@@ -741,3 +741,14 @@ For every meaningful feature or fix:
 - [ ] Verify the current CircleCI workflow, Android test results and debug APK artifact for the exact feature branch HEAD.
 
 **Verification boundary:** the API now fails closed on stale incremental event pages and has a focused regression test. The test has not been executed; no CircleCI run, APK assembly, device verification, ChatGPT authentication or deployment is claimed.
+
+
+## 40. Clarify Android connection-check scope — 2026-11-18
+
+- [x] Review the Android connection-check flow against its actual behavior: it authenticates to the private Browser JSON API, performs a CircleCI read-only status probe, then validates a bounded report response **(выполнено — source review)**.
+- [x] Identify misleading UI wording that named the check as a “ChatGPT report path”, which could imply that ChatGPT itself had authenticated **(выполнено — concrete UX finding)**.
+- [x] Rename the action to “Check CircleCI + private report API”; preserve the explicit in-app explanation that this validates Android → CI Bridge → CircleCI and the report endpoint, not a separate ChatGPT session **(выполнено — source fix)**.
+- [ ] Run the Android test suite and assemble the debug APK through CircleCI; no execution or artifact is claimed.
+- [ ] Verify the revised wording and report handoff on a physical Android device; direct ChatGPT session authentication remains a separate unresolved platform capability.
+
+**Verification boundary:** this is a source/UI wording correction only. It does not establish Android test execution, APK assembly, CircleCI execution, physical-device verification or ChatGPT authentication.
