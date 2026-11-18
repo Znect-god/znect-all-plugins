@@ -38,7 +38,7 @@ function assertUniqueResourceIds(
 ): void {
   for (const resource of resources) {
     if (seenIds.has(resource.id)) {
-      throw new Error(`CircleCI API v3 repeated a ${label} ID across pagination pages.`);
+      throw new Error(`CircleCI API v3 repeated a ${label} ID in a paginated collection.`);
     }
     seenIds.add(resource.id);
   }
