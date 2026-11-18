@@ -61,12 +61,12 @@ Before enabling the connection, provision only read permissions for Actions meta
 1. Keep the CircleCI v3 adapter and the explicit v1.1 compatibility API isolated; preserve their distinct identifier and response contracts.
 2. Preserve the browser API and dashboard's alignment with the shared model. The MCP and browser diagnostics paths both use normalized step/action/execution types; extend those types deliberately if another provider needs additional diagnostic detail.
 3. Decide whether legacy v1.1 build tools should be represented as a compatibility API or replaced by provider-neutral run/job operations.
-4. Implement Znect Build using the documented GitHub Actions read API and a repository-scoped read-only credential; do not assume a separate Build API exists.
+4. Complete the live Znect Build adapter verification after the central fingerprint workflow change is merged through the approved path and the repository-scoped read-only credential is provisioned; do not assume a separate Build API exists.
 5. Maintain focused compatibility tests for the three v1.1 tools, including project-scoped URLs and artifact URL validation. Add provider contract tests and provider-specific fixture tests before switching any registered project from CircleCI to Znect Build.
 
 ## Verification status
 
-GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) passed on PR #2 commit `2840dc49c0165b220b69344ff779624a83c03268`, not on the later feature-branch head. Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed for that earlier commit. The install emitted a non-fatal npm warning that install scripts for `core-js-pure`, `esbuild` and `workerd` are not covered by `allowScripts`. The subsequent compatibility-test changes and current branch head remain unverified by this run. This run did not deploy the Worker. The real CircleCI workflow-completed delivery and GitHub Actions read-only integration for Znect Build remain separate pending work.
+GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) passed on PR #2 commit `2840dc49c0165b220b69344ff779624a83c03268`, not on the later feature-branch head. Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed for that earlier commit. The install emitted a non-fatal npm warning that install scripts for `core-js-pure`, `esbuild` and `workerd` are not covered by `allowScripts`. The subsequent compatibility-test changes and current branch head remain unverified by this run. This run did not deploy the Worker. The real CircleCI workflow-completed delivery and live verification of the source-implemented GitHub Actions read-only adapter for Znect Build remain pending.
 
 
 ## Webhook event persistence
