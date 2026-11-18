@@ -430,6 +430,7 @@ export interface CircleCiArtifact {
     path?: string;
     url?: string;
     node_index?: number;
+    execution?: number;
     size?: number;
   };
 }
@@ -469,20 +470,28 @@ export async function getCircleCiJobArtifact(
   token: string,
   jobId: string,
   artifactPath: string,
-  maxBytes = MAX_TEXT_BYTES
-): Promise<{ path: string; text: string; truncated: boolean }> {
+  maxBytes = MAX_TEXT_BYTES,
+  execution?: number
+): Promise<{ path: string; text: string; truncated: boolean; execution?: number }> {
+  if (execution !== undefined && (!Number.isInteger(execution) || execution < 0)) {
+    throw new Error("Artifact execution must be a non-negative integer.");
+  }
   if (typeof artifactPath !== "string" || artifactPath.length < 1 || artifactPath.length > 512 ||
       artifactPath.startsWith("/") || artifactPath.split("/").some((part) => part === "." || part === "..")) {
     throw new Error("Invalid CircleCI artifact path.");
   }
   const artifacts = await listCircleCiJobArtifacts(token, jobId);
-  const matches = artifacts.filter((artifact) => artifact.attributes?.path === artifactPath);
+  const matches = artifacts.filter((artifact) =>
+    artifact.attributes?.path === artifactPath &&
+    (execution === undefined || artifact.attributes?.execution === execution)
+  );
   if (matches.length !== 1) {
     throw new Error(matches.length === 0
-      ? "The requested artifact path was not found for this job."
-      : "The requested artifact path is ambiguous for this job.");
+      ? "The requested artifact path was not found for this job and execution."
+      : "The requested artifact path is ambiguous; specify its parallel execution index.");
   }
-  const rawUrl = matches[0].attributes?.url;
+  const selected = matches[0];
+  const rawUrl = selected.attributes?.url;
   if (typeof rawUrl !== "string") throw new Error("CircleCI artifact does not include a download URL.");
   const url = allowedArtifactUrl(rawUrl);
   if (!url) throw new Error("CircleCI artifact URL is not on an allowed HTTPS host.");
@@ -492,5 +501,9 @@ export async function getCircleCiJobArtifact(
     throw new Error(`CircleCI artifact download failed (HTTP ${response.status}).`);
   }
   const bounded = await readBoundedText(response, maxBytes);
-  return { path: artifactPath, ...bounded };
+  return {
+    path: artifactPath,
+    ...(typeof selected.attributes?.execution === "number" ? { execution: selected.attributes.execution } : {}),
+    ...bounded
+  };
 }
