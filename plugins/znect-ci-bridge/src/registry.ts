@@ -104,7 +104,17 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
       const repository = item.repository === undefined ? undefined : requiredString(item.repository, "component.repository", 200);
       if (repository && !REPOSITORY_PATTERN.test(repository)) throw new Error(`Invalid component repository: ${repository}.`);
       const pathPrefix = item.pathPrefix === undefined ? undefined : requiredString(item.pathPrefix, "component.pathPrefix", 512);
-      if (pathPrefix?.startsWith("/") || pathPrefix?.split("/").includes("..")) throw new Error("Component pathPrefix must be a relative safe path.");
+      if (pathPrefix !== undefined) {
+        const segments = pathPrefix.split("/");
+        const safeSegments = pathPrefix.endsWith("/") ? segments.slice(0, -1) : segments;
+        if (pathPrefix.startsWith("/") || safeSegments.length === 0 ||
+            safeSegments.some((segment) =>
+              segment.length === 0 || segment === "." || segment === ".." ||
+              !/^[A-Za-z0-9._-]+$/.test(segment)
+            )) {
+          throw new Error("Component pathPrefix must be a relative safe path.");
+        }
+      }
       return { id: componentId, name: componentName, ...(repository ? { repository } : {}), ...(pathPrefix ? { pathPrefix } : {}) };
     });
     const componentIds = new Set(components.map((component) => component.id));
