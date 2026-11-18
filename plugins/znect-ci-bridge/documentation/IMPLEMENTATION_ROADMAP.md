@@ -391,7 +391,7 @@ For every meaningful feature or fix:
 - No exporter source code has been added yet. No secrets were requested/read, no API request was made, and no tests, CircleCI pipeline, build or deployment was run.
 
 - Added `documentation/ANDROID_REPORT_EXPORTER_DESIGN.md` with the proposed Android-native manual handoff architecture: Keystore-backed credential storage, fixed-origin HTTPS GET-only access to `/api/v1/report`, bounded report validation, private temporary export and explicit Sharesheet sharing. **(выполнено — design specification only; no app source or runtime verification)**
-### Android exporter implementation update (2026-11-18)
+### [SUPERSEDED] Android exporter implementation update — removed companion path
 
 - Created isolated branch `feature/ci-bridge-android-exporter` from the report-handoff research branch.
 - Added a native Kotlin Android application module under `plugins/znect-ci-bridge/android-exporter/` (application ID `com.znect.cibridge.exporter`, minSdk 26, target/compile SDK 35, JDK 17).
@@ -402,7 +402,7 @@ For every meaningful feature or fix:
 - Remaining work: source review and additional test coverage; then, only after explicit authorization, local Gradle build, tests and Android device verification as separate steps.
 
 
-## 10. Development log — 2026-11-18 (Android exporter and CircleCI alignment)
+## 10. [SUPERSEDED] Development log — Android exporter and CircleCI alignment
 
 - Confirmed the root `.circleci/config.yml` exists on the Android exporter branch and defines validation only: `npm ci`, `npm run check`, smoke-script syntax check and Wrangler dry-run; it contains no deploy step.
 - Confirmed `Znect-god/znect-build` is a separate central build repository whose current README documents GitHub Actions as its executor. This remains separate from CI Bridge source development and its CircleCI validation; no Znect Build workflow was invoked.
@@ -420,7 +420,7 @@ For every meaningful feature or fix:
 - No CircleCI run could be started or inspected because this session has no authenticated CircleCI API/control connection. No GitHub Actions, pipeline, Gradle tests/build, deployment, live API request or secret access was used as a substitute.
 
 
-## 12. Android exporter build wiring review — 2026-11-18
+## 12. [SUPERSEDED] Android exporter build wiring review
 
 - Added the missing Kotlin Android Gradle plugin to the root and app module build scripts; Kotlin source files are now explicitly included in the Android compilation configuration **(выполнено — source configuration)**.
 - Pinned a mutually compatible toolchain: Android Gradle Plugin 8.7.2, Kotlin Gradle Plugin 2.1.10 and Gradle Wrapper 8.9, with Java/Kotlin bytecode target 17 **(выполнено — source configuration; compatibility checked against upstream version matrices)**.
@@ -437,14 +437,14 @@ For every meaningful feature or fix:
 - No workflow dispatch, pipeline mutation, deployment, or secret access was performed.
 
 
-## 14. Android CI artifact handoff — 2026-11-18
+## 14. [SUPERSEDED] Android CI artifact handoff
 
 - Added CircleCI test-result collection and debug APK artifact storage after the Android test/build command **(выполнено — CircleCI configuration)**.
 - The artifact is a debug APK for manual review/install only; no release signing, publishing, deployment, or automatic device installation is configured.
 - Documented the artifact path in the Android exporter README. Artifact availability remains conditional on a successful CircleCI job; no APK artifact is currently verified.
 
 
-## 15. Android Bearer credential validation hardening — 2026-11-18
+## 15. [SUPERSEDED] Android Bearer credential validation hardening
 
 - Extracted Bearer token validation into a separately testable policy and aligned the accepted characters with RFC 6750 `b64token`, including underscore. The previous validator rejected tokens containing `_`, which could block valid CircleCI-style credentials **(выполнено — source fix)**.
 - Added JVM tests for underscore and other allowed characters, whitespace/CRLF header-injection rejection, empty input and the 4096-character boundary **(выполнено — test source added; execution pending)**.
@@ -452,7 +452,7 @@ For every meaningful feature or fix:
 - Remaining validation is unchanged: CircleCI run, APK artifact and physical-device check are not yet verified.
 
 
-## 16. Android report validation and disconnect hardening — 2026-11-18
+## 16. [SUPERSEDED] Android report validation and disconnect hardening
 
 - Tightened the report validator to enforce requested/returned limits, failed-run count bounds, object-only run/event entries, non-negative event cursor and consistency between event availability and completeness metadata **(выполнено — source fix)**.
 - Added JVM test cases for inconsistent failed counts, malformed item types, mismatched completeness flags and out-of-contract requested limits **(выполнено — test source added; execution pending)**.
@@ -460,7 +460,7 @@ For every meaningful feature or fix:
 - Runtime tests, CircleCI execution and device verification remain pending; no build success is claimed.
 
 
-## 17. Android report schema type strictness — 2026-11-18
+## 17. [SUPERSEDED] Android report schema type strictness
 
 - Changed the Android validator to inspect actual JSON primitive types rather than coercing strings through `optInt`/`optLong`; report version, counters, requested limits and event cursor must be JSON numbers, while identity/permission fields must have their declared types **(выполнено — source fix)**.
 - Added three JVM regression tests for numeric strings in counters, string report versions and string event cursors **(выполнено — test source added; execution pending)**.
@@ -468,20 +468,20 @@ For every meaningful feature or fix:
 - No Gradle build, CircleCI run, APK creation, live API request, deployment or secret access was performed.
 
 
-## 18. Android disconnect cleanup verification — 2026-11-18
+## 18. [SUPERSEDED] Android disconnect cleanup verification
 
 - Hardened Disconnect so cached report deletion is checked instead of assuming every file was removed; the UI now distinguishes verified cleanup from a failed cache-deletion attempt **(выполнено — source fix)**.
 - Keystore alias deletion and cached-report deletion are reported independently, while preferences and encrypted credential clearing remain synchronous and checked.
 - No Android runtime, filesystem fault-injection, Gradle test or CircleCI execution was performed; source behavior still requires device verification.
 
 
-## 19. Android event cursor numeric compatibility — 2026-11-18
+## 19. [SUPERSEDED] Android event cursor numeric compatibility
 
 - Aligned the Android report validator with the Worker API's `Number.isSafeInteger(after)` contract: event cursors must be non-negative JSON integers no larger than JavaScript's maximum safe integer **(выполнено — source fix)**.
 - Added a regression test for a cursor above the safe-integer range **(выполнено — test source added; execution pending)**.
 - Android module test sources now total 40 cases: 8 origin + 18 report-schema/privacy + 3 Bearer-token + 11 CircleCI connection-status tests. None has been executed; build and device checks remain pending.
 
-## 20. Android report handoff integrity and lifecycle — 2026-11-18
+## 20. [SUPERSEDED] Android report handoff integrity and lifecycle
 
 - The Android exporter now binds a report to the exact CircleCI connection selected in local configuration; a valid report for a different connection is rejected before export **(выполнено — source fix)**.
 - The response must declare JSON media type before parsing. Private report writes now use a temporary file and rename-based finalization, and prior cache cleanup is checked **(выполнено — source fix)**.
@@ -503,13 +503,13 @@ For every meaningful feature or fix:
 - These tests preserve the separate `WEB_ACCESS_TOKEN` boundary and GET-only report handoff. They do not add MCP-based CircleCI access or any write capability.
 - The Android module has 32 authored JVM test cases; Worker tests have been extended by two cases. No test suite or CircleCI job has been executed.
 
-## 23. Android temporary-report retention verification — 2026-11-18
+## 23. [SUPERSEDED] Android temporary-report retention verification
 
 - Startup TTL cleanup now checks whether expired cached report files/directories were actually removed and surfaces a warning when cleanup cannot be verified **(выполнено — source fix)**.
 - Before a new report is accepted, the exporter now requires the private cache directory to be inspectable and verifies removal of prior temporary reports; it does not silently treat a failed directory listing as successful cleanup **(выполнено — source fix)**.
 - No Android filesystem fault-injection, Gradle test, APK build, CircleCI run or device verification was performed.
 
-## 24. Android request cancellation on Activity teardown — 2026-11-18
+## 24. [SUPERSEDED] Android request cancellation on Activity teardown
 
 - The exporter now tracks its active HTTPS connection and disconnects it when the Activity is destroyed, in addition to interrupting the executor and suppressing late UI callbacks **(выполнено — source fix; Android runtime verification pending)**.
 - A queued request exits before decrypting the local credential when its Activity has already been destroyed. An in-flight request is disconnected on teardown; network cancellation behavior still requires device verification.
@@ -521,13 +521,13 @@ For every meaningful feature or fix:
 - Added `npm audit --audit-level=high` to the CircleCI Worker validation job immediately after deterministic `npm ci`, so dependency advisories are checked by the current CircleCI executor rather than relying only on historical GitHub Actions evidence **(выполнено — CircleCI config source)**.
 - Updated the CircleCI setup guide and project README. No audit command or CircleCI job has been run on the current branch; result remains unverified.
 
-## 26. Android connection selection guidance — 2026-11-18
+## 26. [SUPERSEDED] Android connection selection guidance
 
 - Updated the connection field hint and setup documentation: `connection_id` may be omitted only when the selected project has exactly one CircleCI connection; projects with multiple connections require an explicit ID **(выполнено — UI/docs clarification)**.
 - The returned report is independently checked against the selected connection ID when one is supplied.
 
 
-## 7. Android connection-check behavior (2026-11-18)
+## 7. [SUPERSEDED] Android connection-check behavior
 
 - [x] Add a user-triggered **Check CircleCI ↔ ChatGPT handoff** action to the Android exporter **(выполнено — source implementation)**.
 - [x] Probe authenticated `GET /api/v1/status` with the locally stored Bearer credential; enforce HTTPS, GET-only, redirect rejection, timeouts and an 8 KB response ceiling **(выполнено — source implementation)**.
@@ -540,7 +540,7 @@ For every meaningful feature or fix:
 - [ ] Establish a supported direct ChatGPT authentication mechanism for the private API. The Android check cannot attest that ChatGPT itself has an active authenticated session; it proves only that the Bridge endpoint and CircleCI read path respond to the app's credential.
 
 
-## 8. Android connection-check hardening — 2026-11-18
+## 8. [SUPERSEDED] Android connection-check hardening
 
 - [x] Match the Android status validator against the actual Worker `GET /api/v1/status` response contract: `service`, `connected`, `provider`, project/connection identity, provider availability, read-only permission and `read_probe.recent_runs_available` **(выполнено — source review)**.
 - [x] Preserve the server's safe provider/read-probe failure reason in the Android UI rather than collapsing it into a generic network message **(выполнено — source implementation)**.
@@ -551,7 +551,7 @@ For every meaningful feature or fix:
 - [ ] Direct ChatGPT authentication remains an explicit platform integration blocker; do not describe manual Sharesheet handoff as automatic ChatGPT connectivity.
 
 
-## 9. CI executor isolation — 2026-11-18
+## 9. [SUPERSEDED] CI executor isolation — historical CircleCI snapshot
 
 - [x] Retire the legacy GitHub Actions Cloudflare Preview workflow on this engineering branch. It is now inert: its job is hard-disabled and it performs no checkout, runner allocation, Preview deployment or secret access **(выполнено — workflow source updated)**.
 - [x] Keep `.circleci/config.yml` as the only CI Bridge validation workflow definition; it contains Worker validation and Android test/APK jobs and no deployment command **(выполнено — source inspection)**.
@@ -559,7 +559,7 @@ For every meaningful feature or fix:
 - Note: externally configured Cloudflare Workers Builds may still react to repository commits independently; such activity is not CI Bridge validation and must not be treated as CircleCI evidence. Do not change Cloudflare account settings from this workflow.
 
 
-## 27. Android action recovery and CircleCI status API test correction — 2026-11-18
+## 27. [SUPERSEDED] Android action recovery and CircleCI status API test correction
 
 - [x] Restore the Android connection-check button after a failed report fetch; previously it could remain disabled until Activity recreation **(выполнено — source fix)**.
 - [x] Remove duplicate button-state restoration in the connection-check error handler **(выполнено — source cleanup)**.
@@ -615,7 +615,7 @@ For every meaningful feature or fix:
 
 **Verification boundary:** these are documentation/source commits only. They do not establish that tests passed, CircleCI ran, an APK was assembled, ChatGPT authenticated to the API, or any Preview/Production deployment occurred.
 
-## 33. Android configuration mutation guard and source security review — 2026-11-18
+## 33. [SUPERSEDED] Android configuration mutation guard and source security review
 
 - [x] Review CircleCI v3 request construction, fixed API origin, GET-only behavior, redirect handling, bounded JSON/text reads, project/run/workflow/job ownership checks, artifact path matching and artifact-host allowlisting **(выполнено — source review)**.
 - [x] Review the CircleCI adapter's scope checks and its run/workflow/job relationship validation **(выполнено — source review)**.
@@ -639,7 +639,7 @@ For every meaningful feature or fix:
 **Verification boundary:** source and regression-test changes are committed. The new test has not been executed in this session; no CircleCI run, green status, or APK artifact is claimed.
 
 
-## 35. Worker read API and Android export boundary review — 2026-11-18
+## 35. Worker read API and [SUPERSEDED] Android export boundary review
 
 - [x] Re-review authenticated Browser JSON API routing: Bearer verification, constant-time comparison, failed-auth rate limiting, authenticated-request rate limiting, GET-only enforcement, no-store JSON responses and bounded report serialization **(выполнено — source review)**.
 - [x] Re-review `/api/v1/status` and `/api/v1/report`: registered project/connection selection, CircleCI-only provider selection, bounded query parameters, safe provider failure responses, bounded event-store parsing and explicit read-only report metadata **(выполнено — source review)**.
@@ -653,7 +653,7 @@ For every meaningful feature or fix:
 **Verification boundary:** this section records static source review only. It does not establish passing tests, a CircleCI run, an assembled APK, device verification, automatic ChatGPT authentication or deployment.
 
 
-## 36. Enforce temporary report expiry at share time — 2026-11-18
+## 36. [SUPERSEDED] Enforce temporary report expiry at Android share time
 
 - [x] Confirmed a lifecycle gap: the 30-minute cache cleanup previously ran only when the Activity was created, so a report could remain shareable beyond its intended TTL if the app stayed open **(выполнено — concrete source finding)**.
 - [x] Add a dedicated report-expiry policy with explicit TTL boundary handling **(выполнено — source implementation)**.
