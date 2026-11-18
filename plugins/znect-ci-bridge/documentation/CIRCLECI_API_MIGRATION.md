@@ -92,6 +92,10 @@ Single-resource v3 responses are unwrapped from the documented `data` envelope. 
 5. Fetch job details using `GET /api/v3/jobs/:id`.
 6. Fetch each selected step's stdout/stderr using `GET /api/v3/jobs/:id/stdout` or `stderr` with `filter[step_num]` and optional `filter[execution]`.
 
+### Job detail step shape
+
+CircleCI's public CLI v3 acceptance-fixture model represents `attributes.parallel_executions` as an array of step arrays (`[][]JobStep`): each outer-array position is the zero-based execution index, and each inner array contains that execution's steps. The adapter maps `num` to the API step number and does not require the optional `is_insignificant` extension field to be present. Queued jobs may omit `parallel_executions` entirely; they are represented as having no reported steps, not as a failed parse. The regression fixtures use this nested-array wire shape.
+
 ## Remaining work
 
 1. Confirm the configured CircleCI personal API token as the Worker Secret `CIRCLECI_TOKEN` without exposing it in chat.
