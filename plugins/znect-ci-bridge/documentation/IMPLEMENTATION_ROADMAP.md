@@ -780,6 +780,7 @@ For every meaningful feature or fix:
 - [x] Preserve the existing Cloudflare Worker, CircleCI read-only diagnostics adapter, Browser JSON API, webhook inbox, dashboard and bounded assistant-report download **(выполнено — existing core paths retained)**.
 - [x] Rewrite the current assistant-channel and free-access documentation to remove Android Sharesheet as a supported route and establish Znect Build as the sole validation executor **(выполнено)**.
 - [x] Keep old Android/CircleCI execution notes only as historical records; they are superseded by this cleanup and must not be treated as current instructions **(выполнено)**.
+- [x] Keep both legacy GitHub Actions workflow files inert with `if: ${{ false }}` and correct their comments so they point to central Znect Build / explicit Preview authorization rather than CircleCI **(выполнено — workflow source updated)**.
 - [x] Inspect the central Znect Build target: `znect-ci-bridge/worker-validation` is registered but `execution_enabled: false`; no validation run was triggered **(выполнено — registry source review)**.
 - [x] Inspect the Znect Build recipe and disabled target; align the Worker validation requirements and manifest contract, including a high-severity dependency audit **(выполнено — source review and coordinated source edits)**.
 - [ ] Review/merge the central recipe to Znect Build `main` through the approved process; the current feature branch is not yet the adapter's trusted main-branch workflow.
@@ -795,6 +796,7 @@ For every meaningful feature or fix:
 - [x] Add the audit step to the machine-readable validation manifest and update the Bridge adapter's exact expected-step contract **(выполнено — source implementation)**.
 - [x] Add regression tests proving the Bridge accepts the complete recipe provenance and rejects a manifest that omits the dependency audit **(выполнено — test source added; execution pending)**.
 - [x] Keep the central target disabled and do not dispatch a workflow, modify secrets, or alter repository settings **(выполнено — registry remains execution_enabled=false)**.
+- [x] Update the central registry target notes to list the dependency audit alongside typecheck, Vitest, syntax validation and Wrangler dry-run **(выполнено — registry source updated)**.
 - [ ] Review the central recipe changes and their validation on the intended Znect Build branch; no test execution is claimed.
 - [ ] Continue with the private report/ChatGPT access path and exact-SHA validation readiness.
 
