@@ -1117,8 +1117,20 @@ For every meaningful feature or fix:
 - [x] Enforce a shared 500,000-byte aggregate retrieval budget per job; each next download receives only the remaining budget.
 - [x] Mark diagnostics incomplete and set the artifact-limit indicator when the artifact-count or aggregate-byte budget prevents full collection; preserve per-artifact retrieval errors without hiding successful reports.
 - [x] Keep oversized known artifacts out of retrieval and report incompleteness rather than attempting an over-budget download.
-- [ ] Add focused regression tests for multiple executions, same-path artifacts, count cap, aggregate byte cap, unknown sizes and partial retrieval failure.
+- [x] Add focused regression-test source for multiple executions, same-path artifacts, count cap, aggregate byte cap, unknown sizes and partial retrieval failure **(выполнено — Stage 75; execution pending)**.
 - [ ] Execute TypeScript checks and focused tests through the authorized opt-in CircleCI workflow.
 - [ ] Verify multi-execution JUnit collection against a live authorized CircleCI job.
 
 **Verification boundary:** shared collector and both diagnostics call sites updated in source; static review only. The four-artifact and 500,000-byte limits are code-enforced, but TypeScript and runtime behavior remain unverified. No tests, live API requests, CircleCI pipeline, deployment or credential changes were performed.
+
+
+### Stage 75 — Extract and regression-test the bounded diagnostic artifact collector — 2026-11-18
+- [x] Move the shared JUnit/test-results collector into `src/diagnostic-artifacts.ts`, with explicit typed inputs/results and exported count/byte limits.
+- [x] Keep both MCP and Browser JSON API diagnostics on the same extracted collector; preserve artifact path, optional size, parallel execution index and per-artifact safe errors.
+- [x] Add isolated regression tests for parallel executions and duplicate paths, the four-artifact cap, aggregate byte budgeting, unknown artifact sizes, oversized known artifacts, partial retrieval failures, truncated downloads, filtering and list failures.
+- [x] Fail closed when an adapter returns report content larger than the remaining byte budget, rather than emitting an over-budget report.
+- [ ] Execute the focused Vitest file and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
+- [ ] Review test results and address any failures before broader validation.
+- [ ] Verify bounded multi-execution JUnit collection against a live authorized CircleCI job.
+
+**Verification boundary:** module extraction, both call-site imports and focused regression-test source are committed to the feature branch. Tests and TypeScript checks were not executed; no CircleCI API requests, pipeline execution, deployment or credential/configuration changes were performed.
