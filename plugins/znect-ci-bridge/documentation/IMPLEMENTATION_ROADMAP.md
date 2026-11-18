@@ -1,24 +1,24 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (CircleCI migration and repository-boundary audit)  
+**Updated:** 2026-11-18 (CircleCI runtime and registry hardening)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)  
 **Previous engineering base:** `test/ci-bridge-webhook-ingress-contract`  
 **Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
 
-This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness. Historical sections preserve earlier decisions and intermediate architecture. Stage 51 records the corrected requirement: CircleCI is the CI execution platform; Znect Build is the development/recipe home, not a GitHub Actions executor. Any earlier statement that CI Bridge validation must execute through GitHub Actions or that CircleCI is merely an observed provider is superseded.
+This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness. Historical sections preserve earlier decisions and intermediate architecture. Current architecture: CircleCI executes CI Bridge validation; Znect Build owns the central recipe, registry policy and development workflow; Znect All Plugins owns Bridge source; the Bridge observes CircleCI through a read-only adapter. Any earlier statement that CI Bridge validation executes through GitHub Actions or that Znect Build is the execution platform is superseded.
 
 ## 1. Project boundaries
 
 - **Znect All Plugins** is the source-development home for CI Bridge: code, tests, docs, plugin metadata and release preparation.
-- **Znect Build** (`Znect-god/znect-build`) is the central build and validation executor for Znect projects, including CI Bridge. CI Bridge must not introduce a parallel executor.
-- **Znect CI Bridge** is a read-only diagnostics/integration plugin. It observes CI systems and exposes reports; it does not execute builds.
-- **CircleCI** is an observed CI provider for registered projects. Its Bridge adapter is read-only; it is not the executor for CI Bridge's own validation.
+- **Znect Build** (`Znect-god/znect-build`) is the development and central-recipe home for Znect projects, including CI Bridge; it is not the CI executor.
+- **Znect CI Bridge** is a read-only diagnostics/integration plugin. It observes CircleCI and exposes reports; it does not execute or mutate builds.
+- **CircleCI** is the CI execution platform for Znect Build and CI Bridge validation. The Bridge's CircleCI adapter remains strictly read-only.
 - The root `.circleci/config.yml` and the optional native Android exporter were removed as redundant paths. Do not recreate them without a new explicit architectural decision.
-- GitHub Actions workflows in this repository remain inert/historical. CI Bridge checks must be routed through Znect Build, not invoked directly through a separate workflow.
-- The existing Znect Build read adapter remains a separate read-only diagnostics path and does not grant build-execution permissions.
+- GitHub Actions workflows in this repository remain inert/historical and are not an execution path for CI Bridge validation.
+- The central CircleCI recipe checks an exact source SHA from `Znect-god/znect-all-plugins`; the Bridge may observe the resulting CircleCI run and provenance artifacts only through its read-only provider.
 
 No PR merge, Znect Build execution, Preview refresh, Production change, secret access or deployment is authorized by this roadmap alone.
 
@@ -927,3 +927,14 @@ For every meaningful feature or fix:
 - [ ] Confirm the Worker runtime's `CIRCLECI_TOKEN` can read the Znect Build CircleCI project and that no credential or registry value is exposed.
 
 **Verification boundary:** source and documentation prerequisites were audited. CircleCI account state, Cloudflare runtime bindings/secrets and live provider access are not accessible through the connected tools in this session. No runtime configuration was changed, no secret was read or modified, no CircleCI pipeline was started, and no deployment occurred.
+
+## 56. Harden project registry schema and reconcile validation contracts — 2026-11-18
+
+- [x] Reject unknown keys at the registry root, project, repository, component and connection levels so misspelled or misplaced configuration cannot be silently ignored **(выполнено — parser source change)**.
+- [x] Add regression-test source for unknown root/project/repository/connection fields, including an attempted credential field in a connection **(выполнено — test source added; execution pending)**.
+- [x] Correct a pre-existing multi-connection test expectation that contradicted its fixture (`circleci-tools` was expected as `build-main`) **(выполнено — test source corrected)**.
+- [x] Reconcile the current roadmap's project-boundary summary with the actual architecture: CircleCI executes; Znect Build owns central recipes/development; All Plugins owns Bridge source; Bridge reads CircleCI only **(выполнено — roadmap source updated)**.
+- [ ] Run registry tests, typecheck and the full suite on the resulting exact source SHA through the authorized CircleCI validation workflow.
+- [ ] Verify the registered Znect Build slug and private runtime connection using authenticated read-only access; no account/runtime connector is currently available.
+
+**Verification boundary:** parser and regression-test source were committed. No tests or CircleCI workflow were executed, no secrets/runtime bindings were changed, and no deployment occurred.
