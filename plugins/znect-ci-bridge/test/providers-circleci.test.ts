@@ -26,18 +26,18 @@ describe("CircleCI read-only provider adapter", () => {
       .mockResolvedValueOnce(response({
         data: [{
           id: RUN_ID,
-          references: { project: { id: PROJECT_ID } },
-          attributes: {
-            phase: "ended",
-            current_outcome: "failed",
-            created_at: "2026-11-15T10:00:00Z"
-          },
           references: {
+            project: { id: PROJECT_ID },
             event: { attributes: { vcs: {
               branch: "main",
               revision: "abc123",
               commit: { subject: "Fix tests" }
             } } }
+          },
+          attributes: {
+            phase: "ended",
+            current_outcome: "failed",
+            created_at: "2026-11-15T10:00:00Z"
           }
         }],
         page: { next: null }
