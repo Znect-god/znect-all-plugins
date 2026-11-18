@@ -731,3 +731,13 @@ For every meaningful feature or fix:
 - [ ] Obtain and inspect the actual CircleCI pipeline and Android exporter results/artifact for the current branch head.
 
 **Verification boundary:** this change tightens configuration parsing and adds regression-test source only. No local or CircleCI test execution, APK build, device verification, ChatGPT authentication or deployment is claimed.
+
+## 41. Enforce forward-only incremental event cursors — 2026-11-18
+
+- [x] Identify a defensive validation gap: an event-store response to `after=N` could include a stale event with cursor `<= N`; a single stale record passed the existing ordering and maximum-cursor checks **(выполнено — concrete source finding)**.
+- [x] Reject every incremental event cursor that is not strictly greater than the requested cursor **(выполнено — source fix)**.
+- [x] Add a Browser API regression test where `after=5` receives cursor `4`; the response must be rejected as invalid event-store data **(выполнено — test authored; execution pending)**.
+- [ ] Run the Worker typecheck and complete Vitest suite through CircleCI; no test result is claimed.
+- [ ] Verify the current CircleCI workflow, Android test results and debug APK artifact for the exact feature branch HEAD.
+
+**Verification boundary:** the API now fails closed on stale incremental event pages and has a focused regression test. The test has not been executed; no CircleCI run, APK assembly, device verification, ChatGPT authentication or deployment is claimed.
