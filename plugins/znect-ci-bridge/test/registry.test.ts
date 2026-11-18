@@ -69,6 +69,18 @@ describe("project registry", () => {
     }))).toThrow(/may only be registered once/i);
   });
 
+  it("rejects unknown fields instead of silently accepting registry typos", () => {
+    const cases = [
+      { version: 1, projects: [], provider: "circleci" },
+      { version: 1, projects: [{ ...forge, displayName: "typo" }] },
+      { version: 1, projects: [{ ...forge, repositories: [{ fullName: "Znect-god/znect-forge", componetId: "android-app" }] }] },
+      { version: 1, projects: [{ ...forge, connections: [{ id: "circleci-main", provider: "circleci", projectSlug: "gh/Znect-god/znect-forge", token: "not-allowed" }] }] }
+    ];
+    for (const value of cases) {
+      expect(() => parseProjectRegistry(JSON.stringify(value))).toThrow(/unknown project registry field/i);
+    }
+  });
+
   it("rejects repositories assigned to unknown components", () => {
     expect(() => parseProjectRegistry(JSON.stringify({
       version: 1,
@@ -148,7 +160,7 @@ describe("project registry", () => {
     }));
     expect(parsed.projects[0].repositories).toHaveLength(2);
     expect(parsed.projects[0].connections.map((connection) => connection.id))
-      .toEqual(["circleci-main", "build-main"]);
+      .toEqual(["circleci-main", "circleci-tools"]);
   });
   it("reports project registration, CI configuration, and provider availability independently", () => {
     const empty = parseProjectRegistry(JSON.stringify({
