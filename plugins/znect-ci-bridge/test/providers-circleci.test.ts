@@ -309,4 +309,46 @@ describe("CircleCI read-only provider adapter", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
+
+  it("shares one in-flight read for concurrent requests to the same run", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: [{
+          id: RUN_ID,
+          references: { project: { id: PROJECT_ID } },
+          attributes: { phase: "ended", current_outcome: "succeeded" }
+        }],
+        page: { next: null }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    const [first, second] = await Promise.all([
+      adapter.getRun(scope, RUN_ID),
+      adapter.getRun(scope, RUN_ID)
+    ]);
+    expect(first).toEqual(second);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries project resolution after a transient CircleCI API failure", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ message: "temporary failure" }, 503))
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: [{
+          id: RUN_ID,
+          references: { project: { id: PROJECT_ID } },
+          attributes: { phase: "ended", current_outcome: "succeeded" }
+        }],
+        page: { next: null }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+    await expect(adapter.getRun(scope, RUN_ID)).rejects.toThrow("HTTP 503");
+    await expect(adapter.getRun(scope, RUN_ID)).resolves.toMatchObject({ id: RUN_ID, status: "succeeded" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });
