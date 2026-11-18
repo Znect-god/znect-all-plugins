@@ -1,3 +1,10 @@
+## 2026-11-18 — verify aggregate report diagnostic-link contract
+
+- Extended the aggregate CircleCI report regression test to assert the exact failed-run UUID, status, same-origin diagnostics path, and selected project/connection query scope.
+- Asserted that the aggregate report explicitly marks diagnostic bundles as not yet included, matching the dashboard's subsequent bounded diagnostic retrieval.
+- Reconciled current roadmap wording with the central Znect Build executor and marked obsolete CircleCI/Android stage snapshots as superseded.
+- Test execution and live Preview verification remain pending.
+
 ## 2026-11-18 — central Build recipe contract coverage
 
 - Added central Znect Build tests for exact CI Bridge recipe/manifest step ordering, the disabled validation target, and no-deploy dry-run behavior.
