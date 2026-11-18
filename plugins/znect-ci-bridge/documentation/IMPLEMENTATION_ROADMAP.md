@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (report-link contract regression coverage and roadmap reconciliation)  
+**Updated:** 2026-11-18 (CircleCI migration and repository-boundary audit)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)  
@@ -862,7 +862,7 @@ For every meaningful feature or fix:
 - [x] Update Znect Build architecture, operations, security, README and both project roadmaps to match the CircleCI flow; legacy GitHub Actions jobs are inert **(выполнено — source/documentation updates)**.
 - [x] Preserve exact source-SHA verification, bounded provenance artifacts, read-only Bridge access and disabled execution/deployment safeguards **(выполнено — source/config review; runtime verification pending)**.
 
-**Verification boundary:** this stage is a completed source/architecture audit and roadmap correction only. The CircleCI migration has not yet been implemented or run. No CircleCI pipeline was triggered, no GitHub Actions workflow was used, no tests were executed, and no Preview/Production deployment or secret change occurred.
+**Historical verification boundary (superseded by stages 52–54):** at the time of stage 51, CircleCI migration was still pending. Stage 52 subsequently added the CircleCI configuration and recipe; stage 53 retired the GitHub Actions-specific Bridge adapter; stage 54 verified that both repositories and their separate development responsibilities remain intact. No CircleCI pipeline or current-head test suite has yet been executed.
 
 
 ## 52. Implement CircleCI validation in Znect Build — 2026-11-18
@@ -878,7 +878,7 @@ For every meaningful feature or fix:
 - [x] Reconcile Znect Build README, architecture, operations, security, roadmap and registry notes; update CI Bridge assistant-channel docs, plugin metadata and changelog **(выполнено — documentation/metadata updates)**.
 - [ ] Configure/verify the Znect Build CircleCI project using free/included resources only.
 - [ ] Execute the Znect Build contract tests and an explicitly authorized exact-SHA CI Bridge pipeline; capture actual run and artifact evidence.
-- [ ] Replace or retire the legacy GitHub Actions-based Znect Build adapter in CI Bridge and route central validation evidence through CircleCI.
+- [x] Replace or retire the legacy GitHub Actions-based Znect Build adapter in CI Bridge and route central validation evidence through CircleCI **(выполнено — adapter/routes/tests retired; generic CircleCI adapter retained)**.
 
 **Verification boundary:** source configuration, tests and documentation are committed on isolated feature branches. No CircleCI project connection was inspected or configured, no pipeline or test suite was run, and no Preview/Production deployment or secret change occurred.
 
@@ -897,3 +897,19 @@ For every meaningful feature or fix:
 - [ ] Complete the supported private ChatGPT Free access/handoff path without MCP or weakening Browser API authentication.
 
 **Verification boundary:** the legacy GitHub Actions adapter and routes are removed from source, and the generic CircleCI adapter is the only provider implementation. Test source was updated but not executed; the Znect Build runtime CircleCI connection and live artifact round-trip remain pending. No CircleCI pipeline, Preview deployment or Production change was performed.
+
+
+## 54. Verify repository boundaries and preserve Znect Build as the development home — 2026-11-18
+
+- [x] Verify that `Znect-god/znect-build` still exists, is private, is not archived and retains its own `feat/ci-bridge-node-worker-recipe` development branch **(выполнено — repository metadata and branch inventory)**.
+- [x] Verify that `Znect-god/znect-all-plugins` remains a separate public source repository and retains its own CI Bridge engineering branch **(выполнено — repository metadata and branch inventory)**.
+- [x] Reconfirm responsibility split: all-plugins owns CI Bridge source; Znect Build owns central recipes, schemas, registry policy and development; CircleCI executes checks; Bridge observes CircleCI read-only **(выполнено — source and documentation audit)**.
+- [x] Confirm Znect Build's CircleCI config, exact-SHA source checkout, centrally maintained recipe, provenance artifacts and disabled-by-default validation parameter remain present **(выполнено — static source verification)**.
+- [x] Correct stale provider-contract wording that still described a GitHub Actions Build adapter **(выполнено — source comment correction)**.
+- [x] Reconcile prior roadmap entries that predated the CircleCI migration and mark the adapter retirement as completed in stage 52 **(выполнено — roadmap reconciliation)**.
+- [ ] Configure and verify the existing Znect Build CircleCI project with free/included resources only.
+- [ ] After explicit authorization, run the Znect Build contract checks and CI Bridge exact-SHA validation through CircleCI; record real run/job/artifact evidence.
+- [ ] Register the Znect Build CircleCI project in the private runtime registry and verify run/job/log/test/artifact reads through the generic read-only adapter.
+- [ ] Finish a supported private ChatGPT Free handoff without mandatory MCP or weakened authentication.
+
+**Verification boundary:** both repositories and their isolated engineering branches are intact. This stage was a repository/source/documentation audit only; no branch was merged, no CI pipeline was triggered, no tests were executed, and no Preview/Production deployment or secret change occurred.
