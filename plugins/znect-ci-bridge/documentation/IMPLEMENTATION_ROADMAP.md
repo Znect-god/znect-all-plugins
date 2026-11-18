@@ -837,3 +837,14 @@ For every meaningful feature or fix:
 - [ ] Keep the direct ChatGPT authentication limitation explicit until a supported private credential flow is proven; dashboard JSON export remains a manual fallback.
 
 **Verification boundary:** metadata and documentation now describe the current architecture. This does not validate code execution, live Preview behavior, direct ChatGPT authentication or release readiness.
+
+
+## 50. Verify ChatGPT custom-MCP plan availability boundary — 2026-11-18
+
+- [x] Check current OpenAI Help Center guidance for connecting custom MCP servers in ChatGPT **(выполнено — official documentation review)**.
+- [x] Record that the documented availability is Business and Enterprise/Edu, with Pro read/fetch support; Free is not listed as supporting custom MCP server connections **(выполнено — platform-availability finding)**.
+- [x] Keep custom MCP optional and explicitly exclude it as a required transport for the Free-tier requirement **(выполнено — assistant-channel guide updated)**.
+- [x] Preserve the existing private Browser JSON API and user-reviewed dashboard JSON export as the current fallback; do not weaken authentication to simulate direct access **(выполнено — architecture boundary reaffirmed)**.
+- [ ] Determine whether a supported direct authenticated REST access path exists for ChatGPT Free; if not, document the limitation rather than inventing a connector or requiring an upgrade.
+
+**Evidence:** OpenAI Help Center, “Connecting custom MCP servers in ChatGPT”: https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt. This stage records documented plan availability; it does not establish direct REST authentication from ChatGPT Free.
