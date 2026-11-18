@@ -381,3 +381,12 @@ For every meaningful feature or fix:
 - No exporter source code has been added yet. No secrets were requested/read, no API request was made, and no tests, CircleCI pipeline, build or deployment was run.
 
 - Added `documentation/ANDROID_REPORT_EXPORTER_DESIGN.md` with the proposed Android-native manual handoff architecture: Keystore-backed credential storage, fixed-origin HTTPS GET-only access to `/api/v1/report`, bounded report validation, private temporary export and explicit Sharesheet sharing. **(выполнено — design specification only; no app source or runtime verification)**
+### Android exporter implementation update (2026-11-18)
+
+- Created isolated branch `feature/ci-bridge-android-exporter` from the report-handoff research branch.
+- Added a native Kotlin Android application module under `plugins/znect-ci-bridge/android-exporter/` (application ID `com.znect.cibridge.exporter`, minSdk 26, target/compile SDK 35, JDK 17).
+- Implemented local configuration, AES-GCM encryption of the Browser API Bearer token with a non-exportable Android Keystore key, strict HTTPS-origin validation, fixed GET-only `/api/v1/report` request, redirect rejection, 100 KB response cap, report identity/read-only validation, defensive credential-field checks, private temporary JSON export and explicit Android Sharesheet sharing.
+- Disabled cleartext traffic and restricted TLS trust anchors to the Android system store. No background work, analytics, cloud upload, MCP or pipeline mutation capability was added.
+- Added unit-test source for strict HTTPS-origin validation. **Test execution pending; no build or APK was produced.**
+- No live API request was made; no token or other secret was requested/read. No CircleCI pipeline, CI workflow, build, deployment or device installation was run.
+- Remaining work: source review and additional test coverage; then, only after explicit authorization, local Gradle build, tests and Android device verification as separate steps.
