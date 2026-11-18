@@ -194,12 +194,15 @@ function mapArtifact(artifact: CircleCiArtifact, jobId: string): CiArtifact | un
   if (execution !== undefined && (!Number.isInteger(execution) || (execution as number) < 0)) {
     throw new Error("CircleCI API v3 returned an invalid artifact execution index.");
   }
+  const size = artifact.attributes?.size;
+  if (size !== undefined && (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0)) {
+    throw new Error("CircleCI API v3 returned an invalid artifact size.");
+  }
   return {
     id: text(artifact.id) ?? path,
     jobId,
     path,
-    ...(typeof artifact.attributes?.size === "number" && Number.isFinite(artifact.attributes.size)
-      ? { size: artifact.attributes.size } : {}),
+    ...(typeof size === "number" ? { size } : {}),
     ...(typeof execution === "number" ? { execution } : {})
   };
 }
