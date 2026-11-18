@@ -493,7 +493,7 @@ For every meaningful feature or fix:
 
 - Aligned the Android report validator with the Worker API's `Number.isSafeInteger(after)` contract: event cursors must be non-negative JSON integers no larger than JavaScript's maximum safe integer **(выполнено — source fix)**.
 - Added a regression test for a cursor above the safe-integer range **(выполнено — test source added; execution pending)**.
-- Android module test sources now total 38 cases: 8 origin + 18 report-schema/privacy + 3 Bearer-token + 9 CircleCI connection-status tests. None has been executed; build and device checks remain pending.
+- Android module test sources now total 40 cases: 8 origin + 18 report-schema/privacy + 3 Bearer-token + 11 CircleCI connection-status tests. None has been executed; build and device checks remain pending.
 
 ## 20. Android report handoff integrity and lifecycle — 2026-11-18
 
@@ -547,8 +547,19 @@ For every meaningful feature or fix:
 - [x] Probe authenticated `GET /api/v1/status` with the locally stored Bearer credential; enforce HTTPS, GET-only, redirect rejection, timeouts and an 8 KB response ceiling **(выполнено — source implementation)**.
 - [x] Validate service identity, CircleCI provider, expected project/connection, explicit read-only permission, provider availability and recent-run probe result **(выполнено — source implementation)**.
 - [x] Follow the status probe with the bounded `GET /api/v1/report` request and existing report/privacy validation to test the assistant-facing report endpoint **(выполнено — source implementation)**.
-- [x] Add nine JVM regression tests for the connection-status response validator **(выполнено — test source added; execution pending)**.
+- [x] Add eleven JVM regression tests for the connection-status response validator **(выполнено — test source added; execution pending)**.
 - [x] Serialize report fetch and connection checks through the existing single-thread executor; disable conflicting actions while a request is active **(выполнено — source implementation)**.
 - [ ] Verify the button and network behavior on a physical Android device.
 - [ ] Verify a real CircleCI-backed response from CircleCI-run validation/Preview evidence.
 - [ ] Establish a supported direct ChatGPT authentication mechanism for the private API. The Android check cannot attest that ChatGPT itself has an active authenticated session; it proves only that the Bridge endpoint and CircleCI read path respond to the app's credential.
+
+
+## 8. Android connection-check hardening — 2026-11-18
+
+- [x] Match the Android status validator against the actual Worker `GET /api/v1/status` response contract: `service`, `connected`, `provider`, project/connection identity, provider availability, read-only permission and `read_probe.recent_runs_available` **(выполнено — source review)**.
+- [x] Preserve the server's safe provider/read-probe failure reason in the Android UI rather than collapsing it into a generic network message **(выполнено — source implementation)**.
+- [x] Add regression cases rejecting negative and fractional recent-run counts **(выполнено — test source added; execution pending)**.
+- [x] Android connection-status validator suite now contains 11 cases; Android total is 40 authored JVM test cases **(выполнено — source count reviewed; execution pending)**.
+- [ ] Execute all 40 Android JVM tests and assemble the debug APK through CircleCI; no successful CircleCI result has been retrieved.
+- [ ] Verify the status and report calls against a real configured CircleCI connection and test the manual report handoff on Android.
+- [ ] Direct ChatGPT authentication remains an explicit platform integration blocker; do not describe manual Sharesheet handoff as automatic ChatGPT connectivity.
