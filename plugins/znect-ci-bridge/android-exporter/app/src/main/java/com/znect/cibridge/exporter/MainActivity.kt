@@ -100,7 +100,7 @@ class MainActivity : Activity() {
 
         root.addView(actionButton("Save configuration") { saveConfiguration() })
         root.addView(actionButton("Disconnect and clear local data") { disconnectCredential() })
-        checkConnectionButton = actionButton("Check CircleCI ↔ ChatGPT handoff") { checkConnection() }
+        checkConnectionButton = actionButton("Check CircleCI + ChatGPT report path") { checkConnection() }
         root.addView(checkConnectionButton)
         fetchButton = actionButton("Fetch report") { fetchReport() }
         root.addView(fetchButton)
@@ -266,12 +266,12 @@ class MainActivity : Activity() {
                 val status = requestConnectionStatus(origin, project, connection, token)
                 if (!status.connected) throw IllegalStateException(status.message)
                 // The report endpoint is the same bounded private endpoint intended
-                // for the no-MCP ChatGPT handoff; fetching it proves that path works.
+                // for the user-controlled no-MCP report handoff; this does not authenticate ChatGPT itself.
                 requestReport(origin, project, connection, token)
                 if (destroyed || Thread.currentThread().isInterrupted) return@execute
                 runOnUiThread {
                     if (!destroyed) {
-                        statusText.text = "Connection check successful. Android → CI Bridge → CircleCI read probe is available; the private ChatGPT report endpoint also returned a valid report. This does not prove a separate ChatGPT conversation is currently authenticated."
+                        statusText.text = "Connection check successful. Android → CI Bridge → CircleCI read probe is available; the private report endpoint intended for ChatGPT also returned a valid report. This does not prove a separate ChatGPT conversation is currently authenticated."
                         checkConnectionButton.isEnabled = true
                         fetchButton.isEnabled = true
                         fetching = false
