@@ -92,6 +92,7 @@ class MainActivity : Activity() {
         root.addView(tokenInput)
 
         root.addView(actionButton("Save configuration") { saveConfiguration() })
+        root.addView(actionButton("Disconnect and clear local data") { disconnectCredential() })
         fetchButton = actionButton("Fetch report") { fetchReport() }
         root.addView(fetchButton)
         shareButton = actionButton("Share report") { shareReport() }
@@ -176,6 +177,26 @@ class MainActivity : Activity() {
             statusText.text = "Configuration saved locally. The token is encrypted by Android Keystore."
         } catch (_: Exception) {
             statusText.text = "Could not securely save the credential. Existing configuration was not verified."
+        }
+    }
+
+    private fun disconnectCredential() {
+        if (fetching) {
+            statusText.text = "Wait for the current report request to finish before disconnecting."
+            return
+        }
+        try {
+            val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            if (store.containsAlias(KEY_ALIAS)) store.deleteEntry(KEY_ALIAS)
+            val saved = prefs.edit().remove(TOKEN_CIPHERTEXT).commit()
+            if (!saved) throw IllegalStateException("Local credential storage could not be cleared.")
+            tokenInput.text.clear()
+            latestReportFile?.delete()
+            latestReportFile = null
+            shareButton.isEnabled = false
+            statusText.text = "Credential and temporary report cleared from this app."
+        } catch (_: Exception) {
+            statusText.text = "Could not fully clear local credential material. Review app storage before reconnecting."
         }
     }
 
