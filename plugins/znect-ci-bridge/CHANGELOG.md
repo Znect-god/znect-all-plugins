@@ -1,3 +1,10 @@
+## 2026-11-18 — Free non-MCP ChatGPT channel and CircleCI report-scope fix
+
+- Clarified that the supported ChatGPT access path is the private Forge issue command → GitHub Actions → authenticated CI Bridge Browser API → private short-lived report artifact; MCP is not required or used as the assistant channel.
+- Confirmed Forge PR #9 merged the private report workflow and collector to Forge `main`.
+- Corrected missing required project/connection query parameters and status-response validation in the report workflow on isolated Forge branch `fix/ci-bridge-free-circleci-report-params`.
+- Live report execution and artifact retrieval remain unverified; no workflow was triggered and no deployment was performed.
+
 ## 2026-11-18 — Znect Build read-only adapter implementation
 
 - Added a GET-only GitHub Actions adapter for the fixed central repository `Znect-god/znect-build`.
