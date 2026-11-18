@@ -81,7 +81,7 @@ export function parseCiBridgeManifest(raw: string): Record<string, unknown> {
   }
   let buildUrl: URL;
   try { buildUrl = new URL(ci.build_url as string); } catch { throw new Error("manifest_circleci_invalid"); }
-  if (buildUrl.protocol !== "https:" || buildUrl.hostname !== "app.circleci.com" ||
+  if (buildUrl.protocol !== "https:" || (buildUrl.hostname !== "app.circleci.com" && buildUrl.hostname !== "circleci.com") ||
       buildUrl.username || buildUrl.password) throw new Error("manifest_circleci_invalid");
   return m;
 }
