@@ -949,3 +949,17 @@ For every meaningful feature or fix:
 - [ ] Execute the test suite and typecheck through the opt-in CircleCI exact-SHA workflow after explicit authorization.
 
 **Verification boundary:** the report's stale provider label was corrected. The manifest is still not parsed or trusted by Bridge; its presence in CircleCI artifacts is not proof that the Bridge validated it. All findings are from static source inspection; no tests, pipeline, runtime configuration or deployment were executed.
+
+## 58. Parse and verify Znect Build CircleCI provenance in Bridge diagnostics — 2026-11-18
+
+- [x] Add a strict, bounded parser for the exact ci-bridge-validation-manifest.json schema emitted by the central Znect Build CircleCI recipe; reject unknown keys, malformed JSON, invalid hashes/identifiers, inconsistent exit/outcome values, altered validation commands and unsafe deployment/mutation claims **(выполнено — source implementation)**.
+- [x] Discover the dedicated exact-SHA validation workflow and uniquely identify its validate-ci-bridge-source job across bounded workflow/job listings, including successful jobs that ordinary failure-only diagnostics do not inspect **(выполнено — source implementation)**.
+- [x] Fetch the manifest and resolved-source-sha.txt only by exact artifact paths returned by CircleCI; reject missing/duplicate artifacts, oversized/truncated content and untrusted manifest URLs **(выполнено — source implementation)**.
+- [x] Cross-check the manifest pipeline ID against the selected CircleCI run, workflow ID against the selected workflow, job name against the dedicated validation job, recipe SHA against the Znect Build run revision, and source SHA against the separately stored exact-checkout SHA **(выполнено — source implementation; live round-trip pending)**.
+- [x] Expose a bounded provenance summary in both MCP diagnose_run and authenticated Browser API /api/v1/diagnostics/:runId; distinguish validated recipe success, validated recipe failure, missing, invalid and unavailable evidence **(выполнено — source integration)**.
+- [x] Add unit-test source for successful and failed recipe manifests, unknown fields, inconsistent outcome, deployment/mutation claims, malformed/truncated/oversized content and invalid identity values **(выполнено — test source added; execution pending)**.
+- [ ] Add adapter-level regression tests for artifact duplication/missing cases, pipeline/workflow/job mismatch, recipe/source SHA mismatch, successful validation-job discovery and bounded scan truncation.
+- [ ] Run the focused provenance tests, TypeScript check and complete Vitest suite on the exact source SHA through the authorized opt-in CircleCI workflow.
+- [ ] Verify a real CircleCI run/artifact round-trip and confirm the actual CircleCI API v3 run revision equals the recipe repository commit SHA before treating the integration as runtime-verified.
+
+**Verification boundary:** strict manifest parsing, bounded artifact discovery, identity/SHA cross-checks and both diagnostics integrations are committed as source. Unit-test source is committed but has not been executed. No CircleCI pipeline, tests, runtime configuration, secrets, Preview or Production deployment were changed or run. A live run/artifact round-trip remains required; until then, source-level implementation is not runtime proof.
