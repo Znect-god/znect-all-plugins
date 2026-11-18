@@ -1028,7 +1028,7 @@ function createServer(env: Env) {
     {
       description: "List verified central Znect Build workflow-run artifact metadata. Artifacts are run-scoped, not job-scoped; download URLs are not exposed. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().regex(/^\\d{1,16}$/) }
+      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().regex(/^\d{1,16}$/) }
     },
     async ({ project_id, connection_id, run_id }) => {
       const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
