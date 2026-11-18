@@ -640,3 +640,14 @@ For every meaningful feature or fix:
 - [ ] Verify the connection check and manual report handoff on a physical Android device; direct ChatGPT session authentication remains unproven.
 
 **Verification boundary:** the Android configuration guard is committed source code, not an executed test result. CircleCI has not been queried from this session and no CI run is asserted.
+
+## 34. Artifact fetch boundary hardening — 2026-11-18
+
+- [x] Re-check the CircleCI artifact URL path from provider metadata through redirects **(выполнено — source review)**.
+- [x] Enforce the HTTPS artifact-host allowlist inside `fetchAllowedArtifact` itself, not only in its current caller; untrusted initial URLs now fail before any network request **(выполнено — source fix)**.
+- [x] Add a regression test proving an untrusted initial artifact URL is rejected without calling `fetch` **(выполнено — test authored)**.
+- [ ] Run the Worker/security suite in CircleCI and inspect the actual test report.
+- [ ] Continue the remaining Worker and Android lifecycle review; keep source changes limited to concrete findings.
+- [ ] Retrieve and verify the CircleCI Android test result and debug APK; perform device verification and resolve the separate ChatGPT authentication limitation.
+
+**Verification boundary:** source and regression-test changes are committed. The new test has not been executed in this session; no CircleCI run, green status, or APK artifact is claimed.
