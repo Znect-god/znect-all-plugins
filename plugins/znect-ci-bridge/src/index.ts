@@ -836,6 +836,7 @@ function createServer(env: Env) {
       const safePayload = redactKnownSecrets(JSON.stringify({
         project: { id: registryProject.id, name: registryProject.name, provider: adapter.provider },
         run,
+        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status; the request validation artifact is metadata-only and is not parsed here.",
         workflows: workflowReports,
         diagnostics_summary: {
           workflows_total: workflows.length,
@@ -986,6 +987,7 @@ function createServer(env: Env) {
       return { content: [{ type: "text", text: redactedBoundedJson({
         project: { id: project.id, name: project.name, provider: "znect-build" },
         connection: { id: connection.id },
+        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status",
         runs
       }, env, 100_000) }] };
     }
