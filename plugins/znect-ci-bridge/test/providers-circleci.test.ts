@@ -31,7 +31,7 @@ describe("CircleCI read-only provider adapter", () => {
             event: { attributes: { vcs: {
               branch: "main",
               revision: "abc123",
-              commit: { subject: "Fix tests" }
+              commit: { subject: "Fix tests", url: "https://github.com/Znect-god/znect-build/commit/abc123" }
             } } }
           },
           attributes: {
