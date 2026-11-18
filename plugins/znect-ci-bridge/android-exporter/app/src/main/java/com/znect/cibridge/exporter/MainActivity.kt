@@ -256,7 +256,7 @@ class MainActivity : Activity() {
         checkConnectionButton.isEnabled = false
         fetchButton.isEnabled = false
         shareButton.isEnabled = false
-        statusText.text = "Checking the authenticated ChatGPT handoff and CircleCI read connection…"
+        statusText.text = "Checking the CircleCI read connection and private report endpoint…"
 
         executor.execute {
             try {
