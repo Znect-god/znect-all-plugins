@@ -100,7 +100,7 @@ class MainActivity : Activity() {
 
         root.addView(actionButton("Save configuration") { saveConfiguration() })
         root.addView(actionButton("Disconnect and clear local data") { disconnectCredential() })
-        checkConnectionButton = actionButton("Check CircleCI + ChatGPT report path") { checkConnection() }
+        checkConnectionButton = actionButton("Check CircleCI + private report API") { checkConnection() }
         root.addView(checkConnectionButton)
         fetchButton = actionButton("Fetch report") { fetchReport() }
         root.addView(fetchButton)
