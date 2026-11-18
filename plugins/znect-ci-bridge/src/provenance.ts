@@ -96,25 +96,21 @@ export async function inspectCiBridgeProvenance(
 ): Promise<ProvenanceSummary> {
   try {
     if (workflows.length > 5) return { status: "unavailable", reason: "workflow_scan_limit_reached" };
-    const candidates: Array<{ workflow: CiWorkflow; jobId: string }> = [];
-    let truncated = false;
-    for (const workflow of workflows) {
-      const jobs = await adapter.listJobs(scope, run.id, workflow.id);
-      if (jobs.length > 40) truncated = true;
-      for (const job of jobs.slice(0, 40)) {
-        if (workflow.name === "ci-bridge-exact-sha-validation" &&
-            job.name === "validate-ci-bridge-source") {
-          candidates.push({ workflow, jobId: job.id });
-        }
-      }
-    }
-    if (truncated) return { status: "unavailable", reason: "job_scan_limit_reached" };
-    if (candidates.length === 0) return { status: "missing", reason: "validation_job_not_found" };
-    if (candidates.length !== 1) return { status: "invalid", reason: "duplicate_validation_jobs" };
-    const candidate = candidates[0];
-    if (candidate.workflow.id.length === 0 || candidate.workflow.runId !== run.id) {
+    const targetWorkflows = workflows.filter((workflow) =>
+      workflow.name === "ci-bridge-exact-sha-validation"
+    );
+    if (targetWorkflows.length === 0) return { status: "missing", reason: "validation_workflow_not_found" };
+    if (targetWorkflows.length !== 1) return { status: "invalid", reason: "duplicate_validation_workflows" };
+    const workflow = targetWorkflows[0];
+    if (!workflow.id || workflow.runId !== run.id) {
       return { status: "invalid", reason: "workflow_identity_mismatch" };
     }
+    const jobs = await adapter.listJobs(scope, run.id, workflow.id);
+    if (jobs.length > 40) return { status: "unavailable", reason: "job_scan_limit_reached" };
+    const candidates = jobs.filter((job) => job.name === "validate-ci-bridge-source");
+    if (candidates.length === 0) return { status: "missing", reason: "validation_job_not_found" };
+    if (candidates.length !== 1) return { status: "invalid", reason: "duplicate_validation_jobs" };
+    const candidate = { workflow, jobId: candidates[0].id };
     const listed = await adapter.listArtifacts(scope, candidate.jobId);
     const manifests = listed.filter((item) => item.path === MANIFEST_PATH);
     const sourceShaFiles = listed.filter((item) => item.path === SOURCE_SHA_PATH);
