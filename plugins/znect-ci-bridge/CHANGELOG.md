@@ -302,3 +302,12 @@
 - Clarified that CircleCI's successful Add Webhook ping/check verifies endpoint acknowledgement only; a real `workflow-completed` delivery is still pending.
 - Added an ordered launch and end-to-end verification procedure, including delivery-history correlation, durable inbox inspection, duplicate verification, and MCP retrieval.
 - Reaffirmed that the bridge remains in-development, Production is not deployed, and no PR merge or Production change is authorized.
+
+
+## 2026-11-18 — Central Znect Build result visibility
+
+- Repaired the central Znect Build read-only adapter and strengthened project/source ownership verification using the central request-validation artifact fingerprint.
+- Added Browser JSON API evidence fields for verified source SHA, request fingerprint, validation manifest artifact metadata, and central job/step outcomes.
+- Documented the runtime `ZNECT_PROJECT_REGISTRY` entry and least-privilege `ZNECT_BUILD_GITHUB_TOKEN` requirements.
+- Added a regression test for central validation manifest artifact metadata. Tests were not executed in this change set.
+- Preserved read-only behavior: no workflow dispatch, build execution, retry, cancellation, artifact download, deployment, or CircleCI mutation.
