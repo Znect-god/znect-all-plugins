@@ -170,8 +170,8 @@ function mapJob(resource: V3Resource, projectId: string, workflowId?: string, ru
     ...(workflowId ? { workflowId } : {}),
     status: statusOf(resource),
     ...(text(attrs.name) ? { name: text(attrs.name) } : {}),
-    ...(iso(attrs.started_at ?? attrs.start_time ?? attrs.created_at) ? { startedAt: iso(attrs.started_at ?? attrs.start_time ?? attrs.created_at) } : {}),
-    ...(iso(attrs.ended_at ?? attrs.stop_time ?? attrs.stopped_at) ? { completedAt: iso(attrs.ended_at ?? attrs.stop_time ?? attrs.stopped_at) } : {}),
+    ...(iso(attrs.started_at) ? { startedAt: iso(attrs.started_at) } : {}),
+    ...(iso(attrs.ended_at) ? { completedAt: iso(attrs.ended_at) } : {}),
     ...(steps.length ? { steps } : {})
   };
 }
