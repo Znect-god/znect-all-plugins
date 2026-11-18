@@ -1,3 +1,10 @@
+## 2026-11-18 — harden central Znect Build validation provenance
+
+- Added `npm audit --audit-level=high` to the central Node/Cloudflare Worker recipe after `npm ci`.
+- Updated the central validation manifest and CI Bridge read-only adapter to require the dependency-audit step in the exact validation sequence.
+- Added regression-test source for accepting the complete manifest and rejecting one that omits the audit step.
+- The central target remains disabled; no workflow was dispatched and no test execution is claimed.
+
 ## 2026-11-18 — remove redundant CI executor and Android handoff prototype
 
 - Removed the standalone root `.circleci/config.yml`; CI Bridge validation must use central `Znect-god/znect-build`, not a parallel CircleCI workflow.
