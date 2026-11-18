@@ -424,3 +424,12 @@
 - Audited failed-step log retrieval and confirmed stdout/stderr requests preserve the execution index; job-level structured test results remain unpartitioned by execution.
 - Confirmed the current one-report-per-job diagnostics cap marks multiple eligible JUnit artifacts as incomplete rather than implying full coverage. Aggregating multiple per-execution reports remains future work.
 - Static source review only; TypeScript, tests, live CircleCI requests and pipeline execution were not performed.
+
+
+## 2026-11-18 — Bounded multi-execution JUnit diagnostics
+
+- Replaced the one-report-per-job diagnostics cap with a shared collector used by MCP and Browser JSON API diagnostics.
+- Collects up to four JUnit/test-results XML artifacts per job, retaining exact artifact paths and CircleCI parallel execution indexes.
+- Enforces a 500,000-byte aggregate retrieval budget per job; later downloads are limited to the remaining byte budget.
+- Marks reports incomplete and surfaces the artifact-limit indicator when count or byte limits prevent full collection. Individual artifact failures are retained alongside successfully retrieved reports.
+- Static source review only. Focused regression tests and TypeScript checks remain pending; no CircleCI API calls or pipeline executions were performed.
