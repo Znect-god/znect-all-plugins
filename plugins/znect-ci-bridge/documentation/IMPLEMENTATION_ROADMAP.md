@@ -369,3 +369,13 @@ For every meaningful feature or fix:
 - **Current conclusion:** no supported, free, non-MCP direct ChatGPT-to-Browser-API authentication path has been established for this personal Free account. The report endpoint remains private and Bearer-protected; no auth weakening or unauthenticated fallback is warranted.
 - This is a platform/access limitation, not a defect in `/api/v1/report`. Revisit if OpenAI offers a supported non-MCP custom REST connector for personal accounts, or if the user explicitly changes the no-MCP constraint.
 - No plugin/GPT was created, no connector was connected, no secret was requested/read, no API request or tests were run, and no CircleCI pipeline/deployment was started.
+
+### Stage 3 research update — native ChatGPT apps and safe fallback (2026-11-18)
+
+- Reviewed current OpenAI documentation for custom MCP connections and the Apps SDK. The Apps SDK is built on MCP; it is not a separate direct-REST transport. **(выполнено — official documentation review)**
+- OpenAI documents custom MCP server connections/full MCP support for Business and Enterprise/Edu workspaces; the documented connection flow is web-only, not mobile. This does not provide a usable native custom REST/Bearer connector for this personal Free account. **(выполнено — official documentation review)**
+- Therefore, the direct ChatGPT → private Browser JSON API path remains blocked by current ChatGPT platform capabilities. Do not change /api/v1/report authentication and do not substitute an MCP transport.
+- **Next implementation direction:** design a user-operated local report exporter as a fallback, not as direct automatic ChatGPT access. It must retrieve only the bounded read-only report, keep the Bearer credential inside the user's device secure storage, write a redacted JSON report to a user-selected local destination, and let the user explicitly attach/share that report to ChatGPT. No background upload, public link, cloud intermediary, GitHub Actions runner or credential transfer into chat.
+- Because the user's primary client is Android, evaluate an Android-native companion/exporter using Android Keystore and the system Sharesheet before choosing a generic Node/Termux CLI. Do not assume Termux or any particular local runtime is installed.
+- Keep this fallback separately labelled **manual secure report handoff**; it does not satisfy the original direct automatic ChatGPT access requirement.
+- No exporter source code has been added yet. No secrets were requested/read, no API request was made, and no tests, CircleCI pipeline, build or deployment was run.
