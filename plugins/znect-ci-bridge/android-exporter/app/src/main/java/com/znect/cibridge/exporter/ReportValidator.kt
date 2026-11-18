@@ -11,11 +11,15 @@ internal object ReportValidator {
     private const val MAX_SAFE_INTEGER = 9_007_199_254_740_991L
     private val sensitiveKey = Regex("(?i)(token|secret|authorization|password|api[_-]?key)")
 
-    private fun isInteger(value: Any?, min: Long, max: Long): Boolean =
-        value is Number && value.toDouble().isFinite() &&
-            value.toDouble() % 1.0 == 0.0 &&
-            value.toDouble() >= min.toDouble() &&
-            value.toDouble() <= max.toDouble()
+    private fun isInteger(value: Any?, min: Long, max: Long): Boolean {
+        if (value !is Number) return false
+        return runCatching {
+            val decimal = value.toString().toBigDecimal()
+            decimal.stripTrailingZeros().scale() <= 0 &&
+                decimal >= min.toBigDecimal() &&
+                decimal <= max.toBigDecimal()
+        }.getOrDefault(false)
+    }
 
     fun validate(report: JSONObject, expectedProject: String, expectedConnection: String? = null) {
         require(
