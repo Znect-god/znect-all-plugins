@@ -12,7 +12,7 @@
       "Optional MCP-compatible clients"
     ],
     "tested": [
-      "Historical Worker tests and Preview smoke checks exist on earlier revisions; current feature-branch source has not yet been validated through central Znect Build."
+      "Historical Worker tests and Preview smoke checks exist on earlier revisions; current feature-branch source has not yet been validated through the opt-in CircleCI exact-SHA workflow."
     ]
   },
   "permissions": [
