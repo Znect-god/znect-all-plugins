@@ -12,7 +12,7 @@
       "Optional MCP-compatible clients"
     ],
     "tested": [
-      "Historical Worker tests and Preview smoke checks exist on earlier revisions; current feature-branch source has not yet been validated through the opt-in CircleCI exact-SHA workflow."
+      "Historical Worker tests and Preview smoke checks exist on earlier revisions; canonical ci-bridge head 922dc13bbcd379d7a65f6d911455f072001372ca has not yet been validated through the opt-in CircleCI exact-SHA workflow."
     ]
   },
   "permissions": [
@@ -55,7 +55,7 @@
   ],
   "limitations": [
     "In development; not production-ready",
-    "The current feature-branch head has not been deployed to Preview or Production; earlier Preview smoke checks are historical evidence only.",
+    "The current ci-bridge branch head has not been deployed to Preview or Production; earlier Preview smoke checks are historical evidence only.",
     "CircleCI API v3 project resolution and read-only access to the fixed Forge project were verified by the authenticated Preview smoke test; broader live run/job/log/artifact response coverage remains to be verified.",
     "Configured Worker secrets and common credential formats are redacted heuristically; custom or encoded upstream secrets may still appear in logs",
     "Cloudflare built-in rate limiting is approximate and per location, not a strict global limit; dedicated edge WAF hardening remains advisable.",
@@ -104,7 +104,7 @@
     ],
     "historical_note": "All GitHub Actions run records and historical Preview checks listed here predate the current central Znect Build validation policy. They are retained as historical evidence only and do not validate the current feature-branch HEAD.",
     "current_branch": {
-      "source_changes": "Committed on feature/ci-bridge-android-exporter; current source/test execution pending.",
+      "source_changes": "Committed on the canonical ci-bridge branch; current source/test execution pending.",
       "worker_typecheck": "pending through the opt-in CircleCI exact-SHA validation workflow",
       "vitest_suite": "pending through the opt-in CircleCI exact-SHA validation workflow",
       "dependency_audit": "pending through the opt-in CircleCI exact-SHA validation workflow",
