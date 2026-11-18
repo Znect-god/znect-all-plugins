@@ -1,5 +1,8 @@
 # CI provider adapter architecture
 
+> **Primary ChatGPT integration:** the authenticated Browser JSON API and private report-artifact handoff. MCP is not required and is not the assistant channel. The CircleCI adapter is shared by the direct Browser API and the legacy optional MCP surface.
+
+
 **Status:** CircleCI adapter implemented for core MCP reads. A source-level Znect Build adapter is now implemented against GitHub Actions' documented read-only REST API; live credential, workflow and artifact verification remains pending. There is no separate Znect Build read API.
 
 ## Shared contract
