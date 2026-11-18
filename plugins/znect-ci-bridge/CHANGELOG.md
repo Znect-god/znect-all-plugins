@@ -1,3 +1,8 @@
+## 2026-11-18 — enforce byte-accurate assistant report size limit
+
+- Changed the dashboard's 600 KB export ceiling from JavaScript string length to the actual JSON Blob byte size, preventing multi-byte UTF-8 content from exceeding the advertised file-size bound.
+- Updated the dashboard regression test source. Execution through Znect Build remains pending.
+
 ## 2026-11-18 — harden central Znect Build validation provenance
 
 - Added `npm audit --audit-level=high` to the central Node/Cloudflare Worker recipe after `npm ci`.
