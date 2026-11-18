@@ -425,6 +425,7 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
       reader.releaseLock();
     }
     if (total === 0) throw new Error("Central validation artifact download was empty.");
+    if (total !== artifactSize) throw new Error("Central validation artifact size does not match its GitHub metadata.");
     const archive = new Uint8Array(total);
     let offset = 0;
     for (const chunk of chunks) { archive.set(chunk, offset); offset += chunk.byteLength; }
@@ -439,10 +440,10 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
         parsed.project_id !== scope.projectId ||
         typeof parsed.source_repository !== "string" ||
         parsed.source_repository.toLowerCase() !== this.expectedSourceRepository.toLowerCase() ||
-        typeof parsed.source_ref !== "string" || parsed.source_ref.length > 255 ||
+        typeof parsed.source_ref !== "string" || parsed.source_ref.length === 0 || parsed.source_ref.length > 255 ||
         parsed.source_sha !== run.commitSha || !/^[0-9a-f]{40}$/.test(String(parsed.source_sha)) ||
         parsed.build_target !== "znect-ci-bridge/worker-validation" ||
-        typeof parsed.build_profile !== "string" ||
+        typeof parsed.build_profile !== "string" || !["debug", "release-candidate", "release"].includes(parsed.build_profile) ||
         parsed.recipe !== "node-cloudflare-worker-validation" ||
         !["success", "failure"].includes(String(parsed.recipe_outcome)) ||
         !Array.isArray(parsed.validation_steps) ||
