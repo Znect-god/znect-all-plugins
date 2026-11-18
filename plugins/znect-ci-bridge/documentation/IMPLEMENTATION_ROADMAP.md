@@ -971,3 +971,13 @@ For every meaningful feature or fix:
 - [ ] Run focused provenance tests and TypeScript/Vitest checks through the authorized opt-in CircleCI path; no test execution is claimed yet.
 
 **Verification boundary:** this stage improves source-level resource bounds and artifact identity checks. Test source has not been executed; no CircleCI pipeline or runtime operation was performed.
+## 60. Remove legacy CircleCI build metadata from v3 provenance — 2026-11-18
+
+- [x] Verify from current CircleCI documentation that API v3 Run ID is the pipeline-run ID and corresponds to `CIRCLE_PIPELINE_ID`; workflow and job UUIDs correspond to `CIRCLE_WORKFLOW_ID` and `CIRCLE_WORKFLOW_JOB_ID` **(выполнено — official documentation review)**.
+- [x] Remove `CIRCLE_BUILD_NUM` and `CIRCLE_BUILD_URL` from the central manifest producer; these are legacy build-summary concepts and are not required for API v3 run identity **(выполнено — Znect Build config source update)**.
+- [x] Narrow the Bridge manifest schema to the v3-native pipeline/workflow/job UUIDs and job name; reject legacy build-number/URL fields as unknown schema drift **(выполнено — parser source update)**.
+- [x] Update the manifest fixture and add a regression test rejecting reintroduction of obsolete build metadata **(выполнено — test source added; execution pending)**.
+- [ ] Execute focused provenance tests, typecheck and the full suite on the exact source SHA through the authorized opt-in CircleCI path.
+- [ ] Confirm the v3 run revision and provenance artifacts against a real CircleCI run; documentation/source review is not a runtime round-trip.
+
+**Verification boundary:** the producer, strict parser and fixture now agree on CircleCI API v3 identity fields only. No tests or CircleCI pipeline were run; no runtime, secret or deployment settings were changed.
