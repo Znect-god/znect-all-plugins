@@ -1007,7 +1007,7 @@ For every meaningful feature or fix:
 
 - [x] Stop mapping an embedded VCS commit URL into the shared CircleCI run URL field; after checking the machine-readable API v3 Run schema, omit `CiRun.url` entirely because `web_url` is not a documented Run response field **(выполнено — official OpenAPI/source correction)**.
 - [x] Extend the run adapter fixture with a GitHub commit URL while asserting the normalized CircleCI run result does not expose it as a run URL **(выполнено — test source added; execution pending)**.
-- [ ] Execute the CircleCI adapter tests and verify any explicit run `web_url` behavior against a real API v3 response.
+- [ ] Execute the CircleCI adapter tests and confirm the negative URL-field regression test passes; the published API v3 Run schema does not define a run `web_url`.
 
 **Verification boundary:** this prevents a misleading link from being presented as a CircleCI run. No tests or pipeline were run.
 
