@@ -294,3 +294,13 @@ For every meaningful feature or fix:
 - Added ZIP extraction regression tests. Tests and typecheck have not been executed; this is not a compile-pass or runtime-verification claim.
 - No GitHub Actions run, central build, CircleCI request, deploy, Preview/Production change, secret read or runtime configuration change was performed. The central target remains disabled.
 - Next: source-level contract review, then request explicit authorization before running the central validation recipe or any live read-only provider probe.
+
+
+## 16. Source-level contract review — 2026-11-18
+
+- Cross-checked the Browser API route against the existing Bearer authentication, rate-limit gate, GET-only method guard, project registry selection and connection scope **(выполнено — static inspection)**.
+- Cross-checked the adapter's run ownership fingerprint against the central workflow identity, repository, workflow path, main branch, project run title, source repository hash, exact source SHA and run ID **(выполнено — static inspection)**.
+- Cross-checked the artifact contract against the central workflow upload name and manifest schema. The adapter now requires the exact registered target/profile/recipe, the exact four validation commands, a supported recipe outcome, the matching source SHA and run URL, and both explicit no-deploy/no-CircleCI-mutation flags **(выполнено — source implementation + static inspection)**.
+- Tightened artifact expiry and downloaded-size checks; corrected stale run-details capability descriptions **(выполнено)**.
+- Confirmed the central registry still has `execution_enabled: false`; no workflow was dispatched.
+- Typecheck, unit tests, ZIP decompression execution, and live artifact retrieval remain **not executed / not verified**.
