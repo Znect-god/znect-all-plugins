@@ -51,7 +51,7 @@ Configured Worker secrets and common credential patterns are redacted, but custo
 
 ### CircleCI API v3 integration — implemented, live verification open
 
-The read-only v3 adapter is now wired to MCP tools for project resolution, recent runs, run/workflow/job details, step stdout/stderr, structured test results, artifact metadata/downloads, and one-call failed-run diagnosis. The legacy v1.1 tools remain available for build-number-based access. Both paths are GET-only. The configured CircleCI token has not yet been verified against the live v3 project endpoint, and the documented Forge failure has not yet been re-diagnosed through the Bridge.
+The read-only v3 adapter is the primary CircleCI provider path. It is exposed through the authenticated Browser JSON API and optional MCP compatibility tools for project resolution, recent runs, run/workflow/job details, step stdout/stderr, structured test results, artifact metadata/downloads, and bounded diagnostics. A small legacy v1.1 compatibility surface remains separate and GET-only; build numbers must never be treated as API v3 UUIDs or silently translated. The configured CircleCI token has not yet been verified against the current live v3 project endpoint, and the documented Forge failure has not yet been re-diagnosed through the Bridge.
 
 ### MCP Origin validation — addressed by the transport wrapper
 
@@ -146,11 +146,6 @@ The earlier pending items concerning Preview deployment, Preview secret installa
 
 Production was not deployed or modified. PR #5 remains Draft and unmerged. The branch remains separate from `main`.
 
-### Znect Build GitHub Actions read-only adapter — source implementation, verification pending
+### Historical Znect Build GitHub Actions read-only adapter — superseded and removed
 
-- The new adapter uses a fixed `api.github.com/repos/Znect-god/znect-build` origin and GET-only requests with a 15-second timeout, bounded JSON bodies, manual redirect rejection and sanitized status errors.
-- It requires the exact central repository identity, `.github/workflows/central-build.yml` workflow path, `main` branch, a project-matching run display title, and an unexpired validation artifact containing the registered project ID, SHA-256 fingerprint of the registered source repository, validated source SHA and exact run ID. The central workflow computes the fingerprint only after request validation.
-- Job resources are checked against their verified parent workflow run. Artifacts remain run-scoped; no job relationship or download URL is fabricated.
-- The adapter does not yet extract GitHub Actions ZIP logs/artifacts or claim generic test-report access. These capabilities are explicitly unavailable.
-- A repository-scoped read-only token is required. Its configured value is included in the shared known-secret redaction list. Do not grant Actions write, dispatch, workflow, contents write or administration permissions.
-- The central fingerprint artifact change is on an isolated, unmerged Znect Build branch. No live run has been checked with this adapter, and no tests/typecheck have been executed on the current Bridge branch head.
+The following design was an earlier experiment and is not part of the current architecture. It used a fixed GitHub REST origin, workflow/run identity checks and a repository-scoped read-only token. It was superseded when Znect Build moved to CircleCI and the Bridge GitHub Actions adapter, routes, tests and runtime token requirement were removed in implementation roadmap stage 53. Do not restore this adapter or treat GitHub Actions evidence as CI Bridge validation. Current source reads Znect Build through the generic read-only CircleCI API v3 adapter. The old GitHub Actions implementation details are retained here only as historical review context.
