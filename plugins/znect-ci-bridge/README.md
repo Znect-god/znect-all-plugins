@@ -118,7 +118,7 @@ npx wrangler deploy --dry-run
 
 These commands are local validation steps, not a project build or deployment. Android ARM64 Termux is not a supported Wrangler/workerd deployment environment. **CI Bridge's own source validation is defined in the root `.circleci/config.yml` and is executed by CircleCI.** Znect Build remains a separate central build system for other Znect application builds; its executor is documented in that repository and is not used to validate or run CI Bridge.
 
-The CircleCI validation config performs `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run only; it has no deployment step. The pipeline has not been triggered for the current exporter branch.
+The CircleCI validation config runs the Node/Worker checks and a separate Android exporter job (Gradle unit tests plus debug APK assembly). It is restricted to `main` and `feature/ci-bridge-android-exporter`, stores JUnit results and the debug APK as CircleCI artifacts, and has no deployment or release-signing step. The pipeline has not been verified for the current exporter branch. See [`documentation/CIRCLECI_SETUP.md`](documentation/CIRCLECI_SETUP.md) for project setup and artifact retrieval.
 
 ## Safety and limitations
 
@@ -145,4 +145,4 @@ The central recipe's manifest is uploaded as a private GitHub Actions artifact. 
 
 ## CircleCI validation pipeline
 
-The root `.circleci/config.yml` defines the CI Bridge validation workflow on CircleCI using Node.js 24.11.0. It installs package dependencies, runs typecheck and unit tests, validates the smoke-test script syntax, and performs Wrangler dry-run only. It does not deploy, access Cloudflare credentials, or mutate monitored CircleCI pipelines. Pipeline execution status must be verified separately in CircleCI; adding the config is not evidence that checks passed.
+The root `.circleci/config.yml` defines the CI Bridge validation workflow on CircleCI using Node.js 24.11.0 and the Android SDK/JDK image. It installs package dependencies, runs typecheck and unit tests, validates the smoke-test script syntax, performs Wrangler dry-run, and runs Android JVM tests plus debug APK assembly. The workflow stores test results and the debug APK as job artifacts. It does not deploy, access Cloudflare credentials, sign a release, or mutate monitored CircleCI pipelines. Pipeline execution status must be verified separately in CircleCI; adding the config is not evidence that checks passed. See [`documentation/CIRCLECI_SETUP.md`](documentation/CIRCLECI_SETUP.md).
