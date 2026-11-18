@@ -1,3 +1,9 @@
+## 2026-11-18 — CircleCI report workflow contract guard
+
+- Added a static validator for the private Forge report workflow to prevent regressions in required project/connection query parameters and status response field names.
+- Wired the validator into the workflow before CircleCI report collection.
+- Changes are isolated in Forge branch `fix/ci-bridge-free-circleci-report-params`; no workflow run was started and no deployment occurred.
+
 ## 2026-11-18 — Free non-MCP ChatGPT channel and CircleCI report-scope fix
 
 - Clarified that the supported ChatGPT access path is the private Forge issue command → GitHub Actions → authenticated CI Bridge Browser API → private short-lived report artifact; MCP is not required or used as the assistant channel.
