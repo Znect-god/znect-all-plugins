@@ -1,3 +1,8 @@
+## 2026-11-18 — verify ChatGPT custom MCP availability boundary
+
+- Checked current OpenAI Help Center guidance: custom MCP server connections are documented for Business and Enterprise/Edu, with Pro read/fetch support; Free is not listed as supported.
+- Kept custom MCP optional and rejected it as a required Free-tier transport. The private Browser JSON API remains primary; the dashboard's reviewed JSON export remains the explicit fallback while direct ChatGPT Free REST authentication is unresolved.
+
 ## 2026-11-18 — reconcile plugin metadata and historical architecture notes
 
 - Removed the retired Android exporter from current plugin platform, dependency, security and assistant-access metadata.
