@@ -320,3 +320,11 @@
 - Added ZIP path selection, size/entry limits, CRC validation and strict manifest-to-project/source/run checks.
 - Added regression tests for exact-path extraction, missing manifest and corrupt entry handling. Tests and typecheck were not run.
 - No central workflow/build, live API probe, deployment or runtime configuration change was performed.
+ 
+
+## 2026-11-18 — Static contract review
+
+- Reviewed Browser API authentication, rate limiting, GET-only routing, project/connection scope and read-only adapter call paths.
+- Cross-checked central workflow ownership and the manifest schema against the central Build recipe.
+- Tightened manifest checks to the exact target/profile/recipe/validation command list and supported outcomes.
+- Confirmed central execution remains disabled. No typecheck, tests, workflow run, live API request or artifact download was performed.
