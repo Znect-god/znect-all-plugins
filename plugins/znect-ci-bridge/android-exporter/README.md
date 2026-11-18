@@ -16,7 +16,7 @@ A native Android helper for a user-initiated, manual handoff of the private CI B
 
 1. Open this `android-exporter` directory in Android Studio.
 2. Build/install only after reviewing the source and authorizing a build.
-3. In the app, enter the HTTPS origin of the deployed CI Bridge Browser API, the registered project ID, optional connection ID, and the Browser API Bearer token.
+3. In the app, enter the HTTPS origin of the deployed CI Bridge Browser API, the registered project ID, a connection ID when the project has multiple CircleCI connections, and the Browser API Bearer token.
 4. Save configuration. The token is encrypted with an AES-GCM key held in Android Keystore; only ciphertext is stored in app-private preferences.
 5. Tap **Fetch report** to request the bounded read-only `GET /api/v1/report`.
 6. Review the report status, then tap **Share report** to open Android Sharesheet and explicitly choose ChatGPT.
