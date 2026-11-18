@@ -22,7 +22,7 @@ CI Bridge нужно закончить в `znect-all-plugins`; перенос �
 - Browser dashboard для статусов, runs, diagnostics, webhook events и correlation.
 - `GET /api/v1/report` для bounded assistant report.
 - Dashboard action **Export assistant report**: aggregate report + максимум три failed-run diagnostics, UUID validation, scope isolation, partial-result markers, 600 KB ceiling, download JSON.
-- Отдельный GitHub Actions-based Znect Build adapter и маршруты `/api/v1/build/*` удаляются; центральная диагностика Znect Build будет идти через обычное CircleCI project connection.
+- Отдельный GitHub Actions-based Znect Build adapter и маршруты `/api/v1/build/*` удалены; центральная диагностика Znect Build будет идти через обычное CircleCI project connection.
 
 ## 3. Безопасность и ограничения
 
