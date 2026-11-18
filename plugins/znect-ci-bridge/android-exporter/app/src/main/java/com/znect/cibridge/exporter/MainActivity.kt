@@ -18,6 +18,7 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URLEncoder
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.util.concurrent.Executors
@@ -329,7 +330,7 @@ class MainActivity : Activity() {
                 }
                 output.toByteArray()
             }
-            val raw = String(body, StandardCharsets.UTF_8)
+            val raw = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(body)).toString()
             if (raw.contains(token)) throw IllegalStateException("The response unexpectedly contained credential material; export was blocked.")
             val report = JSONObject(raw)
             ReportValidator.validate(report, project, connection.takeIf { it.isNotBlank() })
