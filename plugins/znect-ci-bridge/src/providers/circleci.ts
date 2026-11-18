@@ -73,8 +73,6 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
   // Do not consume an undocumented top-level alias as trusted provenance.
   const commitSha = text(vcsRecord.revision);
   const commitMessage = text(commit.subject) ?? text(commit.body);
-  // Do not mislabel the source commit URL as a CircleCI run URL.
-  const url = text(attrs.web_url);
   const createdAt = attrs.created_at;
   return {
     id: resource.id,
@@ -83,8 +81,7 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
     ...(branch ? { branch } : {}),
     ...(commitSha ? { commitSha } : {}),
     ...(commitMessage ? { commitMessage } : {}),
-    ...(iso(createdAt) ? { createdAt: iso(createdAt) } : {}),
-    ...(url ? { url } : {})
+    ...(iso(createdAt) ? { createdAt: iso(createdAt) } : {})
   };
 }
 
