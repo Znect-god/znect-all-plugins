@@ -51,7 +51,7 @@ function escapeRegex(value: string): string {
 }
 
 function runTitle(run: JsonRecord): string {
-  return optionalText(run.name) ?? optionalText(run.display_title) ?? "";
+  return optionalText(run.display_title) ?? optionalText(run.name) ?? "";
 }
 
 function mapRun(value: unknown, projectId: string): CiRun {
@@ -69,8 +69,6 @@ function mapRun(value: unknown, projectId: string): CiRun {
     ...(optionalText(value.head_sha) ? { commitSha: optionalText(value.head_sha) } : {}),
     ...(optionalText(headCommit.message) ? { commitMessage: optionalText(headCommit.message) } : {}),
     ...(iso(value.run_started_at ?? value.created_at) ? { startedAt: iso(value.run_started_at ?? value.created_at) } : {}),
-    ...(iso(value.updated_at) && value.status !== "in_progress" && value.status !== "queued"
-      ? { completedAt: iso(value.updated_at) } : {}),
     ...(optionalText(value.html_url) ? { url: optionalText(value.html_url) } : {})
   };
 }
