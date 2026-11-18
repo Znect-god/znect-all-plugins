@@ -963,3 +963,11 @@ For every meaningful feature or fix:
 - [ ] Verify a real CircleCI run/artifact round-trip and confirm the actual CircleCI API v3 run revision equals the recipe repository commit SHA before treating the integration as runtime-verified.
 
 **Verification boundary:** strict manifest parsing, bounded artifact discovery, identity/SHA cross-checks and both diagnostics integrations are committed as source. Unit-test source is committed but has not been executed. No CircleCI pipeline, tests, runtime configuration, secrets, Preview or Production deployment were changed or run. A live run/artifact round-trip remains required; until then, source-level implementation is not runtime proof.
+## 59. Harden provenance trust boundary and bound discovery — 2026-11-18
+
+- [x] Restrict CircleCI job discovery to the uniquely named exact-SHA validation workflow instead of querying every workflow; reject duplicate target workflows/jobs and incomplete job scans **(выполнено — source implementation)**.
+- [x] Verify the returned artifact paths match the exact requested manifest and resolved-SHA paths before parsing their contents **(выполнено — source implementation)**.
+- [x] Add regression-test source for unrelated workflow exclusion, missing validation workflow, bounded job-scan overflow, exact job UUID mismatch and artifact path mismatch **(выполнено — test source added; execution pending)**.
+- [ ] Run focused provenance tests and TypeScript/Vitest checks through the authorized opt-in CircleCI path; no test execution is claimed yet.
+
+**Verification boundary:** this stage improves source-level resource bounds and artifact identity checks. Test source has not been executed; no CircleCI pipeline or runtime operation was performed.
