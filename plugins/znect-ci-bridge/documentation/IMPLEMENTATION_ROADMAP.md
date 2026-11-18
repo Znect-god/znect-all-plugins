@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (Znect Build architecture alignment)  
+**Updated:** 2026-11-18 (CircleCI-first CI Bridge development alignment)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `test/ci-bridge-webhook-ingress-contract`  
@@ -15,9 +15,11 @@ This is the living implementation roadmap. Update it with every meaningful imple
 - **Znect All Plugins** is the source-development home for CI Bridge: code, tests, docs, plugin metadata, experiments and release preparation.
 - **Znect Build** is the centralized build system for producing applications from pinned source revisions and build recipes. It is not the Bridge source repository.
 - **Znect CI Bridge** is a read-only diagnostics/integration plugin. It observes CI systems and exposes reports; it does not become the build executor.
-- **Znect Build** is the mandatory central execution path for Znect application builds; its central executor is GitHub Actions. Project repositories must not duplicate build recipes or start project builds independently.
-- **CircleCI** remains an external CI provider for projects that already use it (including Forge). CI Bridge may inspect CircleCI through its read-only adapter, but must not trigger, retry, cancel or modify CircleCI pipelines.
-- Bridge-to-Build integration is a separate provider integration. A registry entry or written API contract does not mean that the Build API exists or is operational.
+- **Znect Build** (`Znect-god/znect-build`) is a separate GitHub repository/system in the Znect ecosystem. Its own central build workflows are maintained independently; the repository itself is not a CI provider.
+- **CircleCI** is the CI tool/provider used to execute CI Bridge's own validation pipeline and to provide CI run data to the Bridge. The root `.circleci/config.yml` in `znect-all-plugins` defines CI Bridge validation.
+- The Bridge's CircleCI diagnostics adapter is strictly read-only for observed project pipelines: it must not trigger, retry, cancel or modify those pipelines.
+- CI Bridge validation must run through CircleCI, not GitHub Actions or the Znect Build central recipe. Znect Build remains a separate repository and is not the CI Bridge validation executor.
+- The optional legacy Znect Build read adapter is not part of the primary ChatGPT/CircleCI path and must not be treated as a CircleCI integration.
 
 No PR merge, default-branch update, CI pipeline run, build, deployment, Preview refresh, Production change, or CircleCI action is authorized by this roadmap alone.
 
@@ -29,8 +31,8 @@ ChatGPT and authorized users should be able to inspect current Znect project bui
 - failed-step metadata and bounded/redacted logs;
 - structured test results and allowlisted artifacts when the provider exposes them;
 - signed webhook events and conservative event-to-run correlation;
-- a browser dashboard/JSON API and a free private GitHub Actions report handoff for ChatGPT (no MCP channel);
-- eventually, a free request/response handoff that can deliver a private report for ChatGPT to inspect.
+- a browser dashboard/JSON API and a free private report handoff for ChatGPT (no MCP channel and no GitHub Actions dependency);
+- a bounded assistant-facing report endpoint or equivalent direct private handoff that ChatGPT can consume.
 
 The Bridge must remain read-only with respect to CI execution and project source/configuration: no trigger, retry, cancel, deployment, configuration-write or source-modification operations.
 
@@ -56,10 +58,9 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Provider-neutral read-only adapter contract **(выполнено)**.
 - [x] CircleCI provider adapter for core API v3 operations **(выполнено)**.
 - [x] Project/run/job/workflow ownership checks and bounded run traversal **(выполнено)**.
-- [x] Implement a read-only GitHub Actions adapter for the central `Znect-god/znect-build` repository using the documented Actions REST API; treat GitHub Actions workflow runs as the source of central Build lifecycle truth. **(выполнено — source implementation; live verification pending)**
-- [x] Map run/workflow/job ownership conservatively and expose only data whose parent relationship is verifiable; keep run-level artifacts distinct from job-level artifacts. **(выполнено — source implementation; central fingerprint workflow change remains unmerged)**
-- [x] Expose verified Build reads through MCP and authenticated Browser JSON API endpoints. **(выполнено — source implementation; mocked tests added, execution pending)**
-- [ ] Confirm the minimum repository-scoped read permissions and bounded log/artifact handling before enabling the connection. Do not invent a custom Build API or duplicate build execution.
+- [x] Optional read-only adapter for the separate `Znect-god/znect-build` repository exists as isolated/secondary integration code; it is not the CircleCI adapter and is not the CI Bridge validation executor. **(выполнено — source implementation; live verification pending)**
+- [ ] Keep the Znect Build adapter outside the primary ChatGPT/CircleCI report path; review whether it should remain optional or be removed in a later scoped cleanup.
+- [ ] Do not route CI Bridge validation through GitHub Actions or Znect Build.
 - [ ] Verify multi-project and multi-connection behavior against live, authorized projects.
 
 ### 3.3 CircleCI diagnostics
@@ -123,16 +124,21 @@ The Bridge must remain read-only with respect to CI execution and project source
 
 ### 3.8 Free ChatGPT report handoff (primary assistant channel)
 
-- [x] Private Forge inbox issue #8 and exact command `/znect-ci-bridge check` **(выполнено)**.
-- [x] Private Forge GitHub Actions request workflow merged to Forge `main` in PR #9 (`.github/workflows/znect-ci-bridge-request.yml`) **(выполнено)**.
-- [x] Collector script merged to Forge `main` (`scripts/znect-ci-bridge-collect-github-report.sh`) **(выполнено)**.
-- [x] Workflow collects read-only CircleCI status, recent runs, failed-run diagnostics and webhook events through the Bridge Browser API **(выполнено — source/configuration)**.
-- [x] Workflow stores the report as a private artifact with one-day retention and posts only a short status/link to the private inbox **(выполнено — source/configuration)**.
-- [ ] Confirm the `ZNECT_CI_BRIDGE_WEB_TOKEN` secret exists by presence only; never retrieve or expose its value.
-- [ ] Run one fresh owner-requested report and verify the private artifact round-trip.
-- [ ] Verify ChatGPT can retrieve, parse and analyze the private artifact through the existing GitHub integration.
-- [ ] Repeat the request to prove freshness and verify no stale artifact is mistaken for the latest report.
-- [ ] Confirm the complete workflow remains within included/free-tier quotas; do not enable paid add-ons or auto-refill.
+- [x] Authenticated Browser JSON API provides direct read-only access to registered CircleCI projects, runs, diagnostics and events. **(выполнено)**
+- [x] Separate `WEB_ACCESS_TOKEN`, Bearer authentication, rate limiting, bounded responses and redaction are implemented for Browser API access. **(выполнено — source implementation; current-head validation pending)**
+- [x] MCP is optional legacy functionality and is not required for the ChatGPT channel. **(выполнено)**
+- [ ] Implement a bounded assistant report endpoint (or equivalent direct private handoff) that aggregates only allowlisted CircleCI status, recent runs, diagnostics and event data.
+- [ ] Ensure report handoff is private, authenticated, project/connection-scoped, rate-limited, bounded, redacted and read-only.
+- [ ] Verify ChatGPT can consume the report without MCP, GitHub Actions, paid intermediaries or manual secret sharing.
+- [ ] Verify freshness, pagination/truncation indicators and failure behavior; stale reports must not be presented as current.
+- [ ] Confirm operation stays within CircleCI and Cloudflare free/included quotas; quotas are finite.
+
+### 3.9 CircleCI validation pipeline
+
+- [x] Root `.circleci/config.yml` defines the CI Bridge validation job: `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run. **(выполнено — source configuration)**
+- [x] Validation config does not deploy or mutate observed CircleCI project pipelines. **(выполнено — static source inspection)**
+- [ ] Run the CircleCI pipeline on the exact candidate branch/SHA after explicit user authorization.
+- [ ] Review actual CircleCI job results, logs, tests and Wrangler dry-run output; do not infer success from config presence.
 
 ## 4. Validation and release gates
 
