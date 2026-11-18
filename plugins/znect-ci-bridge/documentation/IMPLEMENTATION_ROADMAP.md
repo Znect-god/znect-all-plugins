@@ -1027,8 +1027,9 @@ For every meaningful feature or fix:
 - [x] Confirm the current adapter's run listing uses `filter[project_id]`, a maximum page size of 20, and bounded cursor traversal; the project-ownership lookup remains bounded to 20 pages / 400 recent runs **(выполнено — source inspection)**.
 - [x] Confirm the official run reference documents `phase` and `current_outcome`, and the current mapper reads `current_outcome` through its shared status normalization path **(выполнено — documentation/source cross-check)**.
 - [x] Inspect CircleCI's machine-readable API v3 OpenAPI response schema: `GET /api/v3/runs/:id` defines VCS revision at `references.event.attributes.vcs.revision`; update the mapper to use only that documented path and add a regression-test source rejecting the undocumented top-level `vcs_revision` alias **(выполнено — official OpenAPI/source/test-source alignment; execution pending)**.
-- [ ] Verify the exact VCS revision response field and nesting against a real, authorized CircleCI API v3 run response. The public reference confirms that a run carries VCS context, but the accessible operation description does not specify the revision field path; do not treat the current `references.event.attributes.vcs.revision` / `attributes.vcs_revision` fallbacks as runtime-confirmed.
-- [ ] Add or adjust fixtures only after the actual response shape is confirmed; then run adapter tests and TypeScript checks through the authorized opt-in CircleCI workflow.
+- [ ] Verify the documented `references.event.attributes.vcs.revision` shape against a real, authorized CircleCI API v3 run response. The machine-readable OpenAPI schema now confirms the field path, but the configured project's live response has not been observed.
+- [x] Align the existing adapter fixture with the documented nested VCS response and add a negative test rejecting undocumented top-level VCS aliases **(выполнено — test source update; execution pending)**.
+- [ ] Run adapter tests and TypeScript checks through the authorized opt-in CircleCI workflow after explicit authorization.
 
 **Verification boundary:** official API documentation and source were inspected; no CircleCI API request, test run, or pipeline execution was performed. VCS revision mapping remains explicitly unverified.
 
