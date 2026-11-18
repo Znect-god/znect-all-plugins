@@ -1134,11 +1134,20 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         workflowReports.push({ workflow, jobs: jobs.slice(0, 40), jobs_truncated: jobs.length > 40 });
       }
       const artifacts = adapter.listRunArtifacts ? await adapter.listRunArtifacts(scope, runId) : [];
+      const validationManifest = artifacts.find((artifact) => artifact.path === `znect-ci-bridge-validation-${runId}`);
+      const requestEvidence = artifacts.find((artifact) => artifact.path.startsWith(`znect-build-request-${project.id}-`));
       return boundedJson(redactedBoundedJson({
         project: { id: project.id, name: project.name, provider: adapter.provider },
         connection: { id: connection.id },
         run,
-        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status; validation artifact JSON is not parsed in this adapter iteration.",
+        status_semantics: "Central GitHub Actions workflow status/conclusion. The verified request artifact binds this run to the registered source repository and exact source SHA; job step outcomes report recipe execution status.",
+        validation_evidence: {
+          source_sha: run.commitSha ?? null,
+          request_fingerprint_artifact: requestEvidence?.path ?? null,
+          validation_manifest_artifact: validationManifest?.path ?? null,
+          manifest_available: Boolean(validationManifest),
+          manifest_content: "Private central workflow artifact; this API exposes metadata only."
+        },
         workflows: workflowReports,
         artifacts: { scope: "workflow_run", items: artifacts },
         capabilities: {
