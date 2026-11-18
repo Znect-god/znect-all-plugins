@@ -801,3 +801,13 @@ For every meaningful feature or fix:
 - [ ] Continue with the private report/ChatGPT access path and exact-SHA validation readiness.
 
 **Verification boundary:** the recipe, manifest, adapter contract and regression-test source have been updated in their respective feature branches. Neither branch has been executed or merged by this stage; no CI run, test result, Preview deployment or Production change is claimed.
+
+
+## 47. Enforce assistant-report export size in bytes — 2026-11-18
+
+- [x] Identify that JavaScript string length counts UTF-16 code units, not the actual UTF-8 JSON file size **(выполнено — concrete source finding)**.
+- [x] Construct the JSON Blob before enforcing the 600 KB ceiling and compare `blob.size` in bytes **(выполнено — source fix)**.
+- [x] Update the dashboard regression assertion to require the byte-based limit **(выполнено — test source added; execution pending)**.
+- [ ] Run the dashboard and full Worker regression suites through the central Znect Build recipe on the exact candidate SHA.
+
+**Verification boundary:** the source and regression-test assertion are committed. No test execution, live Preview download or Znect Build run is claimed.
