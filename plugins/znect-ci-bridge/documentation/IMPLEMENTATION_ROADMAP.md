@@ -1087,3 +1087,14 @@ For every meaningful feature or fix:
 - [ ] Execute focused provider tests and TypeScript checks through the authorized opt-in CircleCI workflow.
 - [ ] Verify the mapping against a live authorized CircleCI job detail response.
 - **Verification boundary:** source and regression-test fixtures corrected using CircleCI's public CLI v3 acceptance-fixture model; no tests, live API calls, pipeline, deployment or credentials accessed.
+
+### Stage 72 — Preserve parallel-execution identity for CircleCI artifacts
+- [x] Cross-check CircleCI's public CLI v3 artifact model, which exposes the zero-based execution index for each artifact.
+- [x] Carry optional artifact execution identity through the provider-neutral contract and CircleCI adapter.
+- [x] Add an optional execution selector to artifact retrieval; reject ambiguous same-path results when no selector is supplied.
+- [x] Expose execution metadata in artifact listings and include it when diagnostics fetch JUnit reports.
+- [x] Add regression coverage for same-path artifacts produced by separate parallel executions and tool-schema exposure.
+- [x] Document the disambiguation rule.
+- [ ] Execute focused provider/API tests and TypeScript checks through the authorized opt-in CircleCI workflow.
+- [ ] Verify duplicate-path artifact behavior against a live authorized parallel job.
+- **Verification boundary:** source and regression-test fixtures updated against CircleCI's public CLI v3 model; no tests, live API calls, pipeline, deployment or credentials accessed.
