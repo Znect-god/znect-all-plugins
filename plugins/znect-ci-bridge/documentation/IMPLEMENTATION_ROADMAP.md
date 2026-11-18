@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (CircleCI runtime and registry hardening)  
+**Updated:** 2026-11-18 (bounded diagnostic artifact collector extraction)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)  
