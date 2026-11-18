@@ -214,7 +214,7 @@ export function describeProjectStatus(project: ProjectRegistryEntry) {
       id: connection.id,
       provider: connection.provider,
       status: "configured" as const,
-      provider_availability: connection.provider === "circleci" ? "not_checked" as const : "not_implemented" as const
+      provider_availability: "not_checked" as const
     }))
   };
 }
