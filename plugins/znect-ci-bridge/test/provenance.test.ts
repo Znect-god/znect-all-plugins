@@ -27,6 +27,7 @@ const manifest = {
   circleci: {
     pipeline_id: "123e4567-e89b-42d3-a456-426614174001",
     workflow_id: "123e4567-e89b-42d3-a456-426614174002",
+    job_id: "123e4567-e89b-42d3-a456-426614174003",
     job: "validate-ci-bridge-source",
     build_num: "123",
     build_url: "https://app.circleci.com/pipelines/github/Znect-god/znect-build/123"
