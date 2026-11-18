@@ -44,9 +44,10 @@ This execution pipeline is separate from the Bridge's CircleCI API adapter. The 
 
 ## Remaining work
 
-- [x] Implement the bounded direct `GET /api/v1/report` assistant report endpoint. **(выполнено — source implementation; tests pending)**
+- [x] Implement the bounded direct `GET /api/v1/report` assistant report endpoint. **(выполнено — source implementation; regression source added, execution pending)**
 - [x] Reuse Browser API authentication, rate limiting, project/connection scope, bounded JSON and secret redaction. **(выполнено — static source inspection)**
-- [ ] Add focused regression tests and verify direct Browser API retrieval end-to-end without MCP or GitHub Actions.
+- [x] Add focused regression tests for authentication, query bounds, successful aggregation, event-to-run correlation, provider-field secret redaction and event-store failure fallback. **(выполнено — test source added; execution pending)**
+- [ ] Verify direct Browser API retrieval end-to-end without MCP or GitHub Actions.
 - Confirm CircleCI pipeline execution and its free-tier usage only after an authorized run.
 - Keep source implementation, executed CircleCI checks, live provider verification and deployment as separate statuses.
 
