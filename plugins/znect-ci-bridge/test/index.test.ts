@@ -114,6 +114,47 @@ describe("Browser API central Znect Build reads", () => {
   });
 });
 
+describe("Browser API aggregate CircleCI assistant report", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("rejects invalid report bounds before making provider or storage requests", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report?project_id=znect-forge&run_limit=11",
+      { headers: { authorization: "Bearer web-test-token" } }
+    ), env, ctx);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining("run_limit") });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("requires project scope for the aggregate report", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report",
+      { headers: { authorization: "Bearer web-test-token" } }
+    ), env, ctx);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "project_id query parameter is required." });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the report behind Browser API bearer authentication", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report?project_id=znect-forge"
+    ), env, ctx);
+
+    expect(response.status).toBe(401);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("MCP tool schemas and error boundary", () => {
   afterEach(() => vi.unstubAllGlobals());
 
