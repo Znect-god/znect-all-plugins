@@ -743,7 +743,7 @@ For every meaningful feature or fix:
 **Verification boundary:** the API now fails closed on stale incremental event pages and has a focused regression test. The test has not been executed; no CircleCI run, APK assembly, device verification, ChatGPT authentication or deployment is claimed.
 
 
-## 40. Clarify Android connection-check scope — 2026-11-18
+## 42. Clarify Android connection-check scope — 2026-11-18
 
 - [x] Review the Android connection-check flow against its actual behavior: it authenticates to the private Browser JSON API, performs a CircleCI read-only status probe, then validates a bounded report response **(выполнено — source review)**.
 - [x] Identify misleading UI wording that named the check as a “ChatGPT report path”, which could imply that ChatGPT itself had authenticated **(выполнено — concrete UX finding)**.
@@ -752,3 +752,16 @@ For every meaningful feature or fix:
 - [ ] Verify the revised wording and report handoff on a physical Android device; direct ChatGPT session authentication remains a separate unresolved platform capability.
 
 **Verification boundary:** this is a source/UI wording correction only. It does not establish Android test execution, APK assembly, CircleCI execution, physical-device verification or ChatGPT authentication.
+
+## 43. Reconcile Android request lifecycle and CircleCI validation configuration — 2026-11-18
+
+- [x] Review both Android status/report requests for HTTPS-only origin validation, explicit GET methods, disabled redirects, bounded response reads, JSON content-type checks and Bearer-token non-disclosure checks **(выполнено — source review)**.
+- [x] Review request cancellation and Activity teardown: the active HTTPS connection is disconnected and the single-thread executor is shut down when the Activity is destroyed **(выполнено — source review)**.
+- [x] Review report-file lifecycle: private cache creation, previous-report cleanup, 30-minute expiry at share time, startup cleanup and read-only FileProvider sharing **(выполнено — source review)**.
+- [x] Reconcile CircleCI configuration with the setup guide: the Worker validation and Android test/APK jobs are separate, branch-filtered, non-deploying jobs; Android JUnit results and the debug APK are configured as artifacts **(выполнено — configuration/documentation review)**.
+- [x] Correct the duplicated roadmap section number so the Android connection-check scope item follows sections 40 and 41 **(выполнено — documentation correction)**.
+- [ ] Execute Worker validation and all 48 authored Android JVM tests in CircleCI; inspect the actual job results.
+- [ ] Retrieve the debug APK from a successful CircleCI job and verify installation and behavior on a physical Android device.
+- [ ] Separately establish whether ChatGPT can authenticate to the private Browser JSON API without manual Android Sharesheet handoff; do not infer this from Android's successful API probe.
+
+**Verification boundary:** this pass is source/configuration review only. It does not establish test execution, a CircleCI workflow run, APK assembly, device verification, direct ChatGPT authentication or deployment.
