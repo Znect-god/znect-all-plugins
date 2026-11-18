@@ -60,3 +60,6 @@ The first implementation intentionally has no background worker, scheduled polli
 ## CircleCI build outputs
 
 The `ci-bridge-android-exporter` CircleCI job runs the JVM unit tests and assembles a debug APK. On a successful run it stores the JUnit test results and the APK as CircleCI artifacts at `android-exporter/app-debug.apk`. This is a debug build for manual review/install only; it is not a release or deployment.
+
+
+Bearer credentials are validated against the RFC 6750 `b64token` character set (including underscore), with a 4096-character upper bound. The policy has focused JVM tests for accepted token characters, whitespace/CRLF rejection and length bounds.
