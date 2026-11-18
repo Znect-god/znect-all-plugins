@@ -200,13 +200,27 @@ class MainActivity : Activity() {
             projectInput.text.clear()
             connectionInput.text.clear()
             val reportDir = File(cacheDir, "reports")
-            reportDir.listFiles()?.forEach { it.delete() }
+            var reportsRemoved = true
+            val cachedReports = reportDir.listFiles()
+            if (cachedReports == null && reportDir.exists()) {
+                reportsRemoved = false
+            } else {
+                cachedReports?.forEach { file ->
+                    val removed = if (file.isDirectory) file.deleteRecursively() else file.delete()
+                    if (!removed && file.exists()) reportsRemoved = false
+                }
+            }
             latestReportFile = null
             shareButton.isEnabled = false
-            statusText.text = if (keyRemoved) {
-                "All local configuration, credential data and temporary reports cleared."
-            } else {
-                "Local configuration and reports cleared, but Keystore key cleanup could not be verified."
+            statusText.text = when {
+                keyRemoved && reportsRemoved ->
+                    "All local configuration, credential data and temporary reports cleared."
+                !keyRemoved && !reportsRemoved ->
+                    "Configuration cleared, but Keystore key and cached-report cleanup could not both be verified."
+                !keyRemoved ->
+                    "Local configuration and reports cleared, but Keystore key cleanup could not be verified."
+                else ->
+                    "Configuration and Keystore key cleared, but cached-report deletion could not be verified."
             }
         } catch (_: Exception) {
             statusText.text = "Could not clear local configuration. Review app storage before reconnecting."
