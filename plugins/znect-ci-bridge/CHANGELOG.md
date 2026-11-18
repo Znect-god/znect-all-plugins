@@ -463,3 +463,12 @@
 - Gives CircleCI JSONL precedence on one-to-one status conflicts while surfacing the conflict and marking the summary incomplete.
 - Exposes the same `test_summary` in both diagnostics paths, including the private Browser JSON API used for report handoff; JSONL retrieval failures and JUnit collection limits propagate to summary completeness.
 - Added focused regression-test source. Tests and typecheck were not executed; no CircleCI API request, pipeline trigger, deployment or runtime configuration change was performed.
+
+
+## 2026-11-18 — Self-describing free assistant report handoff
+
+- Added explicit `assistant_handoff` metadata to the aggregate Browser JSON API report. It identifies the current path as a user-reviewed JSON attachment, states that automatic API access is not established, confirms MCP is not required and declares that no Bearer token is included.
+- Preserved normalized per-job `test_summary` objects inside the dashboard's bounded aggregate export.
+- Clarified that test totals represent observed records and that source coverage/incompleteness must be reviewed before drawing conclusions.
+- Added Browser API contract-test source and updated the assistant-channel, README and usage documentation.
+- Direct authenticated ChatGPT Free access remains unverified. Tests/typecheck and live Preview export were not run; no CircleCI pipeline, deployment or runtime configuration change was performed.
