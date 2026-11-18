@@ -67,7 +67,9 @@ describe("CircleCI read-only provider adapter", () => {
           attributes: {
             phase: "ended",
             current_outcome: "succeeded",
-            branch: "unverified-branch-alias",\n            subject: "unverified-subject-alias",\n            vcs_revision: "unverified-revision-alias"
+            branch: "unverified-branch-alias",
+            subject: "unverified-subject-alias",
+            vcs_revision: "unverified-revision-alias"
           }
         }],
         page: { next: null }
