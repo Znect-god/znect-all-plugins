@@ -120,7 +120,9 @@ function parseJsonl(content: string | undefined, alreadyTruncated: boolean): Par
     const classnameValue = record.classname ?? record.className;
     const fileValue = record.file;
     if ((classnameValue !== undefined && typeof classnameValue !== "string") ||
-        (fileValue !== undefined && typeof fileValue !== "string")) {
+        (fileValue !== undefined && typeof fileValue !== "string") ||
+        (typeof classnameValue === "string" && classnameValue.length > 1024) ||
+        (typeof fileValue === "string" && fileValue.length > 2048)) {
       malformed++;
       continue;
     }
@@ -273,10 +275,7 @@ function parseJunitXml(content: string, execution?: number): ParsedTests {
         if (current) throw new Error("Nested JUnit testcases are invalid.");
         const testName = attrs.name;
         if (!testName || testName.length > 1024) throw new Error("JUnit testcase has no valid name.");
-        current = {
-          name: testName,
-          classname: (attrs.classname ?? "").slice(0, 1024),
-          file: (attrs.file ?? "").slice(0, 2048),
+        if ((attrs.classname?.length ?? 0) > 1024 || (attrs.file?.length ?? 0) > 2048) {\n          throw new Error("JUnit testcase identity exceeds the configured limit.");\n        }\n        current = {\n          name: testName,\n          classname: attrs.classname ?? "",\n          file: attrs.file ?? "",
           status: "passed"
         };
       } else if (current && (name === "failure" || name === "error")) {
@@ -339,10 +338,7 @@ function reconcileTests(jsonl: NormalizedTestCase[], junit: NormalizedTestCase[]
     const junitTest = junitTests[0];
     if (jsonTest.execution !== undefined && junitTest.execution !== undefined &&
         jsonTest.execution !== junitTest.execution) continue;
-    removed.add(junitTest);
-    duplicateReportsRemoved++;
-    if (jsonTest.status !== "unknown" && junitTest.status !== "unknown" &&
-        jsonTest.status !== junitTest.status) conflictingStatuses++;
+    removed.add(junitTest);\n    duplicateReportsRemoved++;\n    if (jsonTest.status === "unknown" && junitTest.status !== "unknown") {\n      jsonTest.status = junitTest.status;\n    } else if (jsonTest.status !== "unknown" && junitTest.status !== "unknown" &&\n        jsonTest.status !== junitTest.status) {\n      conflictingStatuses++;\n    }
   }
   return {
     tests: [...jsonl, ...junit.filter((test) => !removed.has(test))],
@@ -357,8 +353,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
   const json = parseJsonl(input.jsonl, input.jsonlTruncated === true);
   const junitReports = input.junitArtifacts ?? [];
   const junitTests: NormalizedTestCase[] = [];
-  let malformedJunitReports = 0;
-  let junitChars = 0;
+  let malformedJunitReports = 0;\n  let junitAvailable = false;\n  let junitChars = 0;
   let incomplete = json.truncated || json.malformed > 0 || input.jsonlUnavailable === true;
 
   for (const report of junitReports) {
@@ -375,9 +370,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
     }
     junitChars += report.content.length;
     const parsed = parseJunitXml(report.content, readExecution(report.execution));
-    malformedJunitReports += parsed.malformed;
-    if (parsed.malformed || parsed.truncated) incomplete = true;
-    junitTests.push(...parsed.tests);
+    malformedJunitReports += parsed.malformed;\n    if (parsed.malformed || parsed.truncated) incomplete = true;\n    else junitAvailable = true;\n    junitTests.push(...parsed.tests);
     if (junitTests.length > MAX_TEST_CASES) {
       junitTests.length = MAX_TEST_CASES;
       incomplete = true;
@@ -397,9 +390,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
   if (reconciled.conflictingStatuses > 0 || reconciled.ambiguousDuplicateGroups > 0) incomplete = true;
 
   const total = reconciled.tests.length;
-  const hasJsonl = json.tests.length > 0;
-  const hasJunit = junitTests.length > 0;
-  const hasSource = hasJsonl || hasJunit;
+  const hasJsonl = input.jsonl !== undefined && input.jsonlUnavailable !== true;\n  const hasJunit = junitAvailable;\n  const hasSource = json.tests.length > 0 || junitTests.length > 0;
   const status = !hasSource
     ? (incomplete ? "unavailable" : "empty")
     : (incomplete ? "partial" : "available");
