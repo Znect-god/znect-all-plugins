@@ -771,7 +771,6 @@ function createServer(env: Env) {
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResultsContent = report.content;
-            testResultsContent = report.content;
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
             testResultsState = testResultsStatus({ content: report.content, truncated: report.truncated });
             if (report.truncated) reportDataIncomplete = true;
@@ -1244,6 +1243,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           let testResultsState: "available" | "partial" | "unavailable" | "empty" = "unavailable";
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
+            testResultsContent = report.content;
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
             testResultsState = testResultsStatus({ content: report.content, truncated: report.truncated });
             if (report.truncated) { reportDataIncomplete = true; }
