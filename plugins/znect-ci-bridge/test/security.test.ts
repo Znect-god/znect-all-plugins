@@ -59,6 +59,15 @@ describe("redactKnownSecrets", () => {
   });
 
 
+  it("redacts the central Znect Build GitHub token from returned output", () => {
+    const buildToken = "github_pat_" + "z".repeat(30);
+    const output = redactKnownSecrets("central API token " + buildToken, {
+      ZNECT_BUILD_GITHUB_TOKEN: buildToken
+    });
+    expect(output).not.toContain(buildToken);
+    expect(output).toContain("[REDACTED]");
+  });
+
   it("redacts the dedicated browser access token from returned output", () => {
     const webToken = "web-secret-value";
     const output = redactKnownSecrets("log line contains " + webToken, {
