@@ -44,6 +44,7 @@ class MainActivity : Activity() {
     @Volatile private var latestReportFile: File? = null
     @Volatile private var fetching = false
     @Volatile private var destroyed = false
+    @Volatile private var activeConnection: HttpsURLConnection? = null
     private var expiredReportCleanupFailed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -250,6 +251,7 @@ class MainActivity : Activity() {
 
         executor.execute {
             try {
+                if (destroyed || Thread.currentThread().isInterrupted) return@execute
                 val token = decryptToken(prefs.getString(TOKEN_CIPHERTEXT, "") ?: "")
                 if (!isValidBearerToken(token)) throw IllegalStateException("Stored credential is invalid. Re-enter it in the app.")
                 val report = requestReport(origin, project, connection, token)
@@ -298,6 +300,12 @@ class MainActivity : Activity() {
             useCaches = false
         }
 
+        activeConnection = conn
+        if (destroyed || Thread.currentThread().isInterrupted) {
+            activeConnection = null
+            conn.disconnect()
+            throw InterruptedException("Activity is no longer active.")
+        }
         try {
             val code = conn.responseCode
             if (code in 300..399) throw IllegalStateException("The API redirected the request; redirects are blocked.")
@@ -330,6 +338,7 @@ class MainActivity : Activity() {
             }
             return report
         } finally {
+            if (activeConnection === conn) activeConnection = null
             conn.disconnect()
         }
     }
@@ -482,6 +491,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         destroyed = true
         latestReportFile = null
+        activeConnection?.disconnect()
         executor.shutdownNow()
         super.onDestroy()
     }
