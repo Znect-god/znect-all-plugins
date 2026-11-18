@@ -525,6 +525,11 @@
 
 ## Unreleased — 2026-11-18
 
+### Response budget preflight
+- Reject invalid or unsafe-integer CircleCI text and artifact byte budgets before issuing authenticated API or artifact network requests.
+- Add regression-test source confirming invalid budgets cause no network activity.
+
+
 ### Security and validation provenance
 - Require CI Bridge validation provenance to use the canonical `ci-bridge` source ref.
 - Harden the opt-in Znect Build CircleCI exact-SHA workflow to reject non-canonical refs and source commits that are not reachable from the canonical branch tip.
