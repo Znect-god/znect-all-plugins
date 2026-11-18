@@ -50,5 +50,15 @@ jobs:
 workflows:
   ci-bridge-validation:
     jobs:
-      - ci-bridge-validation
-      - ci-bridge-android-exporter
+      - ci-bridge-validation:
+          filters:
+            branches:
+              only:
+                - main
+                - feature/ci-bridge-android-exporter
+      - ci-bridge-android-exporter:
+          filters:
+            branches:
+              only:
+                - main
+                - feature/ci-bridge-android-exporter
