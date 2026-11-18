@@ -46,6 +46,33 @@ describe("bounded diagnostic JUnit artifact collection", () => {
     expect(result.incomplete).toBe(false);
   });
 
+  it("rejects provider responses whose artifact path or execution identity differs from the listing", async () => {
+    const wrongPath = adapter(
+      [report("junit/results.xml", 0)],
+      async (_path, _maxBytes, execution) => content("junit/other.xml", "wrong-path", execution)
+    );
+    const wrongExecution = adapter(
+      [report("junit/results.xml", 1)],
+      async (path, _maxBytes) => content(path, "wrong-execution", 0)
+    );
+
+    const pathResult = await collectJobReportArtifacts(wrongPath, scope, "job-1");
+    const executionResult = await collectJobReportArtifacts(wrongExecution, scope, "job-1");
+
+    expect(pathResult.artifacts).toMatchObject([{
+      path: "junit/results.xml", execution: 0,
+      error: "Retrieved report identity did not match the listed artifact."
+    }]);
+    expect(pathResult.artifacts[0].content).toBeUndefined();
+    expect(executionResult.artifacts).toMatchObject([{
+      path: "junit/results.xml", execution: 1,
+      error: "Retrieved report identity did not match the listed artifact."
+    }]);
+    expect(executionResult.artifacts[0].content).toBeUndefined();
+    expect(pathResult.incomplete).toBe(true);
+    expect(executionResult.incomplete).toBe(true);
+  });
+
   it("collects no more than four eligible reports and flags the count limit", async () => {
     const source = adapter(
       Array.from({ length: 5 }, (_, index) => report(`test-results/${index}.xml`, index)),
