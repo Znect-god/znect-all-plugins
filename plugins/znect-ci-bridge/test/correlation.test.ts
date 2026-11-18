@@ -101,6 +101,19 @@ describe("webhook event and CircleCI API run correlation", () => {
     });
   });
 
+  it("uses the documented CircleCI run creation time as a point, not a fabricated execution interval", () => {
+    const [result] = correlateEventsWithRuns([event], [run({
+      startedAt: undefined,
+      completedAt: undefined,
+      createdAt: "2026-11-17T18:00:00.000Z"
+    })]);
+    expect(result.status).toBe("candidate");
+    expect(result.candidates[0]).toMatchObject({
+      time_delta_ms: 0,
+      match_basis: "commit+branch+created-at"
+    });
+  });
+
   it("uses commit and time when the run does not expose a branch", () => {
     const [result] = correlateEventsWithRuns([event], [run({ branch: undefined })]);
     expect(result.candidates[0].match_basis).toBe("commit+time");
