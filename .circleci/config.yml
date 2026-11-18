@@ -13,6 +13,10 @@ jobs:
           command: cd plugins/znect-ci-bridge && npm ci
           no_output_timeout: 10m
       - run:
+          name: Audit Worker dependencies
+          command: cd plugins/znect-ci-bridge && npm audit --audit-level=high
+          no_output_timeout: 10m
+      - run:
           name: Typecheck and unit tests
           command: cd plugins/znect-ci-bridge && npm run check
           no_output_timeout: 10m
