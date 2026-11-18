@@ -10,45 +10,54 @@ import org.json.JSONObject
 internal object ReportValidator {
     private val sensitiveKey = Regex("(?i)(token|secret|authorization|password|api[_-]?key)")
 
+    private fun isInteger(value: Any?, min: Long, max: Long): Boolean =
+        value is Number && value.toDouble().isFinite() &&
+            value.toDouble() % 1.0 == 0.0 &&
+            value.toDouble() >= min.toDouble() &&
+            value.toDouble() <= max.toDouble()
+
     fun validate(report: JSONObject, expectedProject: String) {
         require(
-            report.optString("service") == "znect-ci-bridge" &&
-                report.optInt("report_version", -1) == 1 &&
-                report.optString("provider") == "circleci" &&
-                report.optString("permissions") == "read-only" &&
-                report.optBoolean("read_only", false)
+            report.opt("service") == "znect-ci-bridge" &&
+                isInteger(report.opt("report_version"), 1, 1) &&
+                report.opt("provider") == "circleci" &&
+                report.opt("permissions") == "read-only" &&
+                report.opt("read_only") == true
         ) { "Unsupported report identity, version or permissions." }
 
-        val generatedAt = report.optString("generated_at")
+        val generatedAt = report.opt("generated_at") as? String
+            ?: throw IllegalArgumentException("The report has an invalid generation timestamp.")
         require(generatedAt.isNotBlank() &&
             runCatching { java.time.Instant.parse(generatedAt) }.isSuccess
         ) { "The report has an invalid generation timestamp." }
 
         val project = report.optJSONObject("project")
             ?: throw IllegalArgumentException("The report has no project metadata.")
-        require(project.optString("id") == expectedProject) {
+        require(project.opt("id") == expectedProject) {
             "The returned project does not match the selected project."
         }
 
         val connection = report.optJSONObject("connection")
             ?: throw IllegalArgumentException("The report has no connection metadata.")
-        require(connection.optString("provider") == "circleci" &&
-            connection.optString("id").isNotBlank()
+        require(connection.opt("provider") == "circleci" &&
+            (connection.opt("id") as? String)?.isNotBlank() == true
         ) { "The report has invalid CircleCI connection metadata." }
 
         val runs = report.optJSONObject("runs")
             ?: throw IllegalArgumentException("The report is missing its run section.")
         val runItems = runs.optJSONArray("items")
             ?: throw IllegalArgumentException("The report run list is invalid.")
-        val runCount = runs.optInt("returned", -1)
-        val requestedRuns = runs.optInt("requested", -1)
-        val failedRuns = runs.optInt("failed_count", -1)
+        val runCount = runs.opt("returned")
+        val requestedRuns = runs.opt("requested")
+        val failedRuns = runs.opt("failed_count")
         require(
             runItems.length() <= 10 &&
-                requestedRuns in 1..10 &&
-                runItems.length() == runCount &&
-                runCount <= requestedRuns &&
-                failedRuns in 0..runCount &&
+                isInteger(requestedRuns, 1, 10) &&
+                isInteger(runCount, 0, 10) &&
+                isInteger(failedRuns, 0, 10) &&
+                runItems.length().toLong() == (runCount as Number).toLong() &&
+                (runCount as Number).toLong() <= (requestedRuns as Number).toLong() &&
+                (failedRuns as Number).toLong() <= (runCount as Number).toLong() &&
                 containsOnlyObjects(runItems)
         ) { "The report run list exceeds its bounds or has inconsistent counts." }
 
@@ -56,15 +65,16 @@ internal object ReportValidator {
             ?: throw IllegalArgumentException("The report is missing its event section.")
         val eventItems = events.optJSONArray("items")
             ?: throw IllegalArgumentException("The report event list is invalid.")
-        val eventCount = events.optInt("returned", -1)
-        val requestedEvents = events.optInt("requested", -1)
-        val nextCursor = events.optLong("next_cursor", -1L)
+        val eventCount = events.opt("returned")
+        val requestedEvents = events.opt("requested")
+        val nextCursor = events.opt("next_cursor")
         require(
             eventItems.length() <= 20 &&
-                requestedEvents in 1..20 &&
-                eventCount == eventItems.length() &&
-                eventCount <= requestedEvents &&
-                nextCursor >= 0 &&
+                isInteger(requestedEvents, 1, 20) &&
+                isInteger(eventCount, 0, 20) &&
+                isInteger(nextCursor, 0, Long.MAX_VALUE) &&
+                eventItems.length().toLong() == (eventCount as Number).toLong() &&
+                (eventCount as Number).toLong() <= (requestedEvents as Number).toLong() &&
                 events.opt("available") is Boolean &&
                 containsOnlyObjects(eventItems)
         ) { "The report event list exceeds its bounds or has invalid metadata." }
@@ -74,7 +84,7 @@ internal object ReportValidator {
         require(
             completeness.opt("runs_limited") is Boolean &&
                 completeness.opt("events_available") is Boolean &&
-                completeness.optBoolean("events_available") == events.optBoolean("available")
+                completeness.opt("events_available") == events.opt("available")
         ) { "The report completeness metadata is inconsistent." }
     }
 
