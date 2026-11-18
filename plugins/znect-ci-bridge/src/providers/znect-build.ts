@@ -242,7 +242,7 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
     const repositoryHash = Array.from(new Uint8Array(digest))
       .map((byte) => byte.toString(16).padStart(2, "0")).join("");
     const expected = new RegExp(
-      `^znect-build-request-${this.projectId.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}-${repositoryHash}-([0-9a-f]{40})-${id}$`
+      `^znect-build-request-${this.projectId}-${repositoryHash}-([0-9a-f]{40})-${id}$`
     );
     const artifacts = await this.listArtifactsRaw(id);
     const requestArtifact = artifacts.find((artifact) =>
