@@ -958,7 +958,7 @@ For every meaningful feature or fix:
 - [x] Cross-check the manifest pipeline ID against the selected CircleCI v3 run, workflow ID against the selected workflow, exact job UUID and job name against the dedicated validation job, recipe SHA against the Znect Build run revision, and source SHA against the separately stored exact-checkout SHA **(выполнено — source implementation; live round-trip pending)**.
 - [x] Expose a bounded provenance summary in both MCP diagnose_run and authenticated Browser API /api/v1/diagnostics/:runId; distinguish validated recipe success, validated recipe failure, missing, invalid and unavailable evidence **(выполнено — source integration)**.
 - [x] Add unit-test source for successful and failed recipe manifests, unknown fields, inconsistent outcome, deployment/mutation claims, malformed/truncated/oversized content and invalid identity values **(выполнено — test source added; execution pending)**.
-- [ ] Add adapter-level regression tests for artifact duplication/missing cases, pipeline/workflow/job mismatch, recipe/source SHA mismatch, successful validation-job discovery and bounded scan truncation.
+- [x] Add adapter-level regression tests for successful validation-job discovery, exact pipeline/workflow/job identity, resolved source SHA mismatch and duplicate artifact rejection **(выполнено — test source added; execution pending)**.
 - [ ] Run the focused provenance tests, TypeScript check and complete Vitest suite on the exact source SHA through the authorized opt-in CircleCI workflow.
 - [ ] Verify a real CircleCI run/artifact round-trip and confirm the actual CircleCI API v3 run revision equals the recipe repository commit SHA before treating the integration as runtime-verified.
 
