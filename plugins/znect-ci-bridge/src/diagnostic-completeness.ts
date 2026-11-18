@@ -63,10 +63,11 @@ export type FailedStepLogsStatus = "available" | "partial" | "unavailable" | "no
 export function failedStepLogsStatus(input: {
   failedActionsCount: number;
   logsCount: number;
+  successfulLogsCount: number;
   incomplete: boolean;
 }): FailedStepLogsStatus {
   if (input.failedActionsCount === 0) return "not_applicable";
-  if (input.logsCount === 0) return "unavailable";
-  if (input.incomplete || input.logsCount < input.failedActionsCount) return "partial";
+  if (input.logsCount === 0 || input.successfulLogsCount === 0) return "unavailable";
+  if (input.incomplete || input.logsCount < input.failedActionsCount || input.successfulLogsCount < input.logsCount) return "partial";
   return "available";
 }
