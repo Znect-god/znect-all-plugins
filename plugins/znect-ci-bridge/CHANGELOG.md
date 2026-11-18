@@ -1,3 +1,11 @@
+## 2026-11-18 — browser-dashboard assistant report export
+
+- Extended the existing Znect CI Bridge dashboard with an explicit **Export assistant report** action; reused the existing Worker and authenticated Browser JSON API rather than creating a parallel bridge.
+- The export retrieves the bounded aggregate report and up to three failed-run diagnostics for the selected project/connection, validates run UUIDs, and keeps credentials in the Authorization header only.
+- Added scope-change/disconnect cancellation guards, partial-diagnostic indicators and a 600 KB total JSON export ceiling.
+- The browser downloads one reviewable JSON report for explicit user-controlled handoff to ChatGPT. This does not establish automatic ChatGPT authentication.
+- Added UI regression-test source and updated the assistant-channel guide, README and implementation roadmap. CircleCI test execution and live Preview verification remain pending; no Preview deployment or Production change was performed.
+
 ## 2026-11-18 — authoritative architecture correction: CircleCI-only CI execution
 
 - The current CI Bridge architecture uses CircleCI as the **only CI executor** for CI Bridge source validation and Android exporter checks, via the root `.circleci/config.yml`.
