@@ -693,3 +693,16 @@ For every meaningful feature or fix:
 **Repository responsibility boundary:** `znect-all-plugins` remains the CI Bridge source-development repository. `znect-build` remains a separate central build/orchestration system for Znect project development builds; its GitHub Actions implementation is not reused as the CI Bridge validation executor. The optional Znect Build read-only adapter remains a distinct provider path and must not replace CircleCI in the primary ChatGPT/CircleCI diagnostics flow.
 
 **Verification boundary:** the legacy GitHub Actions workflow was disabled by committed source configuration. This does not establish a CircleCI run, passing tests, APK assembly, device verification or deployment.
+
+## 38. Final targeted review before CircleCI execution — 2026-11-18
+
+- [x] Re-check the authenticated Browser JSON API status/report routes, bounded query parameters, GET-only access, provider error handling and event-page byte limits **(выполнено — source review)**.
+- [x] Re-check CircleCI adapter construction and cache lifetime; adapter instances are created per selected request, so failed per-instance promise caches do not persist as a cross-request outage **(выполнено — source review)**.
+- [x] Re-check Android temporary report creation, previous-file cleanup, 30-minute expiry enforcement at share time, FileProvider read-only grant and Activity cancellation/disconnection **(выполнено — source review)**.
+- [x] Reconcile the Android test inventory at 45 authored JVM cases; execution remains pending **(выполнено — inventory reconciliation)**.
+- [x] Reconfirm the CircleCI setup guide specifies the connected GitHub project, .circleci/config.yml, allowed feature branch, two jobs, test-result/APK artifact retrieval and no CI secrets for validation **(выполнено — documentation review)**.
+- [ ] Connect/confirm the repository project in CircleCI and obtain an actual workflow run for the exact feature branch HEAD. This session has no CircleCI-specific read integration, so no run can be queried or asserted here.
+- [ ] Inspect CircleCI Worker test/audit/dry-run results and Android JUnit report; retrieve the debug APK only from the completed CircleCI job.
+- [ ] Install and verify the APK on a physical Android device; separately establish whether the intended private Browser JSON API can be authenticated from a ChatGPT session without manual Sharesheet transfer.
+
+**Verification boundary:** this pass found no additional reproducible source defect, so no speculative code change was made. The GitHub workflow files remain inert; CircleCI is the only configured CI Bridge validation executor. No tests, CircleCI run, APK, device test, ChatGPT authentication or deployment are claimed.
