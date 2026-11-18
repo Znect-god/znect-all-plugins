@@ -1142,9 +1142,10 @@ For every meaningful feature or fix:
 - [x] Add per-job `test_results_status` values to distinguish available, partial/truncated, empty and unavailable structured JSONL results.
 - [x] Add per-job `report_artifacts_status` values to distinguish available, partial, unavailable and no matching JUnit artifacts.
 - [x] Add per-job `failed_step_logs_status` values to distinguish available, partial, unavailable and not-applicable logs; account for retrieval errors, truncation, invalid step numbers and global log-action caps.
+- [x] Correct MCP failed-step log requests to use the `execution_index` field emitted by its normalized failed-step structure, preserving parallel-execution selection just like Browser API.
 - [x] Add focused regression-test source for source-status classification, failed-step log completeness and shared overall summary semantics.
 - [ ] Execute focused Vitest files and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
 - [ ] Review test/typecheck results and correct any failures.
 - [ ] Verify the same diagnostic status fields and summary flags against a real authorized CircleCI run through both MCP and Browser API.
 
-**Verification boundary:** shared status/summary helpers, both API call sites and regression-test source are committed to the feature branch. No tests or typecheck were executed; no CircleCI API requests, pipeline execution, deployment or credential/runtime configuration changes were performed.
+**Verification boundary:** shared status/summary helpers, both API call sites, the MCP parallel-execution selector correction and regression-test source are committed to the feature branch. No tests or typecheck were executed; no CircleCI API requests, pipeline execution, deployment or credential/runtime configuration changes were performed.
