@@ -220,7 +220,9 @@ async function main() {
     handoff?.test_summary_count_scope !== "observed_records" ||
     !Array.isArray(assistantReport.runs?.diagnostics) ||
     !Array.isArray(assistantReport.events?.items) ||
-    !assistantReport.completeness
+    !assistantReport.completeness ||
+    JSON.stringify(assistantReport).includes(webToken) ||
+    JSON.stringify(assistantReport).includes(mcpToken)
   ) {
     throw new Error("Aggregate assistant report is missing required read-only handoff or completeness metadata.");
   }
@@ -237,8 +239,14 @@ async function main() {
       throw new Error("Aggregate report diagnostic round-trip returned HTTP " + diagnosticResponse.status + ".");
     }
     const diagnostic = await diagnosticResponse.json();
-    if (diagnostic.run?.id !== item.run_id || !Array.isArray(diagnostic.workflows) || !diagnostic.diagnostics_summary) {
-      throw new Error("Aggregate report diagnostic round-trip returned a mismatched or incomplete report.");
+    if (
+      diagnostic.run?.id !== item.run_id ||
+      !Array.isArray(diagnostic.workflows) ||
+      !diagnostic.diagnostics_summary ||
+      JSON.stringify(diagnostic).includes(webToken) ||
+      JSON.stringify(diagnostic).includes(mcpToken)
+    ) {
+      throw new Error("Aggregate report diagnostic round-trip returned a mismatched, incomplete or unredacted report.");
     }
   }
   console.log("PASS: authenticated aggregate assistant report and diagnostic round-trip");
