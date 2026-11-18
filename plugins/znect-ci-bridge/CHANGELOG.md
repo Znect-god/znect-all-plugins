@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Hardened bounded JUnit collection so provider responses must match the listed artifact path and, when known, the exact CircleCI parallel execution index. Mismatched content is discarded and reported as incomplete.
+- Added regression-test source for wrong-path and wrong-execution provider responses. Tests and typecheck remain unexecuted; no CircleCI pipeline, API request, Preview deployment or runtime configuration change was performed.
+
 - Consolidated the active development location to the single permanent `ci-bridge` branch. `main` remains the shared plugin repository branch; `znect-build` owns build recipes and configuration; CircleCI is the build execution environment.
 - Audited the canonical source tree and corrected the stale plugin maturity/catalog metadata and branch references; removed a duplicate test object key.
 - Hardened the internal event-store page response allowlist so unexpected envelope fields are rejected before Browser API/MCP serialization.
