@@ -96,6 +96,8 @@ Single-resource v3 responses are unwrapped from the documented `data` envelope. 
 
 CircleCI's public CLI v3 acceptance-fixture model represents `attributes.parallel_executions` as an array of step arrays (`[][]JobStep`): each outer-array position is the zero-based execution index, and each inner array contains that execution's steps. The adapter maps `num` to the API step number and does not require the optional `is_insignificant` extension field to be present. Queued jobs may omit `parallel_executions` entirely; they are represented as having no reported steps, not as a failed parse. The regression fixtures use this nested-array wire shape.
 
+Artifact metadata preserves CircleCI's zero-based `execution` index when supplied. Parallel executions can produce the same artifact path more than once; callers must pass the execution index to `get_job_artifact` to disambiguate those entries. A path-only request that matches multiple artifacts is rejected rather than selecting an arbitrary execution.
+
 ## Remaining work
 
 1. Confirm the configured CircleCI personal API token as the Worker Secret `CIRCLECI_TOKEN` without exposing it in chat.
