@@ -1,6 +1,6 @@
 # Znect CI Bridge — Android private report exporter
 
-**Status:** design specification; implementation not started.  
+**Status:** design specification plus initial Android source prototype; build/device verification pending.  
 **Target:** Android companion utility for a user-operated, manual ChatGPT report handoff.  
 **Relationship to CI Bridge:** client-side helper only; it does not replace the Worker, Browser API, or server-side authorization.
 
@@ -104,4 +104,4 @@ A compromised or unlocked device, malicious keyboard/accessibility service, root
 
 ## 10. Current state
 
-This document defines the proposed architecture only. No Android source, APK, signing configuration, test, API request, credential access or deployment has been created or executed.
+The initial Android source prototype is now present under `android-exporter/`, including Keystore-backed credential storage, HTTPS-only bounded report retrieval, local report validation/export, explicit Sharesheet sharing and origin-policy test source. The test source has not been executed. No APK, signing configuration, live API request, credential access, build, device installation or deployment has been performed.
