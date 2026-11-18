@@ -7,7 +7,7 @@
 **Active working branch:** `ci-bridge` (the single permanent CI Bridge development branch)
 
 **Repository/branch clarification:** CI Bridge is one plugin in the shared `znect-all-plugins` repository, not a separate Android application. Its complete current implementation is on the `ci-bridge` branch. `main` contains an earlier prototype registration (`plugin.json` and README), but not the current runnable project (`package.json`, `src/`, tests, and scripts). Legacy CI Bridge branches are consolidation sources only; all ongoing development belongs on `ci-bridge`.  
-**Consolidation source:** `feature/ci-bridge-android-exporter` (legacy branch; retained temporarily until obsolete branch cleanup is available)  
+**Consolidation:** completed on 2026-11-18. The canonical implementation is on `ci-bridge`; the user removed all ten obsolete CI Bridge branches. `main` remains unchanged.  
 **Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
 
 This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness. Historical sections preserve earlier decisions and intermediate architecture. Current architecture: CircleCI executes CI Bridge validation; Znect Build owns the central recipe, registry policy and development workflow; Znect All Plugins owns Bridge source; the Bridge observes CircleCI through a read-only adapter. Any earlier statement that CI Bridge validation executes through GitHub Actions or that Znect Build is the execution platform is superseded.
@@ -191,12 +191,14 @@ The Bridge must remain read-only with respect to CI execution and project source
 
 ## 6. Branch and repository policy
 
-- Continue source work in `Znect-god/znect-all-plugins`, on the isolated branch `feature/ci-bridge-android-exporter`.
-- Keep changes isolated. Do not merge, open a PR, or update `main` without explicit approval.
-- Older branches (`feat/ci-bridge-circleci-webhooks`, `feature/ci-bridge-test-reports`, `feature/znect-ci-bridge-source`, `work/znect-ci-bridge-free-channel-v0.2.0`, `work/znect-ci-bridge-mcp-v0.2.0`) are historical work lines/prototypes; do not develop them in parallel unless a specific recovery or comparison requires it.
-- The `docs/ci-bridge-implementation-roadmap` branch contains the earlier roadmap source; this living copy is maintained alongside the active engineering branch so implementation status and future work stay together.
-- Znect Build remains a separate repository for centralized application builds, with GitHub Actions as its central execution engine. A dedicated Build API is not present. The actual run records, jobs, logs and run-level artifacts are available from GitHub Actions' read-only repository APIs; CI Bridge should integrate with those documented APIs rather than guessed Znect Build routes. A Node/Cloudflare Worker validation recipe, disabled CI Bridge registry target and validated-source fingerprint artifact are present on isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`; that branch is not merged and no run has been triggered. CI Bridge now has a source-level GitHub Actions read-only adapter and MCP tools, but live verification is pending. Do not move Bridge source into Build.
-- Do not trigger GitHub Actions, CircleCI, builds, deployments, Preview refreshes or Production changes without explicit authorization.
+- Continue all CI Bridge source, tests, scripts, metadata and documentation work in `Znect-god/znect-all-plugins`, branch `ci-bridge`. This is the single permanent development branch.
+- Keep `main` as the shared plugin-catalog branch. Do not merge CI Bridge development into `main`, move its ref, or open/merge a PR without explicit approval.
+- The ten obsolete CI Bridge branches were removed by the user on 2026-11-18 after consolidation. Do not recreate them or resume development there.
+- The repository still has unrelated branches `catalog/znect-forge` and `feature/znect-screen-bridge-foundation`; they are outside CI Bridge scope and must not be changed as part of this work.
+- `Znect-god/znect-build` remains a separate infrastructure/recipe repository. Its CI Bridge validation configuration and central recipe are maintained there; it is not the CI Bridge source repository.
+- CircleCI is the executor for CI Bridge source validation and the read-only provider observed by CI Bridge. The central exact-SHA validation workflow is opt-in and defaults to disabled. CI Bridge itself must never trigger, retry, cancel, approve or mutate CircleCI pipelines/jobs/settings.
+- GitHub Actions workflows in this repository are inert historical files and are not an executor. Do not restore a repository-local executor or the removed Android exporter.
+- Do not trigger CircleCI pipelines, builds, deployments, Preview refreshes or Production changes without the required separate explicit authorization. Do not access or change secrets/runtime configuration without separate authorization.
 - Do not request already-configured credentials again. Never put secret values in code, docs, commits, chat or logs.
 
 ## 7. Operating rule for roadmap updates
