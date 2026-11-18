@@ -143,6 +143,117 @@ describe("Browser API aggregate CircleCI assistant report", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+
+  it("returns a bounded CircleCI report with webhook correlation and redacted provider fields", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174010";
+    const eventId = "123e4567-e89b-42d3-a456-426614174011";
+    const happenedAt = "2026-11-18T08:00:00.000Z";
+    const event = {
+      cursor: 1,
+      id: eventId,
+      type: "workflow-completed",
+      happened_at: happenedAt,
+      project_slug: "gh/Znect-god/znect-forge",
+      revision: "abc123",
+      branch: "main"
+    };
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({
+        fetch: async () => new Response(JSON.stringify({ events: [event], next_cursor: 1 }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        })
+      })
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+      }), { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: RUN_ID,
+          attributes: {
+            outcome: "failed",
+            branch: "main",
+            subject: CIRCLE_TOKEN,
+            created_at: happenedAt,
+            ended_at: "2026-11-18T08:05:00.000Z"
+          },
+          references: {
+            project: { id: projectId },
+            event: { attributes: { vcs: { revision: "abc123", branch: "main" } } }
+          }
+        }],
+        page: { next: null }
+      }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report?project_id=znect-forge",
+      { headers: { authorization: "Bearer web-test-token" } }
+    ), { ...env, EVENT_STORE: namespace } as Parameters<typeof worker.fetch>[1], ctx);
+    const payload = await response.json() as {
+      provider?: string;
+      permissions?: string;
+      runs?: { returned?: number; failed_count?: number; items?: Array<{ commitMessage?: string }> };
+      events?: { available?: boolean; returned?: number; next_cursor?: number };
+      correlations?: Array<{ status: string; candidate_count: number }>;
+      read_only?: boolean;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload).toMatchObject({
+      provider: "circleci",
+      permissions: "read-only",
+      runs: { returned: 1, failed_count: 1, items: [{ commitMessage: "[REDACTED]" }] },
+      events: { available: true, returned: 1, next_cursor: 1 },
+      correlations: [{ status: "candidate", candidate_count: 1 }],
+      read_only: true
+    });
+    expect(JSON.stringify(payload)).not.toContain(CIRCLE_TOKEN);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.every((call) => call[1]?.method === "GET")).toBe(true);
+  });
+
+  it("returns a usable partial report when webhook event storage is unavailable", async () => {
+    const namespace = {
+      idFromName: () => "forge",
+      get: () => ({ fetch: async () => { throw new Error("private storage detail"); } })
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: "123e4567-e89b-42d3-a456-426614174010", attributes: { slug: "gh/Znect-god/znect-forge" } }]
+      }), { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], page: { next: null } }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(new Request(
+      "https://bridge.example/api/v1/report?project_id=znect-forge",
+      { headers: { authorization: "Bearer web-test-token" } }
+    ), { ...env, EVENT_STORE: namespace } as Parameters<typeof worker.fetch>[1], ctx);
+    const payload = await response.json() as {
+      provider_status?: string;
+      events?: { available?: boolean; error?: string };
+      completeness?: { events_available?: boolean };
+      correlations?: unknown[];
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.provider_status).toBe("available");
+    expect(payload.events).toMatchObject({
+      available: false,
+      error: "CircleCI webhook event history is temporarily unavailable."
+    });
+    expect(payload.completeness?.events_available).toBe(false);
+    expect(payload.correlations).toEqual([]);
+    expect(JSON.stringify(payload)).not.toContain("private storage detail");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps the report behind Browser API bearer authentication", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
