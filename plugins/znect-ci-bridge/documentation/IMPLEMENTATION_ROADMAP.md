@@ -152,15 +152,18 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Ten report-schema/privacy unit-test cases authored with a JVM JSON test dependency **(выполнено — test source only)**.
 - [x] Add a local disconnect action that removes the encrypted token, Android Keystore key entry and temporary report **(выполнено — source implementation; device verification pending)**.
 - [x] Extract report-schema validation from Activity code and add focused JVM unit-test source for valid reports, provider/permission/project rejection, malformed timestamps, run bounds/counts, event counts, completeness and recursive sensitive-key detection **(выполнено — test source added; execution pending)**.
+- [x] Add an explicit connection-check action that validates authenticated `/api/v1/status`, CircleCI provider identity, project/connection scope, read-only permission and a live recent-run probe **(выполнено — source implementation; CircleCI execution pending)**.
+- [x] Verify the private `/api/v1/report` endpoint from the Android connection-check flow, using bounded schema validation; explicitly distinguish this from proving a separate ChatGPT session is authenticated **(выполнено — source implementation)**.
+- [x] Add focused JVM tests for successful/unavailable CircleCI status, wrong provider/project/connection, non-read-only claims and malformed probe responses **(выполнено — test source added; execution pending)**.
 - [ ] Add device-auth/biometric confirmation and verify lifecycle/error handling.
 - [x] Add Gradle 8.9 Wrapper scripts/JAR from the official `gradle/gradle` `v8.9.0` tag, pin the official distribution SHA-256 and verify the wrapper JAR checksum in CircleCI **(выполнено — source/configuration; execution pending)**.
-- [ ] Run Android Gradle tests/build only after explicit authorization; no APK or device verification is claimed.
+- [ ] Run Android Gradle tests/build in CircleCI and inspect the resulting JUnit/APK artifacts; no APK or device verification is claimed yet.
 
 ### 4.9 CircleCI validation pipeline
 
 - [x] Root `.circleci/config.yml` defines the CI Bridge validation job: `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run. **(выполнено — source configuration)**
 - [x] Validation config does not deploy or mutate observed CircleCI project pipelines. **(выполнено — static source inspection)**
-- [ ] Run the CircleCI pipeline on the exact candidate branch/SHA. User authorization received; execution is blocked in this session because no authenticated CircleCI control/API connection is available. Do not substitute GitHub Actions or Cloudflare checks.
+- [ ] Run the CircleCI pipeline on the exact candidate branch/SHA. The repository config is present, but no authenticated CircleCI result has been retrieved in this session. Do not substitute GitHub Actions or Cloudflare checks.
 - [ ] Review actual CircleCI job results, logs, tests and Wrangler dry-run output; do not infer success from config presence.
 - [x] Add an Android CircleCI job for wrapper-JAR checksum verification, Android SDK 35 installation, JVM unit tests and debug APK assembly **(выполнено — pipeline configuration; run result pending)**.
 
@@ -536,3 +539,15 @@ For every meaningful feature or fix:
 
 - Updated the connection field hint and setup documentation: `connection_id` may be omitted only when the selected project has exactly one CircleCI connection; projects with multiple connections require an explicit ID **(выполнено — UI/docs clarification)**.
 - The returned report is independently checked against the selected connection ID when one is supplied.
+
+
+## 7. Android connection-check behavior (2026-11-18)
+
+- [x] Add a user-triggered **Check CircleCI ↔ ChatGPT handoff** action to the Android exporter **(выполнено — source implementation)**.
+- [x] Probe authenticated `GET /api/v1/status` with the locally stored Bearer credential; enforce HTTPS, GET-only, redirect rejection, timeouts and an 8 KB response ceiling **(выполнено — source implementation)**.
+- [x] Validate service identity, CircleCI provider, expected project/connection, explicit read-only permission, provider availability and recent-run probe result **(выполнено — source implementation)**.
+- [x] Follow the status probe with the bounded `GET /api/v1/report` request and existing report/privacy validation to test the assistant-facing report endpoint **(выполнено — source implementation)**.
+- [x] Add nine JVM regression tests for the connection-status response validator **(выполнено — test source added; execution pending)**.
+- [ ] Verify the button and network behavior on a physical Android device.
+- [ ] Verify a real CircleCI-backed response from CircleCI-run validation/Preview evidence.
+- [ ] Establish a supported direct ChatGPT authentication mechanism for the private API. The Android check cannot attest that ChatGPT itself has an active authenticated session; it proves only that the Bridge endpoint and CircleCI read path respond to the app's credential.
