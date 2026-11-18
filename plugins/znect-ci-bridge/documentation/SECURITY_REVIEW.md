@@ -145,5 +145,5 @@ Production was not deployed or modified. PR #5 remains Draft and unmerged. The b
 - It requires a project-matching run display title plus an unexpired validation artifact containing the registered project ID, SHA-256 fingerprint of the registered source repository, validated source SHA and exact run ID. The central workflow computes the fingerprint only after request validation.
 - Job resources are checked against their verified parent workflow run. Artifacts remain run-scoped; no job relationship or download URL is fabricated.
 - The adapter does not yet extract GitHub Actions ZIP logs/artifacts or claim generic test-report access. These capabilities are explicitly unavailable.
-- A repository-scoped read-only token is required. Do not grant Actions write, dispatch, workflow, contents write or administration permissions.
+- A repository-scoped read-only token is required. Its configured value is included in the shared known-secret redaction list. Do not grant Actions write, dispatch, workflow, contents write or administration permissions.
 - The central fingerprint artifact change is on an isolated, unmerged Znect Build branch. No live run has been checked with this adapter, and no tests/typecheck have been executed on the current Bridge branch head.
