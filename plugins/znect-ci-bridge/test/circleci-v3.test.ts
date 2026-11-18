@@ -424,7 +424,7 @@ describe("CircleCI API v3 client", () => {
         page: { next: null }
       }), { status: 200 })));
     await expect(listCircleCiRuns("token", PROJECT_ID, 2))
-      .rejects.toThrow("repeated a run ID across pagination pages");
+      .rejects.toThrow("repeated a run ID in a paginated collection");
 
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
