@@ -769,3 +769,18 @@ For every meaningful feature or fix:
 - [ ] Separately establish whether ChatGPT can authenticate to the private Browser JSON API without manual Android Sharesheet handoff; do not infer this from Android's successful API probe.
 
 **Verification boundary:** this pass is source/configuration review only. It does not establish test execution, a CircleCI workflow run, APK assembly, device verification, direct ChatGPT authentication or deployment.
+
+
+## 44. Add a browser-dashboard assistant report download — 2026-11-18
+
+- [x] Continue the existing Znect CI Bridge Worker and Browser JSON API; reuse the already implemented authenticated `GET /api/v1/report` and `GET /api/v1/diagnostics/{run_uuid}` routes rather than creating another Worker or rebuilding the service **(выполнено — existing source reused)**.
+- [x] Add an explicit **Export assistant report** action to the existing browser dashboard for the selected registered project and CircleCI connection **(выполнено — source implementation)**.
+- [x] Fetch the bounded aggregate report and retrieve at most three failed-run diagnostic bundles; validate each run UUID and construct same-origin paths instead of following arbitrary endpoint strings **(выполнено — source implementation)**.
+- [x] Preserve Bearer authentication in the request header only, GET-only access, in-memory token handling, and scope isolation when the user switches project/connection or disconnects **(выполнено — source implementation)**.
+- [x] Mark missing/limited diagnostics in the exported report, enforce a 600 KB total JSON ceiling, and download a single reviewable JSON file for explicit user handoff to ChatGPT **(выполнено — source implementation)**.
+- [x] Add dashboard regression coverage for report endpoint use, UUID validation, selected-scope diagnostics, size ceiling, partial-report state and download behavior **(выполнено — test source added; execution pending)**.
+- [x] Update the assistant-channel guide and README to describe the existing web-dashboard handoff and keep Android as an optional companion path **(выполнено — documentation updated)**.
+- [ ] Execute the Worker/dashboard regression suite through the configured CircleCI validation pipeline; no test execution is claimed.
+- [ ] Verify the export action against the existing isolated Cloudflare Preview, including one failed run with diagnostic output and a partial/unavailable diagnostic case. Do not create a new Worker or touch Production.
+
+**Verification boundary:** this is an incremental change to the existing dashboard and reuses the existing private Worker API. Source and regression-test changes are committed, but CircleCI execution and live Preview download have not yet been verified. No Worker deployment, secret access, CircleCI pipeline mutation, Production change or APK build is claimed.
