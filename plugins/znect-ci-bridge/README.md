@@ -3,16 +3,16 @@
 **Status:** `in-development` — experimental; not production-ready.  
 **Version:** `0.1.0`  
 **Source repository:** `Znect-god/znect-all-plugins`  
-**Active branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android exporter source has been removed).
+**Active branch:** `ci-bridge` — the single permanent development branch for all CI Bridge work.
 
-**Repository/branch clarification:** This is the same Znect CI Bridge plugin intended for the shared `znect-all-plugins` repository, not a separate Android application. The complete current plugin source lives on this feature branch. `main` contains an earlier prototype registration (`plugin.json` and README), but not the current runnable project (`package.json`, `src/`, tests, and scripts). The branch name is historical and does not describe the current implementation.
+**Repository/branch clarification:** This is the same Znect CI Bridge plugin intended for the shared `znect-all-plugins` repository, not a separate Android application. The complete current plugin source lives on `ci-bridge`. `main` is reserved for the shared plugin repository and is not the CI Bridge development branch. Legacy CI Bridge branches are consolidation sources only and are not active development locations.
 
 Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for inspecting registered CircleCI projects and collecting signed CI events. The existing CircleCI API v3 adapter, bounded diagnostics, webhook inbox, private Browser JSON API, dashboard and assistant-report export are retained and developed incrementally; this is not a rewrite.
 
 ## Current architecture
 
-- **CircleCI:** CI execution platform for the Znect Build validation flow and the observed CI provider for registered projects.
-- **Znect Build:** development and central recipe repository. Its `.circleci/config.yml` contains Znect Build contract checks and an opt-in exact-SHA CI Bridge validation workflow.
+- **CircleCI:** the CI execution environment that runs builds and validation workflows; CI Bridge only observes it through a read-only API adapter.
+- **Znect Build:** separate build-infrastructure repository containing central build recipes and validation configuration; it is not a second CI Bridge source repository.
 - **CI Bridge:** reads CircleCI through a bounded read-only API v3 adapter. It never triggers, retries, cancels, approves or modifies CircleCI pipelines, jobs or settings.
 - **GitHub Actions:** not used as an executor. Legacy GitHub Actions workflows in Znect Build are inert.
 - **ChatGPT access:** MCP is optional/legacy and not required. The private Browser JSON API uses a separate Bearer token; the dashboard can export a bounded JSON report for explicit user-reviewed handoff. Direct authenticated ChatGPT Free access to the private API remains unverified.
