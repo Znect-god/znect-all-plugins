@@ -429,3 +429,12 @@ For every meaningful feature or fix:
 - Inspected Android exporter module: Gradle project files and test source exist, but `gradlew` and `gradle/wrapper/gradle-wrapper.properties` are absent. Android Gradle verification cannot be reproduced from the repository as currently committed.
 - Checked commit status/check-runs for candidate SHA `5a2ef7800f41191118791cd3adc8aab77730be4a`: no CircleCI status was reported. The one completed successful check is `Workers Builds: znect-ci-bridge` from the Cloudflare GitHub App, not CircleCI; it must not be reported as CircleCI validation.
 - No CircleCI run could be started or inspected because this session has no authenticated CircleCI API/control connection. No GitHub Actions, pipeline, Gradle tests/build, deployment, live API request or secret access was used as a substitute.
+
+
+## 12. Android exporter build wiring review — 2026-11-18
+
+- Added the missing Kotlin Android Gradle plugin to the root and app module build scripts; Kotlin source files are now explicitly included in the Android compilation configuration **(выполнено — source configuration)**.
+- Pinned a mutually compatible toolchain: Android Gradle Plugin 8.7.2, Kotlin Gradle Plugin 2.1.10 and Gradle Wrapper 8.9, with Java/Kotlin bytecode target 17 **(выполнено — source configuration; compatibility checked against upstream version matrices)**.
+- The CircleCI Android job already invokes testDebugUnitTest and assembleDebug; it will now compile the Kotlin source instead of silently omitting the Kotlin plugin configuration.
+- No local Gradle execution or APK build has been performed in this session. CircleCI execution remains unverified until a run result is observable; no passing status is claimed.
+- Remaining: inspect the first CircleCI Android job result, fix any observed failure, then complete a user-device install/runtime check separately. The CircleCI read-only ChatGPT access limitation remains open; no credential/authentication boundary was weakened.
