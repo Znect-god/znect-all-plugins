@@ -15,6 +15,7 @@
 5. ChatGPT analyzes the report; it cannot trigger, retry, cancel or modify CircleCI pipelines through this interface.
 
 The direct API endpoints already implemented include:
+- `GET /api/v1/report?project_id=znect-forge&connection_id=circleci-main&run_limit=10&event_limit=20&after=0` — bounded aggregate report for ChatGPT, including recent CircleCI runs, failed-run diagnostic links, webhook events, correlation candidates and completeness/freshness metadata.
 
 - `GET /api/v1/projects`
 - `GET /api/v1/status?project_id=znect-forge&connection_id=circleci-main`
@@ -43,9 +44,9 @@ This execution pipeline is separate from the Bridge's CircleCI API adapter. The 
 
 ## Remaining work
 
-- Implement a bounded assistant report endpoint or an equivalent private handoff that ChatGPT can consume without MCP and without GitHub Actions.
-- Ensure report requests are authenticated, project-scoped, rate-limited, bounded, redacted and read-only.
-- Verify the direct Browser API and private handoff end-to-end.
+- [x] Implement the bounded direct `GET /api/v1/report` assistant report endpoint. **(выполнено — source implementation; tests pending)**
+- [x] Reuse Browser API authentication, rate limiting, project/connection scope, bounded JSON and secret redaction. **(выполнено — static source inspection)**
+- [ ] Add focused regression tests and verify direct Browser API retrieval end-to-end without MCP or GitHub Actions.
 - Confirm CircleCI pipeline execution and its free-tier usage only after an authorized run.
 - Keep source implementation, executed CircleCI checks, live provider verification and deployment as separate statuses.
 
