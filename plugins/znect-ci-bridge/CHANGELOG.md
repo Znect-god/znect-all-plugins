@@ -1,3 +1,16 @@
+## 2026-11-18 — Znect Build architecture alignment
+
+### Corrected
+- Confirmed that all Znect project builds must be orchestrated by `Znect-god/znect-build`, whose central execution engine is GitHub Actions.
+- Removed the standalone `.circleci/config.yml` that had been added for CI Bridge checks; it was an independent workflow and not the correct central build path.
+- Clarified that CircleCI remains a read-only diagnostics provider for projects that already use it, not the Znect build orchestrator.
+- Recorded that CI Bridge is not yet a registered/enabled Znect Build target and that a Node.js/Cloudflare Worker recipe plus a real read-only result transport are still missing.
+
+### Validation status
+- No CircleCI pipeline or Znect Build workflow was triggered.
+- No source tests, typecheck, Wrangler dry-run, Preview deployment, Forge build or Production action was run.
+- The previous CircleCI workflow entry below is historical and superseded by this correction.
+
 ## 2026-11-18 — CircleCI validation workflow
 
 ### Added
