@@ -1122,7 +1122,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
     if (buildRunSegments.length === 6 && buildRunSegments[1] === "api" &&
         buildRunSegments[2] === "v1" && buildRunSegments[3] === "build" && buildRunSegments[4] === "runs") {
       const runId = buildRunSegments[5];
-      if (!/^\\d{1,16}$/.test(runId)) return json({ error: "A numeric central Build run ID is required." }, 400);
+      if (!/^\d{1,16}$/.test(runId)) return json({ error: "A numeric central Build run ID is required." }, 400);
       const projectId = url.searchParams.get("project_id");
       if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
       const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
