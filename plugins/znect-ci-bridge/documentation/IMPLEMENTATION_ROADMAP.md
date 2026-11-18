@@ -1003,3 +1003,10 @@ For every meaningful feature or fix:
 - [ ] Execute the focused provenance tests and confirm the runtime adapter returns the expected API v3 outcome string.
 
 **Verification boundary:** the test fixture now models CircleCI's documented API v3 vocabulary. The test has not been executed.
+## 64. Keep CircleCI run links distinct from VCS commit links — 2026-11-18
+
+- [x] Stop mapping an embedded VCS commit URL into the shared CircleCI run URL field; only an explicit `web_url` supplied on the run resource may populate `CiRun.url` **(выполнено — adapter source correction)**.
+- [x] Extend the run adapter fixture with a GitHub commit URL while asserting the normalized CircleCI run result does not expose it as a run URL **(выполнено — test source added; execution pending)**.
+- [ ] Execute the CircleCI adapter tests and verify any explicit run `web_url` behavior against a real API v3 response.
+
+**Verification boundary:** this prevents a misleading link from being presented as a CircleCI run. No tests or pipeline were run.
