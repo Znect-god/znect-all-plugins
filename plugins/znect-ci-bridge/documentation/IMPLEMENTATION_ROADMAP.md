@@ -131,6 +131,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Protect the report with the existing Browser API Bearer authentication, rate limiter, GET-only guard, project/connection scope, secret redaction and response-size limit. **(выполнено — static source inspection)**
 - [x] Add focused API regression tests for report authentication, project scope and query bounds. **(выполнено — test source added; execution pending)**
 - [x] Add report regression coverage for successful aggregation, event-to-run correlation, provider-field secret redaction and graceful event-store failure. **(выполнено — test source added; execution pending)**
+- [ ] Design and verify a supported, free ChatGPT-to-Browser-API authentication mechanism; do not assume ChatGPT can attach `WEB_ACCESS_TOKEN` to arbitrary HTTP requests.
 - [ ] Verify ChatGPT can consume the report without MCP, GitHub Actions, paid intermediaries or manual secret sharing.
 - [ ] Verify freshness, pagination/truncation indicators and failure behavior; stale reports must not be presented as current.
 - [ ] Confirm operation stays within CircleCI and Cloudflare free/included quotas; quotas are finite.
@@ -164,9 +165,10 @@ The Bridge must remain read-only with respect to CI execution and project source
 - **Current state:** earlier webhook registration ping was accepted, but this is not proof of a real workflow delivery. Real end-to-end delivery remains pending.
 
 ### Gate D — private assistant report
-- [ ] Verify direct `/api/v1/report` retrieval by ChatGPT without MCP or a GitHub Actions artifact intermediary.
+- [ ] Establish the supported ChatGPT access mechanism for a private Bearer-authenticated Browser API (for example, a supported connector/auth flow or user-approved short-lived credential exchange); validate current product capability rather than assuming generic browser access can set authorization headers.
+- [ ] Verify direct `/api/v1/report` retrieval by ChatGPT without MCP, GitHub Actions, a public unauthenticated URL, query-string secrets or manual secret sharing.
 - [ ] Verify report freshness, pagination, truncation indicators and secret redaction against a live CircleCI project.
-- **Current state:** direct report endpoint source implementation exists; tests and live retrieval are not yet verified.
+- **Current state:** `/api/v1/report` and regression-test source exist; ChatGPT authentication compatibility, test execution and live retrieval remain unverified.
 
 ### Gate E — release readiness
 - [ ] Independent security review.
@@ -332,7 +334,8 @@ For every meaningful feature or fix:
 1. **CircleCI pipeline and project integration:** add a minimal CircleCI config for CI Bridge validation, pin Node/toolchain and commands, define safe workflow filters and free-tier constraints; document required CircleCI project setup. Do not enable paid add-ons or auto-refill.
 2. **ChatGPT private access path:** make the authenticated Browser API the primary interface, add a bounded assistant report endpoint/handoff if needed, and remove the GitHub Actions report-runner dependency. Keep MCP optional/legacy.
 3. **Architecture cleanup and hardening:** remove or clearly retire the CI Bridge Znect Build adapter/routes/registry instructions that are no longer part of this plugin's role; preserve CircleCI read-only boundaries, project ownership, webhook security, redaction and response limits.
-4. **Verification and handoff:** validate source and CircleCI pipeline results only after the pipeline is configured and explicitly authorized; distinguish source review, executed CircleCI checks, live CircleCI API verification and deployment. Update this roadmap at each stage and mark completed source work (выполнено).
+4. **Private ChatGPT access design:** inspect supported ChatGPT connector/authentication capabilities and choose a free, secure way to authorize the private Browser JSON API. Keep `WEB_ACCESS_TOKEN` out of URLs, chat, source and logs; do not disable authentication or expose an unauthenticated report route. If no supported direct-auth path exists, document the precise platform limitation and a safe user-approved alternative without presenting it as direct automatic access.
+5. **Verification and handoff:** validate source and CircleCI pipeline results only after the pipeline is configured and explicitly authorized; distinguish source review, executed CircleCI checks, live CircleCI API verification and deployment. Update this roadmap at each stage and mark completed source work (выполнено).
 
 
 ### Stage 2 progress — CircleCI pipeline source added (2026-11-18)
@@ -340,5 +343,15 @@ For every meaningful feature or fix:
 - Added the root `.circleci/config.yml` to the isolated CI Bridge engineering branch. It pins the CircleCI Node image to 24.11.0 and defines dependency installation, typecheck/unit tests, smoke-script syntax validation and Wrangler dry-run **(выполнено — source configuration)**.
 - The validation job uses a small resource class, requires no secrets, and has no deploy step or CircleCI API mutation capability **(выполнено — source configuration review)**.
 - Updated the README and ChatGPT channel guide to remove GitHub Actions as the active CI Bridge validation/report executor and document the free Browser API + private report handoff direction **(выполнено — documentation source update)**.
-- The new config has not yet been confirmed by a CircleCI run. The GitHub commit currently has no reported status checks; no typecheck, unit tests, smoke check, Wrangler dry-run or live CircleCI API request is claimed as passed.
+- The new config has not yet been confirmed by a CircleCI run. No typecheck, unit tests, smoke check, Wrangler dry-run or live CircleCI API request is claimed as passed.
 - Remaining in this stage: verify CircleCI project integration/branch checkout and the first pipeline result, then address any actual failure. Do not enable paid features or auto-refill.
+
+### Stage 3 — private ChatGPT Browser API access (2026-11-18)
+
+- `/api/v1/report` is implemented as a bounded, read-only aggregate endpoint protected by the existing Browser API Bearer authentication **(выполнено — source implementation; execution pending)**.
+- Regression-test source covers report query/auth guards, successful CircleCI + event aggregation, correlation, provider-field secret redaction and graceful event-store failure **(выполнено — test source added; execution pending)**.
+- The report endpoint and its authentication contract have received source-level inspection **(выполнено — static inspection only)**.
+- **Open design blocker:** the existence of a private HTTP endpoint does not establish that ChatGPT can call it with the required Bearer header. A supported ChatGPT authentication/connector mechanism has not yet been identified or verified.
+- Next: inspect current supported ChatGPT connector and authentication options; determine whether they can securely supply a stored credential or exchange a user-approved short-lived token for the Browser API. Prefer a free, direct route. Do not use MCP as a required channel, GitHub Actions as a report runner, paid intermediaries, public unauthenticated endpoints, URL query secrets or manual secret sharing.
+- Do not request or expose the existing `WEB_ACCESS_TOKEN`. Do not change authentication controls merely to make a generic browser request work.
+- No test execution, CircleCI pipeline, live Browser API request, connector authentication test, deployment or secret inspection has been performed for this stage.
