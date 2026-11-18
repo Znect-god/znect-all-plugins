@@ -20,9 +20,6 @@ internal object CircleCiConnectionValidator {
         require(response.optString("provider") == "circleci") {
             "The selected provider is not CircleCI."
         }
-        require(response.optString("permissions") == "read-only") {
-            "The connection does not confirm read-only permissions."
-        }
 
         val project = response.optJSONObject("project")
             ?: throw IllegalArgumentException("Project metadata is missing.")
@@ -40,32 +37,35 @@ internal object CircleCiConnectionValidator {
 
         val connected = response.opt("connected")
         require(connected is Boolean) { "Connection status is malformed." }
-        if (connected) {
-            require(response.optString("provider_availability") == "available") {
-                "CircleCI availability was not confirmed."
+        if (!connected) {
+            require(response.optString("provider_availability") == "unavailable") {
+                "Unavailable connection response is inconsistent."
             }
-            require(connection.optString("status") == "configured") {
-                "The CircleCI connection is not configured."
-            }
-            val probe = response.optJSONObject("read_probe")
-                ?: throw IllegalArgumentException("CircleCI read-probe result is missing.")
-            val runs = probe.opt("recent_runs_available")
-            require(runs is Int || runs is Long) {
-                "CircleCI read-probe result is malformed."
-            }
-            require((runs as Number).toLong() >= 0) {
-                "CircleCI read-probe result is invalid."
-            }
-            return CircleCiConnectionStatus(true, "CircleCI read-only connection is available.")
+            return CircleCiConnectionStatus(
+                false,
+                response.optString("error").takeIf { it.isNotBlank() }
+                    ?: "CircleCI read probe failed."
+            )
         }
 
-        require(response.optString("provider_availability") == "unavailable") {
-            "Unavailable connection response is inconsistent."
+        require(response.optString("permissions") == "read-only") {
+            "The connection does not confirm read-only permissions."
         }
-        return CircleCiConnectionStatus(
-            false,
-            response.optString("error").takeIf { it.isNotBlank() }
-                ?: "CircleCI read probe failed."
-        )
+        require(response.optString("provider_availability") == "available") {
+            "CircleCI availability was not confirmed."
+        }
+        require(connection.optString("status") == "configured") {
+            "The CircleCI connection is not configured."
+        }
+        val probe = response.optJSONObject("read_probe")
+            ?: throw IllegalArgumentException("CircleCI read-probe result is missing.")
+        val runs = probe.opt("recent_runs_available")
+        require(runs is Int || runs is Long) {
+            "CircleCI read-probe result is malformed."
+        }
+        require((runs as Number).toLong() >= 0) {
+            "CircleCI read-probe result is invalid."
+        }
+        return CircleCiConnectionStatus(true, "CircleCI read-only connection is available.")
     }
 }
