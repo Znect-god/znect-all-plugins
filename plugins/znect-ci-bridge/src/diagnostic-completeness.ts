@@ -11,7 +11,7 @@ export function testResultsStatus(input: {
 }
 
 export function reportArtifactsStatus(input: {
-  artifacts: Array<{ content?: string; error?: string }>;
+  artifacts: Array<{ content?: unknown; error?: unknown }>;
   incomplete: boolean;
 }): DiagnosticSourceStatus {
   if (input.artifacts.length === 0) return input.incomplete ? "unavailable" : "none_found";
@@ -40,7 +40,8 @@ export function buildDiagnosticsSummary(input: DiagnosticsSummaryInput) {
     input.jobsTruncated ||
     input.failedJobLimitReached ||
     input.logActionLimitReached ||
-    input.reportDataIncomplete;
+    input.reportDataIncomplete ||
+    input.reportArtifactLimitReached;
 
   return {
     workflows_total: input.workflowsTotal,
