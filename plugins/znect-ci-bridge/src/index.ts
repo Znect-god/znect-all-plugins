@@ -1157,6 +1157,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         completeness: {
           runs_limited: runs.length === runLimit,
           events_available: eventsAvailable,
+          events_limited: eventsAvailable && events.length === eventLimit,
           diagnostics_included: false,
           diagnostics_note: "Fetch the listed diagnostics endpoints for failed runs; each response is separately bounded and redacted."
         },
