@@ -547,6 +547,41 @@ describe("Worker HTTP boundary", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("reports an unavailable CircleCI read probe without leaking upstream error details", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: "123e4567-e89b-42d3-a456-426614174000", attributes: { slug: "gh/Znect-god/znect-forge" } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("private provider diagnostic circle-secret", { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request("https://bridge.example/api/v1/status?project_id=znect-forge", {
+        headers: { authorization: "Bearer web-test-token" }
+      }),
+      env,
+      ctx
+    );
+    const payload = await response.json() as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(payload).toMatchObject({
+      service: "znect-ci-bridge",
+      connected: false,
+      provider: "circleci",
+      provider_availability: "unavailable",
+      project: { id: "znect-forge" },
+      connection: { id: "forge-circleci", status: "configured" },
+      error: "Provider read probe failed; check provider credentials and connectivity."
+    });
+    expect(payload).not.toHaveProperty("permissions");
+    expect(payload).not.toHaveProperty("read_probe");
+    expect(JSON.stringify(payload)).not.toContain("private provider diagnostic");
+    expect(JSON.stringify(payload)).not.toContain("circle-secret");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.every((call) => call[1]?.method === "GET")).toBe(true);
+  });
+
   it("returns recent CircleCI runs through the authenticated API", async () => {
     const projectId = "123e4567-e89b-42d3-a456-426614174000";
     const runId = "123e4567-e89b-42d3-a456-426614174001";
