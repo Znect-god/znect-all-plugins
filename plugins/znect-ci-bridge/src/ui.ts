@@ -168,8 +168,11 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         if(version!==sessionVersion||requestId!==exportRequestId)return null;
         report.diagnostics=diagnostics;
         if(!report.completeness||typeof report.completeness!=="object")report.completeness={};
-        report.completeness.diagnostics_included=diagnostics.every(function(item){return !!item.report;});
-        report.completeness.diagnostics_returned=diagnostics.filter(function(item){return !!item.report;}).length;
+        var diagnosticsReturned=diagnostics.filter(function(item){return !!item.report;}).length;
+        var failedCount=Number(report.runs&&report.runs.failed_count||0);
+        report.completeness.diagnostics_included=diagnosticsReturned===diagnostics.length&&failedCount<=diagnostics.length;
+        report.completeness.diagnostics_returned=diagnosticsReturned;
+        report.completeness.diagnostics_limited=failedCount>diagnostics.length;
         var serialized=JSON.stringify(report,null,2);
         if(serialized.length>600000)throw new Error("The combined assistant report exceeds the 600 KB export limit.");
         var blob=new Blob([serialized],{type:"application/json"});
@@ -183,7 +186,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         link.click();
         link.remove();
         window.setTimeout(function(){URL.revokeObjectURL(objectUrl);},1000);
-        setMessage("Assistant report exported. Review the JSON before sharing it with ChatGPT.","good");
+        setMessage(report.completeness.diagnostics_included?"Assistant report exported. Review the JSON before sharing it with ChatGPT.":"Partial assistant report exported. Review missing or limited diagnostics before sharing it with ChatGPT.",report.completeness.diagnostics_included?"good":"error");
       });
     }).catch(function(error){
       if(version===sessionVersion&&requestId===exportRequestId)setMessage(error.message,"error");
