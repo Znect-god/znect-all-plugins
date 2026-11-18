@@ -142,18 +142,19 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [ ] Verify freshness, pagination/truncation indicators and failure behavior; stale reports must not be presented as current.
 - [ ] Confirm operation stays within CircleCI and Cloudflare free/included quotas; quotas are finite.
 
-### 3.10 Android private report exporter
+### 4.10 Android private report exporter
 
 - [x] Isolated native Android module under `android-exporter/` with HTTPS-only origin policy and fixed report endpoint **(выполнено — source implementation)**.
 - [x] Android Keystore AES-GCM credential storage and app-private preferences **(выполнено — source implementation)**.
 - [x] Bounded 100 KB report retrieval, redirect rejection, credential-field scan and explicit FileProvider/Sharesheet export **(выполнено — source implementation)**.
 - [x] Validate report identity, CircleCI provider, read-only permissions, ISO timestamp, project/connection metadata, bounded run/event arrays and completeness metadata **(выполнено — source implementation; not yet compiled)**.
 - [x] Eight origin-policy unit-test cases authored **(выполнено — test source only)**.
-- [ ] Add report-schema tests and local disconnect/key-deletion UX.
+- [x] Add a local disconnect action that removes the encrypted token, Android Keystore key entry and temporary report **(выполнено — source implementation; device verification pending)**.
+- [ ] Add focused report-schema unit tests.
 - [ ] Add device-auth/biometric confirmation and verify lifecycle/error handling.
 - [ ] Run Android Gradle tests/build only after explicit authorization; no APK or device verification is claimed.
 
-### 3.9 CircleCI validation pipeline
+### 4.9 CircleCI validation pipeline
 
 - [x] Root `.circleci/config.yml` defines the CI Bridge validation job: `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run. **(выполнено — source configuration)**
 - [x] Validation config does not deploy or mutate observed CircleCI project pipelines. **(выполнено — static source inspection)**
