@@ -12,6 +12,9 @@ import type {
 
 const API_ORIGIN = "https://api.github.com";
 const API_VERSION = "2022-11-28";
+const CENTRAL_REPOSITORY = "Znect-god/znect-build";
+const CENTRAL_WORKFLOW_PATH = ".github/workflows/central-build.yml";
+const CENTRAL_WORKFLOW_BRANCH = "main";
 const MAX_JSON_BYTES = 1_000_000;
 const MAX_PAGES = 5;
 const MAX_RUN_OWNERSHIP_PROBES = 20;
@@ -261,6 +264,14 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
     const run = mapRun(rawRun, scope.projectId);
     const title = runTitle(rawRun);
     const titlePrefix = `Znect Build / ${scope.projectId} /`;
+    const repository = isRecord(rawRun.repository) ? optionalText(rawRun.repository.full_name) : undefined;
+    if (
+      repository?.toLowerCase() !== CENTRAL_REPOSITORY.toLowerCase() ||
+      rawRun.path !== CENTRAL_WORKFLOW_PATH ||
+      rawRun.head_branch !== CENTRAL_WORKFLOW_BRANCH
+    ) {
+      throw new Error("Workflow run is not from the trusted central Build workflow on its protected default branch.");
+    }
     if (!title.startsWith(titlePrefix)) {
       throw new Error("Central Build run does not match the selected project.");
     }
