@@ -14,7 +14,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.FileProvider
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -410,6 +409,5 @@ class MainActivity : Activity() {
         private const val MAX_REPORT_BYTES = 100 * 1024
         private const val REPORT_TTL_MS = 30 * 60 * 1000L
         private val SAFE_ID = Regex("^[A-Za-z0-9._:-]{1,128}$")
-        private val SENSITIVE_KEY = Regex("(?i)(token|secret|authorization|password|api[_-]?key)")
     }
 }
