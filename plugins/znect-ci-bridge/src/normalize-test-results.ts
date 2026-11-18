@@ -11,6 +11,7 @@ export interface NormalizedTestCase {
 
 export interface NormalizedTestSummary {
   status: "available" | "partial" | "unavailable" | "empty";
+  sources: "jsonl_and_junit" | "jsonl_only" | "junit_only" | "none";
   total: number;
   passed: number;
   failed: number;
@@ -36,6 +37,7 @@ export interface JunitReportInput {
 export interface NormalizeJobTestResultsInput {
   jsonl?: string;
   jsonlTruncated?: boolean;
+  jsonlUnavailable?: boolean;
   junitArtifacts?: JunitReportInput[];
 }
 
@@ -152,6 +154,21 @@ function decodeXmlEntities(value: string): string {
   });
 }
 
+function findXmlTagEnd(source: string, start: number): number {
+  let quote: string | null = null;
+  for (let index = start; index < source.length; index++) {
+    const char = source[index];
+    if (quote) {
+      if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === ">") {
+      return index;
+    }
+  }
+  return -1;
+}
+
 function parseXmlAttributes(source: string): Record<string, string> {
   const attributes: Record<string, string> = {};
   let index = 0;
@@ -217,7 +234,7 @@ function parseJunitXml(content: string, execution?: number): ParsedTests {
       }
       if (content.startsWith("<!", index)) throw new Error("Unsupported XML declaration.");
 
-      const close = content.indexOf(">", index + 1);
+      const close = findXmlTagEnd(content, index + 1);
       if (close < 0) throw new Error("Unterminated XML tag.");
       const raw = content.slice(index + 1, close);
       index = close + 1;
@@ -341,7 +358,7 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
   const junitTests: NormalizedTestCase[] = [];
   let malformedJunitReports = 0;
   let junitChars = 0;
-  let incomplete = json.truncated || json.malformed > 0;
+  let incomplete = json.truncated || json.malformed > 0 || input.jsonlUnavailable === true;
 
   for (const report of junitReports) {
     if (report.error || typeof report.content !== "string") {
@@ -379,13 +396,17 @@ export function normalizeJobTestResults(input: NormalizeJobTestResultsInput): No
   if (reconciled.conflictingStatuses > 0 || reconciled.ambiguousDuplicateGroups > 0) incomplete = true;
 
   const total = reconciled.tests.length;
-  const hasSource = json.tests.length > 0 || junitTests.length > 0;
+  const hasJsonl = json.tests.length > 0;
+  const hasJunit = junitTests.length > 0;
+  const hasSource = hasJsonl || hasJunit;
   const status = !hasSource
     ? (incomplete ? "unavailable" : "empty")
     : (incomplete ? "partial" : "available");
+  const sources = hasJsonl && hasJunit ? "jsonl_and_junit" : hasJsonl ? "jsonl_only" : hasJunit ? "junit_only" : "none";
 
   return {
     status,
+    sources,
     total,
     ...counts,
     jsonl_records: json.tests.length,
