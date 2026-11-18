@@ -445,10 +445,14 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
         parsed.build_target !== "znect-ci-bridge/worker-validation" ||
         typeof parsed.build_profile !== "string" || !["debug", "release-candidate", "release"].includes(parsed.build_profile) ||
         parsed.recipe !== "node-cloudflare-worker-validation" ||
-        !["success", "failure"].includes(String(parsed.recipe_outcome)) ||
+        !["success", "failure", "cancelled"].includes(String(parsed.recipe_outcome)) ||
         !Array.isArray(parsed.validation_steps) ||
-        parsed.validation_steps.length > 16 ||
-        !parsed.validation_steps.every((step) => typeof step === "string" && step.length > 0 && step.length <= 300) ||
+        JSON.stringify(parsed.validation_steps) !== JSON.stringify([
+          "npm ci",
+          "npm run check",
+          "node --check scripts/preview-smoke-test.mjs",
+          "npx --no-install wrangler deploy --dry-run"
+        ]) ||
         parsed.deployment_performed !== false ||
         parsed.circleci_pipeline_mutation !== false ||
         !isRecord(parsed.central_run) ||
