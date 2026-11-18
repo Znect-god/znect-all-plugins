@@ -195,7 +195,10 @@ function mapArtifact(artifact: CircleCiArtifact, jobId: string): CiArtifact | un
     jobId,
     path,
     ...(typeof artifact.attributes?.size === "number" && Number.isFinite(artifact.attributes.size)
-      ? { size: artifact.attributes.size } : {})
+      ? { size: artifact.attributes.size } : {}),
+    ...(typeof artifact.attributes?.execution === "number" &&
+      Number.isInteger(artifact.attributes.execution) && artifact.attributes.execution >= 0
+      ? { execution: artifact.attributes.execution } : {})
   };
 }
 
@@ -308,10 +311,21 @@ export class CircleCiReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
       .filter((artifact): artifact is CiArtifact => artifact !== undefined);
   }
 
-  async getArtifact(scope: CiProjectScope, jobId: string, path: string, maxBytes: number): Promise<CiArtifactContent> {
+  async getArtifact(
+    scope: CiProjectScope,
+    jobId: string,
+    path: string,
+    maxBytes: number,
+    execution?: number
+  ): Promise<CiArtifactContent> {
     await this.getJob(scope, jobId);
-    const result = await getCircleCiJobArtifact(this.token, jobId, path, maxBytes);
-    return { path: result.path, content: result.text, truncated: result.truncated };
+    const result = await getCircleCiJobArtifact(this.token, jobId, path, maxBytes, execution);
+    return {
+      path: result.path,
+      content: result.text,
+      truncated: result.truncated,
+      ...(typeof result.execution === "number" ? { execution: result.execution } : {})
+    };
   }
 }
 
