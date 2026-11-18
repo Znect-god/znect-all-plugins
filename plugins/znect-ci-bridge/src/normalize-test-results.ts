@@ -215,7 +215,15 @@ function parseJunitXml(content: string, execution?: number): ParsedTests {
   try {
     while (index < content.length) {
       const open = content.indexOf("<", index);
-      if (open < 0) break;
+      if (open < 0) {
+        if (stack.length === 0 && content.slice(index).trim()) {
+          throw new Error("Non-whitespace content outside the XML root element.");
+        }
+        break;
+      }
+      if (stack.length === 0 && content.slice(index, open).trim()) {
+        throw new Error("Non-whitespace content outside the XML root element.");
+      }
       index = open;
       if (content.startsWith("<!--", index)) {
         const end = content.indexOf("-->", index + 4);
