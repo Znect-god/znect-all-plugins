@@ -376,8 +376,7 @@ class MainActivity : Activity() {
 
     private fun normalizeOrigin(raw: String): String? = OriginPolicy.normalize(raw)
 
-    private fun isValidBearerToken(value: String): Boolean =
-        value.length in 1..4096 && TOKEN_PATTERN.matches(value)
+    private fun isValidBearerToken(value: String): Boolean = BearerTokenPolicy.isValid(value)
 
     private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
 
@@ -411,7 +410,6 @@ class MainActivity : Activity() {
         private const val MAX_REPORT_BYTES = 100 * 1024
         private const val REPORT_TTL_MS = 30 * 60 * 1000L
         private val SAFE_ID = Regex("^[A-Za-z0-9._:-]{1,128}$")
-        private val TOKEN_PATTERN = Regex("^[A-Za-z0-9._~+/-]+=*$")
         private val SENSITIVE_KEY = Regex("(?i)(token|secret|authorization|password|api[_-]?key)")
     }
 }
