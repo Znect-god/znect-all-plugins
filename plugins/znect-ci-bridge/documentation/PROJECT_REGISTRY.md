@@ -38,18 +38,19 @@ The registry is non-secret routing metadata. Never place API tokens, webhook sig
       ]
     },
     {
-      "id": "znect-ai",
-      "name": "Znect AI",
+      "id": "znect-build",
+      "name": "Znect Build",
       "repositories": [
         {
-          "fullName": "Znect-god/znect-ai"
+          "fullName": "Znect-god/znect-build"
         }
       ],
       "components": [],
       "connections": [
         {
-          "id": "znect-build-main",
-          "provider": "znect-build"
+          "id": "circleci-main",
+          "provider": "circleci",
+          "projectSlug": "gh/Znect-god/znect-build"
         }
       ]
     }
@@ -63,7 +64,6 @@ The registry is non-secret routing metadata. Never place API tokens, webhook sig
 - A project may own multiple repositories and components.
 - A repository may be mapped to a component; multiple components may refer to the same repository for monorepo layouts.
 - CircleCI connections require a unique provider-native `projectSlug` (`gh/owner/repository`). The v1.1 and v3 read-only tools resolve the selected project's registered slug rather than using a global Forge constant.
-- `znect-build` is a reserved provider type for the planned native Build adapter. Registry support alone does not implement its API client, event signature, credentials, or diagnostics mapping.
 - Unknown providers, duplicate project IDs, duplicate CircleCI slugs, invalid component references, and malformed/oversized configuration are rejected. Component `pathPrefix` values must be relative slash-separated paths with non-empty ASCII `[A-Za-z0-9._-]` segments; absolute paths, empty segments, `.` / `..`, backslashes, percent-encoded separators/traversal, query and fragment characters are rejected.
 - If the variable is absent, an empty version-1 registry is loaded. No project or provider connection is injected implicitly.
 - A project may have an empty `connections[]` array; its CI configuration state is `not_configured`.
@@ -76,9 +76,9 @@ The registry drives CircleCI webhook allowlisting, project-isolated event inbox 
 
 Before returning run diagnostics, the Bridge verifies run membership by searching the selected project's documented `filter[project_id]` runs collection, bounded to 400 recent runs. Runs older than this verification window fail closed rather than being fetched by an unscoped UUID alone. Before returning job data, it verifies the detail resource's `references.project.id`; when a job is inspected as part of a run, it also verifies `references.workflow.id`. Missing or mismatched ownership metadata is rejected rather than guessed. This protects against callers supplying a valid UUID belonging to another registered project.
 
-The `znect-build` provider remains a reserved registry identifier only. Do not infer that a project has live Build connectivity merely because it appears in this registry.
+Znect Build is registered as a normal CircleCI project. Do not infer live connectivity merely because it appears in this registry.
 
 
-## Znect Build connection
+## Znect Build
 
-A project may register a connection with `provider: "znect-build"` and no CircleCI `projectSlug`. The Bridge currently requires exactly one `repositories[].fullName` entry for that project; it is compared against the central Build validation-artifact source-repository fingerprint. The server-side secret `ZNECT_BUILD_GITHUB_TOKEN` must have read-only Actions access to `Znect-god/znect-build`. The adapter uses GitHub Actions REST reads only. It does not dispatch workflows, rerun/cancel jobs, change settings, or deploy. Central validation artifact names must use the validated ownership format documented in [PROVIDER_ADAPTERS.md](PROVIDER_ADAPTERS.md).
+Register `Znect-god/znect-build` with a normal CircleCI connection and its exact CircleCI project slug. See [Znect Build CircleCI connection](ZNECT_BUILD_CONNECTION.md).
