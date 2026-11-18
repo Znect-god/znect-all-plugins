@@ -66,6 +66,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   var runsRequestId=0;
   var detailsRequestId=0;
   var eventsRequestId=0;
+  var exportRequestId=0;
   var tokenInput=document.getElementById("token");
   var projectSelect=document.getElementById("project");
   var connectionSelect=document.getElementById("connection");
@@ -103,7 +104,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   }
   function connect(){
     var version=++sessionVersion;
-    runsRequestId++;detailsRequestId++;eventsRequestId++;
+    runsRequestId++;detailsRequestId++;eventsRequestId++;exportRequestId++;
+    document.getElementById("export-report").disabled=false;
     token=tokenInput.value.trim();
     runsPanel.hidden=true;detailsPanel.hidden=true;eventsPanel.hidden=true;lastDetails=null;
     runsBox.replaceChildren();detailsBox.replaceChildren();eventsBox.replaceChildren();rawBox.textContent="";
@@ -145,11 +147,12 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   function exportAssistantReport(){
     if(!token||!currentProject||!currentConnection){setMessage("Connect to a registered CircleCI project first.","error");return;}
     var version=sessionVersion;
+    var requestId=++exportRequestId;
     var button=document.getElementById("export-report");
     button.disabled=true;
     setMessage("Building the bounded assistant report…");
     request("/api/v1/report?run_limit=10&event_limit=20&after=0&"+scopeQuery()).then(function(report){
-      if(version!==sessionVersion)return null;
+      if(version!==sessionVersion||requestId!==exportRequestId)return null;
       var links=report&&report.runs&&Array.isArray(report.runs.diagnostics)?report.runs.diagnostics.slice(0,3):[];
       return Promise.all(links.map(function(item){
         var runId=item&&item.run_id;
@@ -162,7 +165,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
           return {run_id:runId,error:error.message};
         });
       })).then(function(diagnostics){
-        if(version!==sessionVersion)return null;
+        if(version!==sessionVersion||requestId!==exportRequestId)return null;
         report.diagnostics=diagnostics;
         if(!report.completeness||typeof report.completeness!=="object")report.completeness={};
         report.completeness.diagnostics_included=diagnostics.every(function(item){return !!item.report;});
@@ -183,9 +186,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         setMessage("Assistant report exported. Review the JSON before sharing it with ChatGPT.","good");
       });
     }).catch(function(error){
-      if(version===sessionVersion)setMessage(error.message,"error");
+      if(version===sessionVersion&&requestId===exportRequestId)setMessage(error.message,"error");
     }).then(function(){
-      if(version===sessionVersion)button.disabled=false;
+      if(version===sessionVersion&&requestId===exportRequestId)button.disabled=false;
     });
   }
   function loadRuns(){
@@ -286,7 +289,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
   document.getElementById("export-report").addEventListener("click",exportAssistantReport);
   document.getElementById("refresh-events").addEventListener("click",loadEventCorrelations);
   function refreshSelectedScope(){
-    eventsRequestId++;
+    eventsRequestId++;exportRequestId++;
+    document.getElementById("export-report").disabled=false;
     detailsPanel.hidden=true;lastDetails=null;rawBox.textContent="";
     setMessage("Switching CI connection…");
     request("/api/v1/status?"+scopeQuery()).then(function(data){
@@ -312,7 +316,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
     refreshSelectedScope();
   });
   document.getElementById("disconnect").addEventListener("click",function(){
-    sessionVersion++;runsRequestId++;detailsRequestId++;eventsRequestId++;
+    sessionVersion++;runsRequestId++;detailsRequestId++;eventsRequestId++;exportRequestId++;
+    document.getElementById("export-report").disabled=false;
     token="";tokenInput.value="";runsPanel.hidden=true;detailsPanel.hidden=true;eventsPanel.hidden=true;lastDetails=null;
     runsBox.replaceChildren();detailsBox.replaceChildren();eventsBox.replaceChildren();rawBox.textContent="";
     setMessage("Token cleared from this tab.","");
