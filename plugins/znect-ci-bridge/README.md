@@ -5,7 +5,7 @@
 **Current CI diagnostics providers:** CircleCI Cloud and central Znect Build via GitHub Actions (read-only; Build adapter live verification pending). Projects and CI connections are explicitly registered; no project is injected as a default. All Znect project builds are centrally orchestrated by Znect Build, whose executor is GitHub Actions.  
 **Architecture:** one Bridge instance with a validated multi-project registry and provider-neutral read-only adapters for CircleCI and central Znect Build (GitHub Actions). The Znect Build adapter is source-implemented but not yet validated against a live central workflow.
 
-Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and inspecting provider runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. It exposes a Streamable HTTP MCP endpoint, a browser dashboard/JSON API, and a signed CircleCI webhook inbox.
+Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting CI events and inspecting CircleCI runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. The supported ChatGPT access path is the private on-demand GitHub Actions report handoff plus the authenticated Browser JSON API. MCP is not required and is not the assistant communication channel.
 
 > **Development notice:** Treat every feature as unverified unless this repository explicitly marks the exact check as passed. Unit tests, mocked API tests, Wrangler dry-runs and synthetic webhook tests do not prove full live integration. Do not use this prototype for production decisions or as the only CI monitoring channel.
 
@@ -39,7 +39,9 @@ The maintained [implementation roadmap](documentation/IMPLEMENTATION_ROADMAP.md)
 
 ## Capabilities
 
-### Read-only MCP tools
+### Optional legacy MCP surface (not the ChatGPT access channel)
+
+The MCP endpoint is not required for operation, is not used by the free ChatGPT handoff, and must not be treated as the product's integration channel. The supported ChatGPT path is described in `documentation/ASSISTANT_CHANNEL.md`.
 
 - Legacy CircleCI v1.1 compatibility API: `list_recent_builds`, `get_build_details`, `get_build_logs` (numeric build numbers; separate from v3 UUID run IDs).
 - Registry: `list_projects` — project registration, CI configuration, and connection catalog; provider availability remains `not_checked` until probed.
@@ -77,6 +79,10 @@ The inbox does **not** push unsolicited messages into an open ChatGPT conversati
 ## Project registry
 
 `ZNECT_PROJECT_REGISTRY` is optional non-secret JSON configuration. When absent, the Bridge loads an empty version-1 registry; it does not inject a Forge project. The schema supports projects without CI connections, multiple repositories, components, and provider connections (`circleci` and `znect-build`). See [PROJECT_REGISTRY.md](documentation/PROJECT_REGISTRY.md). A Znect Build connection requires exactly one registered source repository and the server-side `ZNECT_BUILD_GITHUB_TOKEN` secret with read-only Actions access to `Znect-god/znect-build`. The adapter verifies central run ownership using a validation artifact whose name includes the project ID, a SHA-256 fingerprint of the centrally validated source repository, the validated source commit SHA, and the run ID. The central workflow change that publishes this fingerprint is on the isolated Znect Build feature branch and is not merged or live-verified yet. Provider-neutral types live in `src/providers/contract.ts`; adapters live in `src/providers/circleci.ts` and `src/providers/znect-build.ts`. CircleCI supports per-job logs, test reports and artifacts. GitHub Actions currently exposes run-scoped artifact metadata; job logs are ZIP archives and generic test reports are not exposed by the API, so the adapter explicitly marks those capabilities unavailable rather than fabricating CircleCI-style data.
+
+## Free ChatGPT access (no MCP)
+
+The supported request/response path is a private command in the Forge inbox issue, a GitHub Actions workflow that calls the authenticated read-only CircleCI Browser API, and a short-lived private report artifact that ChatGPT reads through the existing GitHub integration. It uses included/free-tier quotas only; GitHub Actions and Cloudflare usage remain subject to their free-tier limits. No CircleCI build minutes are consumed by read-only API requests. See `documentation/ASSISTANT_CHANNEL.md`.
 
 ## Secrets and configuration
 
