@@ -247,3 +247,12 @@ For every meaningful feature or fix:
 - This proves the source/configuration handoff is merged, not that a report has run successfully. No fresh report artifact or live end-to-end handoff has been verified in this audit.
 - The workflow uses GitHub Actions included quota and Cloudflare Worker free-tier limits; it does not consume CircleCI build minutes. No paid MCP channel is required.
 - Existing MCP source is legacy/optional and is not part of the supported ChatGPT channel. Removal from runtime/dependencies remains a separate cleanup task after dependency and route analysis.
+
+
+## 11. CircleCI free-channel request-scope correction — 2026-11-18
+
+- Audited the merged Forge PR #9 and confirmed the owner-command workflow and report collector are present on Forge `main` **(выполнено)**.
+- Found a blocking integration mismatch: the merged workflow called `/api/v1/status`, `/runs`, `/events`, and `/diagnostics` without the required `project_id`; status validation also expected a `project.slug` field that the Browser API does not return.
+- Corrected the workflow on isolated Forge branch `fix/ci-bridge-free-circleci-report-params`: every CircleCI API request now supplies `project_id=znect-forge`; provider calls also select `connection_id=circleci-main`; status validation checks the actual response fields `project.id`, `connection.id`, and `provider` **(выполнено — source correction)**.
+- No Forge `main` update, PR creation, workflow execution, Preview deployment, or live CircleCI request was performed. The correction remains isolated and unvalidated by a workflow run.
+- Next: add/perform source-level workflow contract validation, review secret presence only, then obtain explicit approval before any report workflow run. Live report/artifact retrieval remains pending.
