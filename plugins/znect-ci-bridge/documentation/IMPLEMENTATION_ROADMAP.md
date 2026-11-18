@@ -153,7 +153,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Add a local disconnect action that removes the encrypted token, Android Keystore key entry and temporary report **(выполнено — source implementation; device verification pending)**.
 - [x] Extract report-schema validation from Activity code and add focused JVM unit-test source for valid reports, provider/permission/project rejection, malformed timestamps, run bounds/counts, event counts, completeness and recursive sensitive-key detection **(выполнено — test source added; execution pending)**.
 - [ ] Add device-auth/biometric confirmation and verify lifecycle/error handling.
-- [ ] Add a reproducible Gradle Wrapper distribution and verify its provenance before enabling the Android CircleCI job; no wrapper binary or checksum has been fabricated.
+- [x] Add Gradle 8.9 Wrapper scripts/JAR from the official `gradle/gradle` `v8.9.0` tag, pin the official distribution SHA-256 and verify the wrapper JAR checksum in CircleCI **(выполнено — source/configuration; execution pending)**.
 - [ ] Run Android Gradle tests/build only after explicit authorization; no APK or device verification is claimed.
 
 ### 4.9 CircleCI validation pipeline
@@ -162,7 +162,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Validation config does not deploy or mutate observed CircleCI project pipelines. **(выполнено — static source inspection)**
 - [ ] Run the CircleCI pipeline on the exact candidate branch/SHA. User authorization received; execution is blocked in this session because no authenticated CircleCI control/API connection is available. Do not substitute GitHub Actions or Cloudflare checks.
 - [ ] Review actual CircleCI job results, logs, tests and Wrangler dry-run output; do not infer success from config presence.
-- [ ] Add Android exporter validation to CircleCI. Current config validates only the Worker; Android module has no Gradle wrapper committed, so it is not yet buildable through the checked-in project wrapper.
+- [x] Add an Android CircleCI job for wrapper-JAR checksum verification, Android SDK 35 installation, JVM unit tests and debug APK assembly **(выполнено — pipeline configuration; run result pending)**.
 
 ## 5. Validation and release gates
 
