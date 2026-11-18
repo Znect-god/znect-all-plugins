@@ -4,7 +4,9 @@
 **Updated:** 2026-11-18 (normalized test summaries and assistant handoff contract)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
-**Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)  
+**Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)
+
+**Repository/branch clarification:** CI Bridge is one plugin in the shared `znect-all-plugins` repository, not a separate Android application. Its complete current implementation is on this feature branch; `main` does not yet contain `plugins/znect-ci-bridge/`. The Android exporter branch name is historical and must not be interpreted as a separate product or as evidence that only an Android exporter is present.  
 **Previous engineering base:** `test/ci-bridge-webhook-ingress-contract`  
 **Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
 
