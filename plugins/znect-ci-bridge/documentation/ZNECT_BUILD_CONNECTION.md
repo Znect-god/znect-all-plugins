@@ -38,15 +38,17 @@ All requests use `GET` and the Browser API Bearer token:
 - `/api/v1/build/status?project_id=znect-ci-bridge&connection_id=znect-build-main`
 - `/api/v1/build/runs?project_id=znect-ci-bridge&connection_id=znect-build-main&limit=10`
 - `/api/v1/build/runs/{run_id}?project_id=znect-ci-bridge&connection_id=znect-build-main`
+- `/api/v1/build/runs/{run_id}/validation-manifest?project_id=znect-ci-bridge&connection_id=znect-build-main`
 
 The central run must be from `Znect-god/znect-build`, workflow `.github/workflows/central-build.yml`, on `main`, and have the expected project run-name prefix. Before exposing it, the adapter verifies an unexpired central request-validation artifact whose name binds the registered project ID, SHA-256 of the registered source repository, exact 40-character source SHA, and central run ID.
 
-The run-details response exposes the verified source SHA, request-fingerprint artifact metadata, validation-manifest artifact metadata, workflow jobs and step outcomes. The manifest itself remains a private GitHub Actions artifact; this Browser API iteration returns metadata only and does not download or unpack ZIP archives. Job logs and structured test reports remain explicitly unavailable until bounded archive extraction/report ingestion is implemented.
+The run-details response exposes the verified source SHA, request-fingerprint artifact metadata, validation-manifest artifact metadata, workflow jobs and step outcomes. The dedicated manifest endpoint downloads only the exact run-scoped validation ZIP after ownership verification, follows one approved HTTPS Azure Blob redirect without forwarding the GitHub token, enforces compressed/decompressed size ceilings, checks ZIP CRC, and extracts only `ci-bridge-validation-manifest.json`. It validates project, registered source repository, exact source SHA, central run identity, recipe outcome and the explicit no-deploy/no-CircleCI-mutation flags. Other archive entries are never returned. Job logs and structured test reports remain unavailable.
 
 ## Safety and current gate
 
 - Central registry target `znect-ci-bridge/worker-validation` remains `execution_enabled: false`.
-- The adapter only issues authenticated GitHub API GET requests.
+- The adapter only issues authenticated GitHub API GET requests; the signed artifact-storage GET carries no GitHub Authorization header.
+- ZIP parsing rejects encrypted, Zip64/oversized, duplicate, malformed or path-mismatched manifest entries; decompressed output is capped at 64 KiB.
 - No workflow dispatch, build, retry, cancellation, artifact deletion, deployment, or CircleCI mutation is exposed.
 - The central validation recipe must be merged to Znect Build `main` through the approved process before the adapter can verify new runs against it.
 - A configured token or registry entry does not prove live connectivity. Keep provider availability unverified until a separately authorized read-only probe succeeds.
