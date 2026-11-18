@@ -344,7 +344,7 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
     const artifacts = await this.listArtifactsRaw(runId);
     const expectedName = `znect-ci-bridge-validation-${runId}`;
     const artifact = artifacts.find((item) => item.name === expectedName);
-    if (!artifact || artifact.expired === true) {
+    if (!artifact || artifact.expired !== false) {
       throw new Error("The central validation manifest artifact is missing or expired.");
     }
     const artifactId = String(positiveInteger(artifact.id, "validation artifact ID"));
@@ -440,13 +440,15 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
         typeof parsed.source_repository !== "string" ||
         parsed.source_repository.toLowerCase() !== this.expectedSourceRepository.toLowerCase() ||
         parsed.source_sha !== run.commitSha ||
-        typeof parsed.source_ref !== "string" ||
-        typeof parsed.build_target !== "string" ||
+        typeof parsed.source_ref !== "string" || parsed.source_ref.length > 255 ||
+        parsed.source_sha !== run.commitSha || !/^[0-9a-f]{40}$/.test(String(parsed.source_sha)) ||
+        parsed.build_target !== "znect-ci-bridge/worker-validation" ||
         typeof parsed.build_profile !== "string" ||
         parsed.recipe !== "node-cloudflare-worker-validation" ||
         !["success", "failure"].includes(String(parsed.recipe_outcome)) ||
         !Array.isArray(parsed.validation_steps) ||
-        !parsed.validation_steps.every((step) => typeof step === "string" && step.length <= 300) ||
+        parsed.validation_steps.length > 16 ||
+        !parsed.validation_steps.every((step) => typeof step === "string" && step.length > 0 && step.length <= 300) ||
         parsed.deployment_performed !== false ||
         parsed.circleci_pipeline_mutation !== false ||
         !isRecord(parsed.central_run) ||
