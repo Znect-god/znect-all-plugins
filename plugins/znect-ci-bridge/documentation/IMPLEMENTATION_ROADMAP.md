@@ -665,3 +665,17 @@ For every meaningful feature or fix:
 - [ ] Verify the real CircleCI-backed status/report path and manual Sharesheet handoff on a physical Android device. The app's check still does not prove that a separate ChatGPT conversation is authenticated.
 
 **Verification boundary:** this section records static source review only. It does not establish passing tests, a CircleCI run, an assembled APK, device verification, automatic ChatGPT authentication or deployment.
+
+
+## 36. Enforce temporary report expiry at share time — 2026-11-18
+
+- [x] Confirmed a lifecycle gap: the 30-minute cache cleanup previously ran only when the Activity was created, so a report could remain shareable beyond its intended TTL if the app stayed open **(выполнено — concrete source finding)**.
+- [x] Add a dedicated report-expiry policy with explicit TTL boundary handling **(выполнено — source implementation)**.
+- [x] Enforce expiry immediately before opening Android Sharesheet; expired reports are not shared, are deleted when possible, and the UI requires a fresh fetch **(выполнено — source fix)**.
+- [x] Reuse the same expiry policy during startup cache cleanup **(выполнено — source refactor)**.
+- [x] Add five JVM regression cases for fresh, exact-boundary, stale, future-dated and invalid-TTL inputs **(выполнено — tests authored; execution pending)**.
+- [x] Update Android documentation to describe the expiry behavior and 45 authored JVM test cases **(выполнено — documentation updated)**.
+- [ ] Execute all 45 Android JVM tests and assemble the debug APK through CircleCI; no test result or APK is claimed.
+- [ ] Verify expiry and manual Sharesheet behavior on a physical Android device.
+
+**Verification boundary:** source and tests are committed, but the five new tests have not been executed. The CircleCI run, APK assembly and physical-device behavior remain unverified.
