@@ -9,7 +9,7 @@ Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and in
 
 > **Development notice:** Treat every feature as unverified unless this repository explicitly marks the exact check as passed. Unit tests, mocked API tests, Wrangler dry-runs and synthetic webhook tests do not prove full live integration. Do not use this prototype for production decisions or as the only CI monitoring channel.
 
-## Current state — 2026-11-17
+## Current state — 2026-11-18
 
 - Historical integration branch: `feature/ci-bridge-test-reports`. Current isolated engineering branch: `test/ci-bridge-webhook-ingress-contract` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins).
 - PR #5 was merged into this feature branch; it was not merged into `main`. PR #2, #4 and #6 remain separate draft workstreams and must not be merged without approval.
@@ -27,13 +27,15 @@ Znect CI Bridge is a read-only Cloudflare Worker for collecting CI events and in
 
 See [the launch and verification guide](documentation/USAGE_GUIDE.md) for the chronological action log, credential ledger, exact launch steps and remaining checks. The [provider adapter architecture](documentation/PROVIDER_ADAPTERS.md) describes the implemented CircleCI adapter and remaining migration. The proposed [Znect Build API contract](documentation/ZNECT_BUILD_API_CONTRACT.md) defines the future read-only integration boundary; it is a proposal, not an existing endpoint specification. The intended free ChatGPT access path is documented in [ASSISTANT_CHANNEL.md](documentation/ASSISTANT_CHANNEL.md).
 
-## Isolated development — 2026-11-17
+## Isolated development — 2026-11-18
 
 The branch [`test/ci-bridge-webhook-ingress-contract`](https://github.com/Znect-god/znect-all-plugins/tree/test/ci-bridge-webhook-ingress-contract) contains expanded signed-webhook regression coverage, bounded HMAC signature parsing, conservative webhook-to-run correlation through MCP and the authenticated Browser API, and a dashboard event panel. Correlation candidates require an exact commit SHA, no conflicting branch, and proximity to the run execution interval; a CircleCI pipeline ID is never assumed to be a v3 run UUID. This is isolated work based on `c72a67e33177985a57f4d9d6180e4e8d8a970edb`, not a merge or release. The current branch head has not been typechecked or tested, deployed, or verified with a real CircleCI delivery.
 
+The 2026-11-18 source review aligned API v3 project resolution with both explicitly registered CircleCI GitHub slug forms (`gh/` and `github/`) and tightened workflow-link validation to the default HTTPS port. Regression tests were added but have not been executed on the current head. The active branch remains isolated and undeployed.
+
 ## Living implementation roadmap
 
-The maintained [implementation roadmap](documentation/IMPLEMENTATION_ROADMAP.md) tracks what is already implemented and what remains. Implemented source items are marked **(разработано)**; validation, real-provider verification, deployment and release gates are tracked separately. Update the roadmap whenever implementation changes.
+The maintained [implementation roadmap](documentation/IMPLEMENTATION_ROADMAP.md) tracks what is already implemented and what remains. Completed source items are marked **(выполнено)**; validation, real-provider verification, deployment and release gates are tracked separately. Update the roadmap whenever implementation changes.
 
 ## Capabilities
 
