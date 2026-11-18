@@ -5,7 +5,7 @@
 **Source repository:** `Znect-god/znect-all-plugins`  
 **Active branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android exporter source has been removed).
 
-**Repository/branch clarification:** This is the same Znect CI Bridge plugin intended for the shared `znect-all-plugins` repository, not a separate Android application. The complete plugin source currently lives on this feature branch; `main` does not yet contain `plugins/znect-ci-bridge/`. The branch name is historical and does not describe the current implementation.
+**Repository/branch clarification:** This is the same Znect CI Bridge plugin intended for the shared `znect-all-plugins` repository, not a separate Android application. The complete current plugin source lives on this feature branch. `main` contains an earlier prototype registration (`plugin.json` and README), but not the current runnable project (`package.json`, `src/`, tests, and scripts). The branch name is historical and does not describe the current implementation.
 
 Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for inspecting registered CircleCI projects and collecting signed CI events. The existing CircleCI API v3 adapter, bounded diagnostics, webhook inbox, private Browser JSON API, dashboard and assistant-report export are retained and developed incrementally; this is not a rewrite.
 
