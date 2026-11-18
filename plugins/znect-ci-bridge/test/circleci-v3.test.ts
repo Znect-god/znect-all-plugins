@@ -473,12 +473,12 @@ describe("CircleCI API v3 client", () => {
   it("lists artifact metadata without altering or exposing the API response shape", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       data: [
-        { id: "artifact-1", attributes: { path: "test-results/junit.xml", url: "https://example.s3.amazonaws.com/file", size: 512, node_index: 0 } }
+        { id: "artifact-1", attributes: { path: "test-results/junit.xml", url: "https://example.s3.amazonaws.com/file", size: 512, node_index: 0, execution: 1 } }
       ]
     }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(listCircleCiJobArtifacts("token", JOB_ID)).resolves.toMatchObject([
-      { id: "artifact-1", attributes: { path: "test-results/junit.xml", size: 512, node_index: 0 } }
+      { id: "artifact-1", attributes: { path: "test-results/junit.xml", size: 512, node_index: 0, execution: 1 } }
     ]);
     expect(fetchMock.mock.calls[0][0]).toBe("https://circleci.com/api/v3/jobs/" + JOB_ID + "/artifacts");
   });
@@ -505,6 +505,38 @@ describe("CircleCI API v3 client", () => {
       .resolves.toEqual({ path: "test-results/junit.xml", text: "<testsuite failures=\"1\"/>", truncated: false });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "GET", redirect: "manual" });
+  });
+
+  it("selects a same-path artifact by its parallel execution index", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [
+          { id: "artifact-0", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/zero.xml", execution: 0 } },
+          { id: "artifact-1", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/one.xml", execution: 1 } }
+        ]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("<testsuite name=\"worker-one\"/>", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "reports/junit.xml", 256, 1))
+      .resolves.toEqual({
+        path: "reports/junit.xml",
+        execution: 1,
+        text: "<testsuite name=\"worker-one\"/>",
+        truncated: false
+      });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe("https://s3.amazonaws.com/bucket/one.xml");
+  });
+
+  it("refuses an ambiguous same-path artifact when no execution is specified", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        { id: "artifact-0", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/zero.xml", execution: 0 } },
+        { id: "artifact-1", attributes: { path: "reports/junit.xml", url: "https://s3.amazonaws.com/bucket/one.xml", execution: 1 } }
+      ]
+    }), { status: 200 })));
+    await expect(getCircleCiJobArtifact("token", JOB_ID, "reports/junit.xml"))
+      .rejects.toThrow("specify its parallel execution index");
   });
 
   it("rejects path traversal and artifact URLs outside the allowlist", async () => {
