@@ -109,19 +109,14 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
     throw new Error("CircleCI API v3 returned malformed job parallel-execution data.");
   }
   const result: CiJobStep[] = [];
-  // API v3 returns parallel executions as an ordered array; the array position
-  // is the execution number. Each entry contains step records directly (not
-  // nested action arrays).
+  // CircleCI API v3 encodes parallel_executions as an array of step arrays
+  // ([][]JobStep). The outer array position is the zero-based execution index.
   for (let executionIndex = 0; executionIndex < executions.length; executionIndex++) {
     const execution = executions[executionIndex];
-    if (execution === null || typeof execution !== "object" || Array.isArray(execution)) {
+    if (!Array.isArray(execution)) {
       throw new Error("CircleCI API v3 returned malformed job parallel-execution data.");
     }
-    const executionRecord = execution as Record<string, unknown>;
-    if (!Array.isArray(executionRecord.steps)) {
-      throw new Error("CircleCI API v3 returned malformed job step data.");
-    }
-    for (const step of executionRecord.steps) {
+    for (const step of execution) {
       if (step === null || typeof step !== "object" || Array.isArray(step)) {
         throw new Error("CircleCI API v3 returned malformed job step data.");
       }
@@ -133,7 +128,7 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
         stepRecord.num < 0 ||
         typeof stepRecord.phase !== "string" ||
         typeof stepRecord.type !== "string" ||
-        typeof stepRecord.is_insignificant !== "boolean" ||
+        (stepRecord.is_insignificant !== undefined && typeof stepRecord.is_insignificant !== "boolean") ||
         (stepRecord.outcome !== undefined && stepRecord.outcome !== null && typeof stepRecord.outcome !== "string") ||
         (stepRecord.exit_code !== undefined && stepRecord.exit_code !== null &&
           (typeof stepRecord.exit_code !== "number" || !Number.isInteger(stepRecord.exit_code)))
@@ -152,7 +147,8 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
           ...(outcome ? { outcome } : {}),
           ...(typeof stepRecord.exit_code === "number" ? { exitCode: stepRecord.exit_code } : {}),
           stepNumber: stepRecord.num,
-          isInsignificant: stepRecord.is_insignificant
+          ...(typeof stepRecord.is_insignificant === "boolean"
+            ? { isInsignificant: stepRecord.is_insignificant } : {})
         }]
       });
     }
