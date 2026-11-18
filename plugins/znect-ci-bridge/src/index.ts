@@ -7,6 +7,7 @@ import { describeProjectStatus, findCircleCiProject, findProject, loadProjectReg
 export { BuildEventStore };
 import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
+import { createZnectBuildReadOnlyAdapter } from "./providers/znect-build";
 import { correlateEventsWithRuns } from "./correlation";
 import {
   allowedArtifactUrl,
@@ -23,6 +24,7 @@ interface Env {
   MCP_ACCESS_TOKEN: string;
   WEB_ACCESS_TOKEN: string;
   CIRCLECI_WEBHOOK_SECRET: string;
+  ZNECT_BUILD_GITHUB_TOKEN?: string;
   ZNECT_PROJECT_REGISTRY?: string;
   EVENT_STORE: DurableObjectNamespace;
   MCP_RATE_LIMITER: {
@@ -48,6 +50,26 @@ function getCircleCiAdapter(env: Env, projectId: string, connectionId?: string) 
     connection,
     scope: { projectId: project.id, connectionId: connection.id },
     adapter: createCircleCiReadOnlyAdapter(env.CIRCLECI_TOKEN, connection.projectSlug!, project.id, connection.id)
+  };
+}
+
+function getZnectBuildAdapter(env: Env, projectId: string, connectionId?: string) {
+  const project = findProject(getProjectRegistry(env), projectId);
+  if (!project) throw new Error(`Unknown Znect project: ${projectId}.`);
+  const connection = selectProjectConnection(project, "znect-build", connectionId);
+  if (project.repositories.length !== 1) {
+    throw new Error("Znect Build connection requires exactly one registered source repository for ownership verification.");
+  }
+  return {
+    project,
+    connection,
+    scope: { projectId: project.id, connectionId: connection.id },
+    adapter: createZnectBuildReadOnlyAdapter(
+      env.ZNECT_BUILD_GITHUB_TOKEN ?? "",
+      project.id,
+      connection.id,
+      project.repositories[0].fullName
+    )
   };
 }
 
@@ -914,6 +936,110 @@ function createServer(env: Env) {
         }
       };
       return { content: [{ type: "text", text: redactedBoundedJson(payload, env, 100_000) }] };
+    }
+  );
+
+
+  server.registerTool(
+    "check_znect_build_connection",
+    {
+      description: "Verify read-only access to the central Znect Build GitHub Actions repository for one registered Znect project. Does not trigger workflows or change builds.",
+      annotations: { readOnlyHint: true },
+      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional() }
+    },
+    async ({ project_id, connection_id }) => {
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
+      try {
+        const runs = await adapter.listRuns(scope, 1);
+        return { content: [{ type: "text", text: redactedBoundedJson({
+          connected: true,
+          provider: adapter.provider,
+          project: { id: project.id, name: project.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "available",
+          permissions: "read-only",
+          read_probe: { verified_runs_available: runs.length }
+        }, env, 20_000) }] };
+      } catch {
+        return { content: [{ type: "text", text: redactedBoundedJson({
+          connected: false,
+          provider: adapter.provider,
+          project: { id: project.id, name: project.name, status: "registered" },
+          connection: { id: connection.id, status: "configured" },
+          provider_availability: "unavailable",
+          error: "Central Build read probe failed; check the repository-scoped read token and connection configuration."
+        }, env, 20_000) }] };
+      }
+    }
+  );
+
+  server.registerTool(
+    "list_build_runs",
+    {
+      description: "List verified central Znect Build workflow runs for one registered project. Ownership requires the central project/source fingerprint artifact; unverified runs are omitted. Read-only; limit 1–30.",
+      annotations: { readOnlyHint: true },
+      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), limit: z.number().int().min(1).max(30).default(10) }
+    },
+    async ({ project_id, connection_id, limit }) => {
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
+      const runs = await adapter.listRuns(scope, limit);
+      return { content: [{ type: "text", text: redactedBoundedJson({
+        project: { id: project.id, name: project.name, provider: "znect-build" },
+        connection: { id: connection.id },
+        runs
+      }, env, 100_000) }] };
+    }
+  );
+
+  server.registerTool(
+    "get_build_run_details",
+    {
+      description: "Read one verified central Znect Build workflow run, its jobs and run-scoped artifact metadata. Does not retrieve or execute project builds.",
+      annotations: { readOnlyHint: true },
+      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().regex(/^\\d{1,16}$/) }
+    },
+    async ({ project_id, connection_id, run_id }) => {
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
+      const run = await adapter.getRun(scope, run_id);
+      const workflows = await adapter.listWorkflows(scope, run_id);
+      const workflowReports = [];
+      for (const workflow of workflows.slice(0, 5)) {
+        const jobs = await adapter.listJobs(scope, run_id, workflow.id);
+        workflowReports.push({ workflow, jobs: jobs.slice(0, 40), jobs_truncated: jobs.length > 40 });
+      }
+      const artifacts = adapter.listRunArtifacts ? await adapter.listRunArtifacts(scope, run_id) : [];
+      return { content: [{ type: "text", text: redactedBoundedJson({
+        project: { id: project.id, name: project.name, provider: "znect-build" },
+        connection: { id: connection.id },
+        run,
+        workflows: workflowReports,
+        artifacts: { scope: "workflow_run", items: artifacts },
+        capabilities: {
+          job_logs: "unavailable_zip_archive",
+          test_reports: "not_exposed_by_generic_github_actions_api",
+          artifact_content: "zip_archive_not_extracted"
+        }
+      }, env, 120_000) }] };
+    }
+  );
+
+  server.registerTool(
+    "list_build_run_artifacts",
+    {
+      description: "List verified central Znect Build workflow-run artifact metadata. Artifacts are run-scoped, not job-scoped; download URLs are not exposed. Read-only.",
+      annotations: { readOnlyHint: true },
+      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().regex(/^\\d{1,16}$/) }
+    },
+    async ({ project_id, connection_id, run_id }) => {
+      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
+      if (!adapter.listRunArtifacts) throw new Error("This provider does not expose run-scoped artifacts.");
+      const artifacts = await adapter.listRunArtifacts(scope, run_id);
+      return { content: [{ type: "text", text: redactedBoundedJson({
+        project: { id: project.id, name: project.name, provider: "znect-build" },
+        run_id,
+        artifact_scope: "workflow_run",
+        artifacts
+      }, env, 60_000) }] };
     }
   );
 
