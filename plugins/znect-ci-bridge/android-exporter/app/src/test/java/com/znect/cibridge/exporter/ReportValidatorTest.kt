@@ -58,7 +58,8 @@ class ReportValidatorTest {
     }
 
     @Test fun rejectsMissingCompletenessMetadata() {
-        val report = validReport().remove("completeness")
+        val report = validReport()
+        report.remove("completeness")
         assertThrows(IllegalArgumentException::class.java) {
             ReportValidator.validate(report, "project-1")
         }
