@@ -278,7 +278,35 @@ describe("CircleCI read-only provider adapter", () => {
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
-  it("rejects negative or non-integer artifact sizes instead of treating them as valid byte metadata", async () => {
+  it.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1, "512"])(
+    "rejects invalid artifact size metadata (%s)",
+    async (size) => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(projectResponse())
+        .mockResolvedValueOnce(response({
+          data: {
+            id: JOB_ID,
+            references: { project: { id: PROJECT_ID }, workflow: { id: WORKFLOW_ID } },
+            attributes: { name: "unit-tests", phase: "completed", outcome: "success" }
+          }
+        }))
+        .mockResolvedValueOnce(response({
+          data: [{ id: "artifact-invalid-size", attributes: {
+            path: "test-results/junit.xml",
+            url: "https://s3.amazonaws.com/bucket/report.xml",
+            size
+          } }]
+        }));
+      vi.stubGlobal("fetch", fetchMock);
+      const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+
+      await expect(adapter.listArtifacts(scope, JOB_ID))
+        .rejects.toThrow("invalid artifact size");
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    }
+  );
+
+  it("preserves zero and positive integer artifact sizes", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(projectResponse())
       .mockResolvedValueOnce(response({
@@ -289,18 +317,18 @@ describe("CircleCI read-only provider adapter", () => {
         }
       }))
       .mockResolvedValueOnce(response({
-        data: [{ id: "artifact-invalid-size", attributes: {
-          path: "test-results/junit.xml",
-          url: "https://s3.amazonaws.com/bucket/report.xml",
-          size: -1
-        } }]
+        data: [
+          { id: "empty", attributes: { path: "junit/empty.xml", size: 0 } },
+          { id: "report", attributes: { path: "junit/report.xml", size: 512 } }
+        ]
       }));
     vi.stubGlobal("fetch", fetchMock);
     const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
 
-    await expect(adapter.listArtifacts(scope, JOB_ID))
-      .rejects.toThrow("invalid artifact size");
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await expect(adapter.listArtifacts(scope, JOB_ID)).resolves.toMatchObject([
+      { path: "junit/empty.xml", size: 0 },
+      { path: "junit/report.xml", size: 512 }
+    ]);
   });
 
   it("rejects malformed API v3 step records instead of dropping diagnostics", async () => {
