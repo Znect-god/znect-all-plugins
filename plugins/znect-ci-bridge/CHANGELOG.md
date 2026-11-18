@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Documented the verified ChatGPT Free/no-MCP platform boundary: the authenticated dashboard JSON attachment remains the supported free handoff; automatic private Browser API calls are not established for a personal Free account. No authentication weakening or public endpoint was introduced.
+- Updated the roadmap and assistant-channel/free-access docs; automatic connector work is explicitly platform-blocked pending an official compatible path and end-to-end verification.
+
 - Hardened bounded JUnit collection so provider responses must match the listed artifact path and, when known, the exact CircleCI parallel execution index. Mismatched content is discarded and reported as incomplete.
 - Added regression-test source for wrong-path and wrong-execution provider responses. Tests and typecheck remain unexecuted; no CircleCI pipeline, API request, Preview deployment or runtime configuration change was performed.
 
