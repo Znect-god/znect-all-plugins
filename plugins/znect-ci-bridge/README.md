@@ -14,7 +14,7 @@ Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting
 - Historical integration branch: `feature/ci-bridge-test-reports`. Current isolated engineering branch: `test/ci-bridge-webhook-ingress-contract` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins).
 - PR #5 was merged into this feature branch; it was not merged into `main`. PR #2, #4 and #6 remain separate draft workstreams and must not be merged without approval.
 - Isolated Cloudflare Preview: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`.
-- MCP endpoint: append `/mcp`. CircleCI webhook endpoint: append `/webhooks/circleci`.
+- Legacy MCP route: `/mcp` remains in the experimental source but is not the supported ChatGPT channel and is not required. CircleCI webhook endpoint: append `/webhooks/circleci`.
 - GitHub Actions Preview run [#43581014497](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581014497) passed on commit `aae93a027626c978a049dd95f7e2254e97f78c7e`: typecheck, all 103 tests, isolated Preview deployment, Preview webhook-secret installation, authenticated browser API, live diagnostics endpoint, event inbox and MCP read-only smoke checks.
 - On 2026-11-12, after replacing a CircleCI API token that v3 rejected, live `list_recent_runs` returned three Forge runs and `get_job_details` returned the real `build-0-7-0` job (115 tests, 2 failed). This is verified live API read coverage.
 - The later Preview smoke test verified authenticated MCP discovery/read-only connection and browser API access, plus a **synthetic** signed webhook path, deduplication, durable storage and retrieval. Synthetic delivery is not a real CircleCI workflow delivery.
