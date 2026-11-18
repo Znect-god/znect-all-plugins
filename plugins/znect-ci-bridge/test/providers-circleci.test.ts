@@ -57,6 +57,28 @@ describe("CircleCI read-only provider adapter", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("does not trust an undocumented top-level VCS revision alias", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(projectResponse())
+      .mockResolvedValueOnce(response({
+        data: [{
+          id: RUN_ID,
+          references: { project: { id: PROJECT_ID } },
+          attributes: {
+            phase: "ended",
+            current_outcome: "succeeded",
+            vcs_revision: "unverified-alias"
+          }
+        }],
+        page: { next: null }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
+    const runs = await adapter.listRuns(scope, 1);
+    expect(runs[0]).not.toHaveProperty("commitSha");
+  });
+
   it("rejects a scope using a different registered connection before network access", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
