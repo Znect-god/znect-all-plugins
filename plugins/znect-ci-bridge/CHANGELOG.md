@@ -416,3 +416,11 @@
 - Cross-checked central workflow ownership and the manifest schema against the central Build recipe.
 - Tightened manifest checks to the exact target/profile/recipe/validation command list and supported outcomes.
 - Confirmed central execution remains disabled. No typecheck, tests, workflow run, live API request or artifact download was performed.
+
+
+## 2026-11-18 — Diagnostics parallel-execution type alignment
+
+- Corrected the MCP diagnostics JUnit artifact result type to carry the optional CircleCI parallel execution index already supplied by the provider adapter.
+- Audited failed-step log retrieval and confirmed stdout/stderr requests preserve the execution index; job-level structured test results remain unpartitioned by execution.
+- Confirmed the current one-report-per-job diagnostics cap marks multiple eligible JUnit artifacts as incomplete rather than implying full coverage. Aggregating multiple per-execution reports remains future work.
+- Static source review only; TypeScript, tests, live CircleCI requests and pipeline execution were not performed.
