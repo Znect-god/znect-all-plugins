@@ -1,3 +1,4 @@
+import { extractValidationManifest } from "./zip-manifest";
 import type {
   CiArtifact,
   CiJob,
@@ -16,6 +17,8 @@ const CENTRAL_REPOSITORY = "Znect-god/znect-build";
 const CENTRAL_WORKFLOW_PATH = ".github/workflows/central-build.yml";
 const CENTRAL_WORKFLOW_BRANCH = "main";
 const MAX_JSON_BYTES = 1_000_000;
+const MAX_ARTIFACT_BYTES = 2_000_000;
+const MAX_MANIFEST_BYTES = 65_536;
 const MAX_PAGES = 5;
 const MAX_RUN_PROBES = 20;
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -334,6 +337,146 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
   async getArtifact(scope: CiProjectScope, jobId: string, _path: string, _maxBytes: number) {
     await this.getJob(scope, jobId);
     throw new Error("ZIP artifact content extraction is not supported by this adapter.");
+  }
+
+  async getValidationManifest(scope: CiProjectScope, runId: string): Promise<Record<string, unknown>> {
+    const run = await this.getRun(scope, runId);
+    const artifacts = await this.listArtifactsRaw(runId);
+    const expectedName = `znect-ci-bridge-validation-${runId}`;
+    const artifact = artifacts.find((item) => item.name === expectedName);
+    if (!artifact || artifact.expired === true) {
+      throw new Error("The central validation manifest artifact is missing or expired.");
+    }
+    const artifactId = String(positiveInteger(artifact.id, "validation artifact ID"));
+    const artifactSize = artifact.size_in_bytes;
+    if (typeof artifactSize !== "number" || !Number.isSafeInteger(artifactSize) ||
+        artifactSize < 1 || artifactSize > MAX_ARTIFACT_BYTES) {
+      throw new Error("Validation manifest artifact size is outside the allowed bounds.");
+    }
+
+    let metadataResponse: Response;
+    try {
+      metadataResponse = await fetch(
+        `${API_ORIGIN}/repos/Znect-god/znect-build/actions/artifacts/${artifactId}/zip`,
+        {
+          method: "GET",
+          headers: {
+            authorization: `Bearer ${this.token}`,
+            accept: "application/vnd.github+json",
+            "x-github-api-version": API_VERSION
+          },
+          redirect: "manual",
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+        }
+      );
+    } catch {
+      throw new Error("Central validation artifact download request failed or timed out.");
+    }
+    if (metadataResponse.status !== 302) {
+      await metadataResponse.body?.cancel().catch(() => undefined);
+      throw new Error(`Central validation artifact download did not return the expected redirect (HTTP ${metadataResponse.status}).`);
+    }
+    const location = metadataResponse.headers.get("location");
+    await metadataResponse.body?.cancel().catch(() => undefined);
+    if (!location) throw new Error("Central validation artifact redirect has no location.");
+    let signedUrl: URL;
+    try { signedUrl = new URL(location); }
+    catch { throw new Error("Central validation artifact redirect target is invalid."); }
+    if (signedUrl.protocol !== "https:" || !/^[a-z0-9.-]+\.blob\.core\.windows\.net$/.test(signedUrl.hostname) ||
+        signedUrl.port !== "" || signedUrl.username || signedUrl.password || signedUrl.hash) {
+      throw new Error("Central validation artifact redirect target is not an approved storage host.");
+    }
+
+    let archiveResponse: Response;
+    try {
+      archiveResponse = await fetch(signedUrl.toString(), {
+        method: "GET",
+        redirect: "manual",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      });
+    } catch {
+      throw new Error("Central validation artifact storage download failed or timed out.");
+    }
+    if (!archiveResponse.ok || archiveResponse.status >= 300) {
+      await archiveResponse.body?.cancel().catch(() => undefined);
+      throw new Error(`Central validation artifact storage returned HTTP ${archiveResponse.status}.`);
+    }
+    const declaredLength = Number(archiveResponse.headers.get("content-length") ?? "0");
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_ARTIFACT_BYTES) {
+      await archiveResponse.body?.cancel().catch(() => undefined);
+      throw new Error("Central validation artifact exceeds the compressed size limit.");
+    }
+    const reader = archiveResponse.body?.getReader();
+    if (!reader) throw new Error("Central validation artifact download was empty.");
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value.byteLength > MAX_ARTIFACT_BYTES - total) {
+          await reader.cancel().catch(() => undefined);
+          throw new Error("Central validation artifact exceeds the compressed size limit.");
+        }
+        chunks.push(value);
+        total += value.byteLength;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    if (total === 0) throw new Error("Central validation artifact download was empty.");
+    const archive = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { archive.set(chunk, offset); offset += chunk.byteLength; }
+    const manifestText = await extractValidationManifest(archive);
+    if (new TextEncoder().encode(manifestText).byteLength > MAX_MANIFEST_BYTES) {
+      throw new Error("Validation manifest exceeds the JSON size limit.");
+    }
+    let parsed: unknown;
+    try { parsed = JSON.parse(manifestText); }
+    catch { throw new Error("Central validation manifest contains invalid JSON."); }
+    if (!isRecord(parsed) || parsed.schema_version !== 1 ||
+        parsed.project_id !== scope.projectId ||
+        typeof parsed.source_repository !== "string" ||
+        parsed.source_repository.toLowerCase() !== this.expectedSourceRepository.toLowerCase() ||
+        parsed.source_sha !== run.commitSha ||
+        typeof parsed.source_ref !== "string" ||
+        typeof parsed.build_target !== "string" ||
+        typeof parsed.build_profile !== "string" ||
+        parsed.recipe !== "node-cloudflare-worker-validation" ||
+        !["success", "failure"].includes(String(parsed.recipe_outcome)) ||
+        !Array.isArray(parsed.validation_steps) ||
+        !parsed.validation_steps.every((step) => typeof step === "string" && step.length <= 300) ||
+        parsed.deployment_performed !== false ||
+        parsed.circleci_pipeline_mutation !== false ||
+        !isRecord(parsed.central_run) ||
+        parsed.central_run.repository !== CENTRAL_REPOSITORY ||
+        String(parsed.central_run.run_id) !== runId ||
+        typeof parsed.central_run.run_url !== "string" ||
+        safeRunUrl(parsed.central_run.run_url, runId) === undefined ||
+        typeof parsed.generated_at !== "string" || !iso(parsed.generated_at)) {
+      throw new Error("Central validation manifest failed project, source, run, or safety validation.");
+    }
+    return {
+      schema_version: 1,
+      project_id: parsed.project_id,
+      source_repository: parsed.source_repository,
+      source_ref: parsed.source_ref,
+      source_sha: parsed.source_sha,
+      build_target: parsed.build_target,
+      build_profile: parsed.build_profile,
+      recipe: parsed.recipe,
+      recipe_outcome: parsed.recipe_outcome,
+      validation_steps: parsed.validation_steps,
+      deployment_performed: false,
+      circleci_pipeline_mutation: false,
+      central_run: {
+        repository: CENTRAL_REPOSITORY,
+        run_id: runId,
+        run_url: safeRunUrl(parsed.central_run.run_url, runId)
+      },
+      generated_at: iso(parsed.generated_at)
+    };
   }
 
   async listRunArtifacts(scope: CiProjectScope, runId: string): Promise<CiArtifact[]> {
