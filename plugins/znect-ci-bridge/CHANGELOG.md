@@ -311,3 +311,12 @@
 - Documented the runtime `ZNECT_PROJECT_REGISTRY` entry and least-privilege `ZNECT_BUILD_GITHUB_TOKEN` requirements.
 - Added a regression test for central validation manifest artifact metadata. Tests were not executed in this change set.
 - Preserved read-only behavior: no workflow dispatch, build execution, retry, cancellation, artifact download, deployment, or CircleCI mutation.
+
+
+## 2026-11-18 — Bounded central validation manifest retrieval
+
+- Added authenticated Browser JSON API endpoint to retrieve the central CI Bridge validation manifest for a verified run.
+- Added bounded artifact download with strict redirect-host validation; GitHub credentials are not forwarded to the signed artifact-storage URL.
+- Added ZIP path selection, size/entry limits, CRC validation and strict manifest-to-project/source/run checks.
+- Added regression tests for exact-path extraction, missing manifest and corrupt entry handling. Tests and typecheck were not run.
+- No central workflow/build, live API probe, deployment or runtime configuration change was performed.
