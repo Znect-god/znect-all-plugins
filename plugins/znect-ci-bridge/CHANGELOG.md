@@ -1,3 +1,11 @@
+## 2026-11-18 — Central Znect Build onboarding correction
+
+- Removed the standalone CircleCI validation workflow; Znect project builds and CI Bridge validation must go through Znect Build.
+- Added a central Node.js 24.11.0 / Cloudflare Worker validation recipe and a registered-but-disabled `znect-ci-bridge/worker-validation` target on isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`.
+- The central recipe is not merged into Znect Build main and has not been executed. It runs dependency installation, TypeScript/Vitest checks, smoke-script syntax validation and Wrangler dry-run only; no deployment is included.
+- Updated this roadmap and README to reflect the isolated central recipe and its disabled execution gate.
+- Next integration direction: read-only GitHub Actions API access to Znect Build workflow runs/jobs/logs/artifacts; no guessed custom Build API.
+
 ## 2026-11-18 — Znect Build architecture alignment
 
 ### Corrected
