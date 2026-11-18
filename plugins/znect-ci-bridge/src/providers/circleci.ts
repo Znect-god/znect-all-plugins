@@ -71,7 +71,8 @@ function mapRun(resource: V3Resource, projectId: string): CiRun {
   const branch = text(vcsRecord.branch) ?? text(attrs.branch);
   const commitSha = text(vcsRecord.revision) ?? text(attrs.vcs_revision);
   const commitMessage = text(commit.subject) ?? text(commit.body) ?? text(attrs.subject);
-  const url = text(commit.url) ?? text(attrs.url) ?? text(attrs.web_url);
+  // Do not mislabel the source commit URL as a CircleCI run URL.
+  const url = text(attrs.web_url);
   const createdAt = attrs.created_at ?? attrs.start_time;
   const completedAt = attrs.ended_at ?? attrs.stop_time ?? attrs.stopped_at;
   return {
