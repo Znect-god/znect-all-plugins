@@ -1,345 +1,99 @@
-# Znect CI Bridge — запуск, настройка и проверка
+# Znect CI Bridge — руководство по использованию и проверке
 
-> **ChatGPT access channel:** use the free authenticated Browser JSON API and its private report handoff. CircleCI is the CI tool; `znect-build` is a separate repository, not the CI provider or the CI Bridge validation executor. GitHub Actions is not the CI Bridge validation or ChatGPT report channel. MCP is optional legacy functionality only. See [ASSISTANT_CHANNEL.md](ASSISTANT_CHANNEL.md).
+**Актуально на 2026-11-18.** Это руководство описывает текущую инженерную ветку `feature/ci-bridge-android-exporter`, а не старые Preview/GitHub Actions сценарии.
 
+> **Архитектурный контракт:** CircleCI — единственный исполнитель CI Bridge validation. ChatGPT-facing источник отчётов — приватный Browser JSON API. Android exporter выполняет проверку read path и предоставляет ручную передачу отчёта через Sharesheet. MCP не требуется и не используется как канал ChatGPT. Znect Build — отдельный проект, не исполнитель проверок CI Bridge.
 
-**Статус: `in-development` — разработка, экспериментальный прототип, не готов к Production.**  
-**Версия:** `0.1.0`  
-**Дата актуализации:** 2026-11-18  
-**Пример действующего CircleCI проекта:** `gh/Znect-god/znect-forge`. Это зарегистрированная связь, а не проект по умолчанию.
+## 1. Назначение и границы
 
-> **Главное правило документации:** наличие реализации, зелёные unit-тесты, mock-тесты, Wrangler dry-run или синтетическое событие не означают, что функция полностью проверена в реальной эксплуатации. Ниже каждый этап разделён на «проверено» и «ещё требуется». Если этап не отмечен как проверенный, считайте его разработкой/непроверенной функцией.
+Znect CI Bridge — экспериментальный read-only сервис для чтения CircleCI runs, workflows, jobs, logs, test results, artifacts и нормализованных webhook events по явно зарегистрированным проектам/соединениям.
 
-## Актуальное уточнение — 17 ноября 2026
+Разделение ответственности:
+- `Znect-god/znect-all-plugins` — исходный код Bridge и Android exporter.
+- CircleCI — выполняет проверки самого Bridge по корневому `.circleci/config.yml`.
+- Cloudflare Worker — приватный API слой и CircleCI read-only adapter.
+- Android companion exporter — локальная проверка соединения, загрузка ограниченного JSON-отчёта и явный экспорт пользователем.
+- `Znect-god/znect-build` — отдельная центральная система сборки других проектов; не использовать её как CI executor Bridge.
 
-Текущая изолированная ветка разработки: `test/ci-bridge-webhook-ingress-contract` в `Znect-god/znect-all-plugins`. Она содержит дополнительную реализацию webhook ingress, корреляции событий с CircleCI API v3 runs и панели событий. Изменения пока не typechecked, не протестированы и не развёрнуты; реальная доставка CircleCI webhook не подтверждена.
+Bridge не запускает, не отменяет, не перезапускает pipelines/jobs и не изменяет настройки CircleCI. Все запросы к CircleCI API со стороны Bridge — GET-only.
 
-**Живая дорожная карта:** [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md). Она отдельно отмечает реализованные пункты меткой **(разработано)** и оставляет тестирование, live-проверки, Preview, security review и выпуск самостоятельными незакрытыми этапами. Её необходимо обновлять вместе с каждой существенной реализацией.
+## 2. Текущий статус
 
-Ответственность разделена: `znect-all-plugins` хранит исходный код и ведёт разработку CI Bridge; `znect-build` — отдельный GitHub-репозиторий Znect Build; CircleCI — CI-инструмент, который выполняет проверки CI Bridge и предоставляет данные для диагностики. Сам Bridge только читает данные зарегистрированных CircleCI-проектов и не управляет их pipeline.
+- Worker и Android exporter source code реализованы на feature branch.
+- Browser API `GET /api/v1/status` проверяет доступность CircleCI read probe для выбранного проекта.
+- Browser API `GET /api/v1/report` возвращает ограниченный private JSON report.
+- Android app проверяет оба endpoint: сначала status, затем report. Успех означает, что Android → Bridge → CircleCI read path и report endpoint доступны; это **не** означает, что ChatGPT conversation автоматически аутентифицирован.
+- Android использует HTTPS, Bearer credential, локальное Keystore-backed encrypted storage, bounded response validation и ручной Android Sharesheet export.
+- Написано 40 Android JVM test cases: 8 origin + 18 report/privacy + 3 Bearer policy + 11 CircleCI status validator. Ни один из этих тестов на текущей ветке ещё не подтверждён как выполненный.
+- CircleCI workflow описан, но успешный запуск для текущего HEAD не получен. APK artifact не подтверждён; устройство не проверено.
+- Автоматическая ChatGPT authentication к приватному Browser API не подтверждена и остаётся открытым platform limitation. Текущий handoff — ручной.
 
-## Актуальное уточнение — 15 ноября 2026
+Подробный прогресс: [Implementation roadmap](IMPLEMENTATION_ROADMAP.md). Актуальный контракт бесплатного канала: [Free access plan](FREE_ACCESS_PLAN.md). Android details: [Android exporter README](../android-exporter/README.md).
 
-Этот документ сохраняет исторический журнал проверок 11–14 ноября; старые результаты не подтверждают текущий SHA. На тот момент рабочей интеграционной веткой была `feature/ci-bridge-test-reports`; актуальная изолированная линия описана в разделе от 17 ноября выше. Реестр больше не подставляет Forge: при отсутствии `ZNECT_PROJECT_REGISTRY` загружается пустой реестр. Проект может существовать без CI connections. Для нескольких CircleCI connections требуется явный `connection_id`; первый connection автоматически не выбирается.
+## 3. CircleCI validation setup
 
-Статусы независимы: проект — `registered`; CI configuration — `configured` или `not_configured`; provider availability — `not_checked` до read-only probe, затем `available` или `unavailable`. Для этого добавлены MCP `list_projects`, выбор connection в dashboard, `connection_id` в project-scoped MCP/browser reads и тест на неоднозначный выбор. Коммит на новом HEAD ещё не проверен typecheck/unit tests/live smoke; CI, Preview и deploy не запускались.
+1. Владелец проекта подключает `Znect-god/znect-all-plugins` как CircleCI project.
+2. CircleCI project должен читать корневой `.circleci/config.yml`.
+3. Разрешённые ветки конфигурации: `main` и `feature/ci-bridge-android-exporter`.
+4. После обычного commit/push CircleCI должен запустить workflow согласно настройкам проекта. Не запускать pipeline через API и не использовать GitHub Actions в качестве замены.
+5. В workflow два job:
+   - `ci-bridge-validation`: `npm ci`, `npm audit --audit-level=high`, `npm run check`, syntax check smoke script, Wrangler dry-run без deploy.
+   - `ci-bridge-android-exporter`: checksum Gradle Wrapper JAR, Android SDK 35, JVM unit tests, debug APK assembly, сохранение test results и APK artifact.
 
-### Изолированная разработка — 17 ноября 2026
+Эти job не требуют CircleCI API token, Cloudflare credentials или Worker secrets. CircleCI API token для чтения диагностируемых проектов — отдельный runtime secret Bridge, не нужен для выполнения validation workflow.
 
-Для проверки новых изменений используется отдельная ветка [`test/ci-bridge-webhook-ingress-contract`](https://github.com/Znect-god/znect-all-plugins/tree/test/ci-bridge-webhook-ingress-contract), основанная на зафиксированном commit `c72a67e33177985a57f4d9d6180e4e8d8a970edb`. В неё добавлены regression-тесты signed webhook ingress, ограничение разбора HMAC signature header, read-only корреляция inbox events с CircleCI API v3 runs (MCP и Browser API), а также панель событий в dashboard. Корреляция возвращает только кандидатов: точный commit SHA, совместимая branch и расстояние до интервала выполнения run; pipeline ID не трактуется как API v3 run UUID. Эта ветка не объединена с feature branch и не является релизом. После последних изменений typecheck/unit tests не запускались, Preview/deployment и реальные CircleCI webhook deliveries не выполнялись.
+**Важно:** наличие конфигурации и commit не доказывают, что workflow стартовал. Успешность тестов, APK assembly, наличие artifact и проверка на устройстве — отдельные критерии.
 
-## 1. Назначение и архитектура
+См. [CircleCI setup](CIRCLECI_SETUP.md).
 
-Znect CI Bridge — read-only сервис Znect для просмотра и диагностики CircleCI Forge. Он состоит из:
-- Cloudflare Worker;
-- Streamable HTTP MCP endpoint `/mcp`;
-- браузерной панели и read-only JSON API;
-- подписанного CircleCI webhook receiver `POST /webhooks/circleci`;
-- SQLite-backed Durable Object inbox для нормализованных событий.
+## 4. Приватный Browser JSON API
 
-Поток webhook:
+- Origin должен быть HTTPS.
+- Для Browser API используется отдельный `WEB_ACCESS_TOKEN` в заголовке `Authorization: Bearer …`.
+- Запросы ограничены GET и project/connection scope.
+- `project_id` обязателен; при нескольких соединениях нужно явно передавать `connection_id`.
+- `/api/v1/status` возвращает безопасный status/probe summary.
+- `/api/v1/report` возвращает bounded report; лимиты runs/events валидируются Worker.
+- Не публиковать endpoint без Bearer authentication, не отключать auth и не передавать token в чат.
 
-1. Forge workflow завершается в CircleCI.
-2. CircleCI отправляет `workflow-completed` на Preview webhook URL.
-3. Worker проверяет HMAC-подпись и проект, нормализует событие.
-4. Durable Object сохраняет событие с дедупликацией по event ID.
-5. Событие читается через MCP `list_recent_events` или Browser API `GET /api/v1/events`.
-6. Для сопоставления с API v3 runs используются MCP `correlate_recent_events` или Browser API `GET /api/v1/event-correlations`; совпадение строится по точному commit SHA, совместимой branch и временному окну 24 часа. Это кандидат корреляции, не доказательство тождества pipeline ID и run UUID.
+Наличие private HTTP API не означает, что ChatGPT может автоматически отправить Bearer header в отдельный endpoint. Не заявлять автоматический ChatGPT direct connection без подтверждённого поддерживаемого механизма. Текущий Android exporter помогает пользователю вручную передать сформированный отчёт в ChatGPT.
 
-Webhook inbox не отправляет самопроизвольные сообщения в открытый диалог ChatGPT. Для этого отдельно потребуется поддерживаемый канал polling/delivery.
+## 5. Android exporter
 
-## 2. Текущее состояние — 2026-11-14
+Приложение находится в `plugins/znect-ci-bridge/android-exporter/`.
 
-| Этап | Состояние |
-|---|---|
-| Исходники, TypeScript и unit/regression tests | Проверены GitHub Actions на текущей feature branch |
-| Isolated Cloudflare Preview | Развёрнут workflow run #43568774133; Production не затрагивался |
-| Preview secrets | Workflow установил `CIRCLECI_WEBHOOK_SECRET`; authenticated smoke test прошёл |
-| CircleCI API v3 project access | Подтверждён smoke test для фиксированного Forge project |
-| MCP discovery и список read-only tools | Подтверждены smoke test |
-| Browser API и synthetic event inbox | Подтверждены smoke test |
-| Synthetic HMAC webhook, deduplication, durable storage и retrieval | Подтверждены в Preview |
-| Реальная регистрация CircleCI webhook | Выполнена пользователем; CircleCI принял автоматическую Add Webhook ping/check с 2xx |
-| Сопоставление webhook events с API v3 runs и dashboard panel | Реализовано в изолированной development branch 2026-11-17; typecheck/tests и deployment ещё не выполнялись |
-| Реальное `workflow-completed` событие от CircleCI | **Ожидает проверки** |
-| Полная проверка run/job/log/test/artifact на реальных CI данных | **Частично/не проверено** |
-| Автоматическая доставка событий в открытый ChatGPT диалог | **Не реализована/не проверена** |
-| Production deployment и независимый security review | **Не выполнялись; не разрешены** |
+Локальная настройка:
+1. Ввести HTTPS API origin без path/query/fragment.
+2. Ввести зарегистрированный project ID и, если требуется, connection ID.
+3. Ввести Bearer credential локально в приложение; не пересылать его в чат и не добавлять в Git.
+4. Нажать **Check CircleCI + ChatGPT report path**.
+5. При успешной проверке получить bounded report и при необходимости использовать явную Sharesheet передачу.
 
-Актуальные ресурсы:
-- Репозиторий: https://github.com/Znect-god/znect-all-plugins
-- Рабочая ветка: `feat/ci-bridge-circleci-webhooks`
-- Draft PR #5: https://github.com/Znect-god/znect-all-plugins/pull/5
-- Последний подтверждённый workflow: https://github.com/Znect-god/znect-all-plugins/actions/runs/43568774133
-- Isolated Preview root: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`
-- MCP: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/mcp`
-- CircleCI webhook: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/webhooks/circleci`
+Кнопка проверяет два GET-запроса: `/api/v1/status` и `/api/v1/report`. Она не логинит пользователя в ChatGPT и не подтверждает автоматическую связь с текущим conversation.
 
-PR #5 остаётся Draft и не объединён. Его base — `feature/ci-bridge-test-reports`, не `main`. Не менять `main`, не объединять PR и не развёртывать Production без отдельного прямого разрешения.
+Безопасность: HTTPS only, redirects blocked, response size limits, report schema validation, локальное encrypted credential storage, app-private report cache и явное пользовательское действие для sharing. Нет фонового опроса, cloud upload или CircleCI mutation.
 
-## 2A. Журнал фактически выполненных действий
+## 6. Секреты и безопасность
 
-Ниже записаны только этапы, для которых в истории разработки есть наблюдаемый результат. Это журнал процесса, а не утверждение, что вся система готова.
+- `CIRCLECI_TOKEN`: только серверный secret Bridge для read-only CircleCI API access.
+- `WEB_ACCESS_TOKEN`: отдельный Bearer secret Browser API.
+- `CIRCLECI_WEBHOOK_SECRET`: отдельный secret для проверки подписей CircleCI webhook, если webhook ingress включён.
+- Android Bearer credential хранится локально через Android Keystore-backed encryption.
 
-### 11 ноября 2026 — локальная проверка и ограничение Android
+Не путать секреты между собой. Не помещать их значения в Git, отчёты, issues, комментарии, URL, скриншоты или ChatGPT. Не просить пользователя присылать токены в чат. Не читать/менять production secrets и не выполнять deployment без отдельного разрешения.
 
-- Репозиторий развивается в общем `znect-plugins` monorepo, а не в отдельном репозитории для Bridge.
-- В Termux на Android ARM64 выполнена установка зависимостей; `npm run typecheck` завершился без ошибок.
-- `npm rebuild esbuild workerd` и `npx wrangler login` не сработали: `workerd` сообщил `Unsupported platform: android arm64 LE`. Это ограничение локального окружения, а не ошибка TypeScript-кода.
-- В результате deployment был перенесён в Linux GitHub Actions/Cloudflare workflow. Не следует описывать локальный Termux как успешную среду Wrangler deployment.
+## 7. Известные ограничения
 
-### 12 ноября 2026 — CircleCI credentials и первые реальные API-ответы
+1. Live CircleCI run для текущего engineering HEAD не подтверждён.
+2. Worker test suite и 40 Android JVM tests не исполнены на текущем HEAD.
+3. Debug APK не собран/не получен как CircleCI artifact.
+4. Android app не проверено на реальном устройстве.
+5. Автоматический ChatGPT authentication к private Browser API не реализован/не подтверждён; handoff ручной.
+6. Реальные CircleCI webhook deliveries и полная live проверка run/job/log/test/artifact endpoints остаются отдельными пунктами в roadmap.
+7. Prototype не готов к Production; независимый security review и release approval отсутствуют.
 
-- Первоначальный CircleCI token был заменён после отказа CircleCI API v3: `API CircleCI v3 отклонил настроенный токен только для чтения`.
-- После замены токена live-вызов `list_recent_runs(limit=10)` успешно получил проект `gh/Znect-god/znect-forge` и три запуска.
-- Затем `get_job_details` успешно вернул job `build-0-7-0`. В прочитанных шагах был `Run unit tests` со статусом failed (exit 1): всего 115 тестов, 2 failed. Это подтверждает не только соединение, но и чтение реальных CircleCI job details.
-- Ранее `/health` возвращал `status: ok`, проект `Znect-god/znect-forge`, режим `read-only`. Обычный GET к `/mcp` в браузере не был MCP handshake и не считался проверкой MCP.
+## 8. Исторические материалы
 
-### 13 ноября 2026 — настройка Preview secrets и исправление доступа
+Старые инструкции с GitHub Actions report collector, Forge inbox command, GitHub Actions artifacts как ChatGPT transport, GitHub Actions как CI Bridge executor или MCP как основным ChatGPT каналом superseded. Они не являются действующими процедурами и не должны использоваться для запуска, настройки или выпуска текущего Bridge.
 
-- Для GitHub repository Actions были заведены/подтверждены secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `MCP_ACCESS_TOKEN`, `WEB_ACCESS_TOKEN`. Значения не документируются.
-- `CIRCLECI_TOKEN` настраивался отдельно как Cloudflare Worker Secret, а не как пятый GitHub Actions secret.
-- Cloudflare environment переключался на Preview. Сначала workflow успешно выполнял typecheck/tests и Preview deployment, но `/api/v1/status` возвращал HTTP 503; MCP/CircleCI checks тогда не достигались. Этот запуск нельзя записывать как успешный end-to-end test.
-- После настройки Preview secrets и пересоздания named Preview deployment secrets стали доступны соответствующему Worker; 503 исчезла, проверка дошла до разрешения project slug.
-- На следующем этапе исправлялась обработка `attributes.slug`. После этого были подтверждены живой Worker, авторизованный CircleCI API, MCP discovery и обнаружение 12 read-only tools. Однако `check_connection`/MCP `tools/call` в тот момент ещё возвращал HTTP 400, поэтому этот этап не доказывал успешный live tool call.
-- Более ранний MCP Inspector вызов также возвращал сообщение о ненастроенных handler secrets; отдельный `MCP_ACCESS_TOKEN` сохранялся и не заменял CircleCI API token.
-
-### 14 ноября 2026 — отдельная webhook feature branch и Preview validation
-
-- Работа велась в `feat/ci-bridge-circleci-webhooks`; локальный checkout уже существовал, поэтому повторный clone не выполнялся.
-- `npm ci` установил 143 пакета (144 audited, 0 vulnerabilities). Локальный Wrangler по-прежнему не запускался из-за Android ARM64 `workerd`; cloud workflow использовался вместо локального deploy.
-- В workflow добавлена установка `CIRCLECI_WEBHOOK_SECRET` именно в named Preview. Этот секрет — отдельный от `CIRCLECI_TOKEN`, `MCP_ACCESS_TOKEN` и `WEB_ACCESS_TOKEN`.
-- CircleCI signing secret создан как отдельный случайный ключ; пользователь добавил соответствующий GitHub Actions secret и использовал то же значение в CircleCI webhook. Само значение нигде не записывается.
-- В коде webhook добавлены проверка HMAC-SHA256, фильтрация проекта, нормализация полей, durable event storage и дедупликация по event ID. Для сокращённых CircleCI ping payload добавлено tolerant acknowledgement после проверки подписи; регрессионные тесты покрывают такие варианты.
-- GitHub Actions run #43568768594 прошёл typecheck/unit tests, named Preview deployment, Preview-only webhook secret installation, secret-scope diagnostics и authenticated read-only smoke test.
-- Run #43568774133 также завершился success на следующем test revision. Smoke validation включала MCP discovery/read-only connection check и synthetic signed webhook path; синтетическая доставка не заменяет настоящее событие CircleCI.
-- Пользователь зарегистрировал CircleCI project webhook `Znect CI Bridge Preview` для `workflow-completed`. CircleCI принял Add Webhook после автоматической ping-проверки с 2xx. В интерфейсе пользователя отдельной кнопки Test Ping нет.
-- После регистрации настоящая доставка `workflow-completed` от обычного Forge workflow ещё не подтверждена. Этот пункт остаётся открытым.
-
-### Реестр секретов — что именно настраивалось
-
-| Secret name | Подтверждённое назначение/место | Статус в истории |
-|---|---|---|
-| `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions repository secret для deploy workflow | Был среди четырёх настроенных GitHub secrets |
-| `CLOUDFLARE_API_TOKEN` | GitHub Actions repository secret для deploy workflow | Был среди четырёх настроенных GitHub secrets |
-| `MCP_ACCESS_TOKEN` | Отдельная Bearer-аутентификация MCP; GitHub Actions secret и соответствующий Worker Preview secret | Наличие в GitHub secrets подтверждено; authenticated MCP smoke впоследствии прошёл |
-| `WEB_ACCESS_TOKEN` | Отдельная Bearer-аутентификация browser API; GitHub Actions secret и соответствующий Worker Preview secret | Наличие в GitHub secrets подтверждено; authenticated browser smoke впоследствии прошёл |
-| `CIRCLECI_TOKEN` | CircleCI Personal API token, Cloudflare Worker Preview secret | Настраивался в Cloudflare отдельно; старый token отвергался, после замены CircleCI API v3 вернул реальные runs и job details |
-| `CIRCLECI_WEBHOOK_SECRET` | HMAC signing secret: GitHub Actions repository secret, named Cloudflare Preview secret и Secret Token зарегистрированного CircleCI webhook | Preview workflow установил secret; CircleCI принял webhook ping. Не является API token |
-
-Секреты Production в рамках описанных действий не настраивались и не должны считаться готовыми. Значения секретов намеренно не фиксируются в документации.
-
-## 3. Требования и секреты
-
-Потребуются:
-- CircleCI Cloud project `Znect-god/znect-forge`;
-- Cloudflare account и Worker Preview;
-- GitHub Actions secrets и доступ к feature branch;
-- Node.js 24 для локальных проверок на поддерживаемой ОС; Linux GitHub Actions используется для Wrangler;
-- MCP-клиент для MCP-сценария либо современный браузер для dashboard.
-
-Секреты:
-
-| Имя | Назначение | Где хранить |
-|---|---|---|
-| `CIRCLECI_TOKEN` | CircleCI API access | Cloudflare Worker Secret |
-| `MCP_ACCESS_TOKEN` | MCP Bearer auth | Cloudflare Preview Secret |
-| `WEB_ACCESS_TOKEN` | Browser API Bearer auth | Cloudflare Preview Secret |
-| `ZNECT_BUILD_GITHUB_TOKEN` | Read-only central Build workflow/run/job/artifact metadata | Cloudflare Preview Secret (pending; no value stored in repository) |
-| `CIRCLECI_WEBHOOK_SECRET` | HMAC подпись webhook | GitHub Actions Secret и matching Cloudflare Preview Secret; тот же signing secret в CircleCI |
-
-Preview и Production secrets не наследуются друг от друга. Не использовать один и тот же секрет для разных назначений. Не вставлять значения в чат, Git, README, workflow logs, URL или shell arguments.
-
-**Текущее состояние секретов:** workflow уже использовал `CIRCLECI_WEBHOOK_SECRET` для Preview; ранее настроенные API/MCP/browser credentials прошли authenticated smoke test. Не нужно повторно создавать или пересылать секреты, если они уже сохранены и работают. Workflow диагностирует только имена секретов, не их значения.
-
-Если значение потеряно, его нельзя прочитать обратно из GitHub/Cloudflare. Сгенерируйте новое локально и обновите обе стороны, которым оно принадлежит; никогда не присылайте его в чат.
-
-## 4. Порядок запуска и проверки
-
-### Шаг 1 — проверить branch и CI
-
-1. Откройте [Draft PR #5](https://github.com/Znect-god/znect-all-plugins/pull/5) и убедитесь, что он остаётся Draft.
-2. Убедитесь, что рабочая ветка — `feat/ci-bridge-circleci-webhooks`.
-3. Проверяйте workflow run на точном текущем head SHA, а не только зелёный статус старого запуска.
-4. Ожидаемые проверки: dependency install, `npm run check` (typecheck + unit tests), syntax check smoke script, изолированный Preview deploy и authenticated smoke test.
-5. PR-triggered workflow валидирует код; branch-push workflow развёртывает named Preview. Не путать эти два сценария.
-
-Последний подтверждённый run #43568774133 прошёл. При следующих изменениях требуется новая успешная проверка на новом SHA.
-
-### Шаг 2 — проверить Cloudflare Preview
-
-Использовать только named Preview:
-`feat-ci-bridge-circleci-webhooks`.
-
-Root URL:
-`https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev`
-
-Перед проверкой:
-- убедиться, что Preview deployment соответствует ожидаемому commit SHA;
-- проверить наличие нужных Preview secrets по именам, не раскрывая значения;
-- убедиться, что Durable Object binding `EVENT_STORE` и SQLite migration применены к Preview;
-- использовать Preview endpoint, не Production.
-
-Последний подтверждённый run выполнил Preview deployment и authenticated smoke test. При новой ревизии статус проверять заново.
-
-### Шаг 3 — smoke test
-
-В автоматическом workflow smoke test проверяет health, browser auth/status, MCP discovery/tool annotations и CircleCI project access; для webhook path используется синтетическое подписанное событие. Успех этого теста подтверждает только перечисленные проверки и не подтверждает реальную доставку CircleCI.
-
-Если запускаете скрипт вручную, делайте это только после проверки точного Preview URL и Preview secrets. Скрипт: `plugins/znect-ci-bridge/scripts/preview-smoke-test.mjs`. Он требует `PREVIEW_ORIGIN`, `MCP_ACCESS_TOKEN`, `WEB_ACCESS_TOKEN`; не передавайте секреты аргументами команды и не публикуйте вывод, содержащий заголовки авторизации.
-
-### Шаг 4 — CircleCI webhook (настроен, реальная доставка ещё ожидает)
-
-CircleCI project webhook уже добавлен пользователем для проекта `Znect-god/znect-forge`:
-- Name: `Znect CI Bridge Preview`
-- Event: `Workflow Completed` (`workflow-completed`)
-- Certificate Validation: enabled
-- URL: `https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/webhooks/circleci`
-- Signing secret: то же значение, что хранится в GitHub Actions secret `CIRCLECI_WEBHOOK_SECRET` и в named Preview secret `CIRCLECI_WEBHOOK_SECRET`.
-
-При добавлении CircleCI автоматически проверяет URL ping-событием. В используемом интерфейсе отдельной кнопки **Test Ping** нет. Успешное добавление означает, что автоматическая проверка URL получила 2xx. Это подтверждает ping-handshake, но **не** реальную доставку `workflow-completed`.
-
-Не удалять и не пересоздавать webhook или signing secret только из-за информационного предупреждения CircleCI о связанном signing secret.
-
-### Шаг 5 — дождаться обычной сборки Forge и проверить настоящее событие
-
-Не нужно запускать искусственную сборку специально. После завершения ближайшего обычного workflow в CircleCI:
-
-1. Зафиксировать workflow URL/ID, проект и время завершения.
-2. Проверить CircleCI Webhooks delivery history для зарегистрированного webhook: статус доставки должен быть успешным (2xx). Если delivery не было, проверить выбранное событие, URL и CircleCI delivery details.
-3. Прочитать Preview inbox через MCP `list_recent_events(after, limit)` либо Browser API:
-   `GET /api/v1/events?after=0&limit=20` с `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
-4. Найти запись с тем же workflow/project и временем. Проверить event ID, тип `workflow-completed`, workflow status, timestamp и cursor.
-5. Повторно прочитать inbox и убедиться, что повторная доставка того же event ID не создала дубликат.
-6. Проверить получение той же записи через MCP `list_recent_events`.
-7. После появления доступных API v3 runs вызвать `correlate_recent_events` либо `GET /api/v1/event-correlations`; проверить, что точное совпадение SHA/branch/time возвращает `candidate`, несколько совпадений — `ambiguous`, а отсутствие revision — `unmatched`.
-8. Проверить ту же корреляцию в панели Recent webhook events браузерного dashboard.
-7. Зафиксировать результат как **real CircleCI delivery verified** только после сопоставления с CircleCI delivery history и содержимым inbox.
-
-До выполнения этих пунктов реальная webhook доставка остаётся **pending / not yet verified**. Синтетическое событие из smoke test не засчитывается. Корреляционный код и dashboard panel на 2026-11-17 существуют только в изолированной development branch и не считаются развёрнутой или проверенной функцией.
-
-### Шаг 6 — проверить API диагностики на реальном run
-
-После обычной сборки проверить последовательно:
-1. `check_connection()`;
-2. `list_recent_runs(limit=5)`;
-3. `get_run_details(run_id)` для UUID из ответа;
-4. `get_job_details(job_id)`;
-5. `get_job_logs(job_id, step_num, ...)`;
-6. `get_job_test_results(job_id)`;
-7. `list_job_artifacts(job_id)`;
-8. `get_job_artifact(job_id, artifact_path)` только с точным путём из предыдущего списка;
-9. `diagnose_run(run_id)` для неуспешного run, когда такой появится.
-
-Не подставлять legacy build number вместо v3 UUID. Отсутствие тестовых результатов или артефактов может означать, что исходная job их не публиковала. Проверка project access не означает, что все перечисленные endpoints уже проверены.
-
-### Поддерживаемые CircleCI project slug
-
-В registry можно явно зарегистрировать один из двух поддерживаемых GitHub slug formats: `gh/owner/repository` или `github/owner/repository`. Выбранная форма должна совпадать с project slug, возвращаемым CircleCI API и передаваемым в webhook. Не регистрируйте оба alias одного проекта как две независимые связи без реальной необходимости.
-
-## 5. Использование
-
-### MCP
-
-MCP URL для текущего Preview:
-`https://feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev/mcp`
-
-Подключать его можно только из клиента, который поддерживает Streamable HTTP MCP и Bearer/API-key auth. Сначала выполнить MCP initialization/tool discovery, затем `check_connection`. Обычное открытие `/mcp` в браузере не является MCP handshake.
-
-Возможность подключить custom MCP в ChatGPT зависит от текущего плана, workspace и платформы. Проверять нужно актуальную документацию OpenAI: https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt. Не считать установку skill или карточки приложения доказательством подключения инструментов.
-
-### Browser dashboard
-
-Открыть root URL подтверждённого Preview в браузере, ввести `WEB_ACCESS_TOKEN) и нажать Connect. Токен хранится только в памяти вкладки. На Android можно использовать браузер; отдельное подключение MCP к мобильному приложению для этого не требуется.
-
-JSON API:
-- `GET /api/v1/status`
-- `GET /api/v1/runs?limit=10`
-- `GET /api/v1/runs/{run_uuid}`
-- `GET /api/v1/events?after=0&limit=20`
-
-Для всех запросов требуется `Authorization: Bearer <WEB_ACCESS_TOKEN>`. API read-only.
-
-Центральный Znect Build доступен через отдельные read-only Browser API маршруты: `GET /api/v1/build/status?project_id=znect-ci-bridge`, `GET /api/v1/build/runs?project_id=znect-ci-bridge&limit=10` и `GET /api/v1/build/runs/{run_id}?project_id=znect-ci-bridge`. Для них дополнительно требуется настроенный Worker Secret `ZNECT_BUILD_GITHUB_TOKEN`; на текущем этапе он ещё не настроен и live-проверка не выполнена. Эти маршруты используют тот же `WEB_ACCESS_TOKEN` для Browser API.
-
-### Инструменты MCP
-
-- `check_connection()` — CircleCI API v3 access/project resolution.
-- `list_recent_runs(limit)` — последние v3 runs.
-- `get_run_details(run_id)` — run/workflows/jobs.
-- `get_job_details(job_id)` — job metadata.
-- `get_job_logs(...)` — ограниченные stdout/stderr.
-- `get_job_test_results(...)` — structured test results.
-- `list_job_artifacts(job_id)` / `get_job_artifact(...)` — метаданные и точный текстовый артефакт.
-- `diagnose_run(run_id)` — ограниченная диагностика failed run.
-- `list_recent_events(after, limit)` — webhook inbox.
-- `correlate_recent_events(project_id, after, event_limit, run_limit)` — bounded candidate matching webhook events to recent API v3 runs; never assumes pipeline ID equals run UUID.
-- Legacy v1.1: `list_recent_builds`, `get_build_details`, `get_build_logs`.
-
-Лимиты и неполнота диагностических ответов описаны в README и отражаются в diagnostics metadata. Если указан `incomplete=true`, результат не исчерпывающий.
-
-## 6. Безопасность и эксплуатационные границы
-
-- Только read-only CircleCI GET-запросы и чтение webhook inbox.
-- Не добавлять trigger/retry/cancel/deploy/config-write возможности.
-- Не менять Forge source, CircleCI config, GitHub branches или настройки проекта через Bridge.
-- Не печатать и не запрашивать секреты.
-- Webhook принимает только подписанные запросы, payload ограничен 64 KiB; сохраняется нормализованная allowlist, а не исходное тело.
-- Event inbox ограничен 500 событиями и сроком хранения 30 дней.
-- Дедупликация использует CircleCI event ID.
-- Secret redaction — best effort, не гарантия.
-- Rate limiting Cloudflare приблизительный и location-local.
-- CircleCI Personal API Token может иметь широкие права; защищать его как высокочувствительный секрет.
-- Production и Preview имеют отдельные secret scopes.
-- Не использовать реальные production credentials в Preview без осознанного решения; для текущего тестирования работать с Preview.
-
-## 7. Известные ограничения / незавершённые работы
-
-1. Настоящее CircleCI `workflow-completed` событие и его end-to-end retrieval ещё не подтверждены.
-2. Более широкая live-проверка run/workflow/job/log/test/artifact endpoints требует реальных representative Forge runs.
-3. Входящий event inbox не инициирует сам сообщения ChatGPT; polling/delivery integration не реализована.
-4. Независимый security review не проведён.
-5. Production deployment не выполнялся и не разрешён.
-6. Лицензия проекта пока не определена.
-7. Wrangler/workerd не поддерживается в текущем Android ARM64 Termux окружении; использовать Linux CI/поддерживаемый desktop.
-
-## 8. Типовые ошибки
-
-| Симптом | Что проверить |
-|---|---|
-| CircleCI не создаёт webhook, ping получает не-2xx | Точный Preview URL, доступность deployment, path `/webhooks/circleci`, Preview signing secret, TLS/certificate validation |
-| Webhook добавлен, но event inbox пуст | Был ли после регистрации новый workflow completion; выбран ли `workflow-completed`; CircleCI delivery history; соответствуют ли signing secrets |
-| HTTP 401 на MCP | `MCP_ACCESS_TOKEN` в клиенте и Preview |
-| HTTP 401 на browser API | `WEB_ACCESS_TOKEN` и заголовок Bearer |
-| HTTP 503 | Rate-limit binding/deployment |
-| CircleCI API 401/403 | Токен, срок действия, доступ к организации/проекту и SSO |
-| Нет logs/test/artifacts | Опубликовала ли их исходная job |
-| В браузере не открывается /mcp как страница | Это MCP transport endpoint, не HTML UI |
-
-Не раскрывать токены в тикетах, скриншотах, чатах и логах.
-
-## 9. Обновление и выпуск
-
-- Изменения вносить в `feat/ci-bridge-circleci-webhooks` или отдельную согласованную feature branch.
-- PR #5 остаётся Draft и unmerged.
-- После каждого изменения проверять новый SHA: CI → isolated Preview → smoke test → live read-only checks.
-- Не сливать PR и не менять `main` без прямого разрешения.
-- Не выполнять Production deployment без отдельного прямого разрешения, независимого security review и закрытия критичных live verification пунктов.
-- Тестирование Forge продолжать обычным рабочим процессом; не менять Forge 0.8.0 freeze и не запускать ненужные сборки специально для Bridge.
-
-## 10. Официальные ссылки
-
-- CircleCI outbound webhooks: https://circleci.com/docs/guides/integration/outbound-webhooks/
-- CircleCI webhook reference: https://circleci.com/docs/reference/outbound-webhooks-reference/
-- CircleCI API v3: https://circleci.com/docs/guides/toolkit/api-v3-developers-guide/
-- CircleCI API tokens: https://circleci.com/docs/guides/toolkit/managing-api-tokens/
-- Cloudflare Workers Previews: https://developers.cloudflare.com/workers/previews/
-- OpenAI custom MCP: https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt/
-- [CircleCI API migration notes](CIRCLECI_API_MIGRATION.md)
-- [Security review](SECURITY_REVIEW.md)
-- [Project README](../README.md)
-
-
-### Znect Build read-only connection (source implemented; live setup pending)
-
-The Bridge now includes a GitHub Actions read-only adapter for `Znect-god/znect-build`. Its runtime registry entry must use provider `znect-build` and map to exactly one registered source repository. Configure `ZNECT_BUILD_GITHUB_TOKEN` only after issuing a repository-scoped token with Actions read-only access. The token is not required for CircleCI-only Bridge operation. The central validation-artifact fingerprint change is on an isolated, unmerged Znect Build branch, so live run discovery will fail closed until the central change is approved and available. No build trigger or deployment capability is added to the Bridge.
+Не выполнять CircleCI trigger/retry/cancel/config-write операции. Не сливать feature branch в main и не развёртывать Production без отдельного прямого разрешения.
