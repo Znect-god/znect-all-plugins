@@ -521,3 +521,11 @@
 - The dashboard now marks an assistant report export as complete only when the run list is not capped, webhook event storage is available, and every listed failed-run diagnostic is successfully included.
 - Partial exports remain downloadable but are explicitly labelled partial, with a prompt to review run, event and diagnostic completeness markers.
 - Added dashboard regression-test source for the combined completeness contract. Tests and live Preview checks remain pending.
+
+
+## Unreleased — 2026-11-18
+
+### Security and validation provenance
+- Require CI Bridge validation provenance to use the canonical `ci-bridge` source ref.
+- Harden the opt-in Znect Build CircleCI exact-SHA workflow to reject non-canonical refs and source commits that are not reachable from the canonical branch tip.
+- Add regression-test source for canonical source-ref and commit-ancestry enforcement.
