@@ -1020,3 +1020,13 @@ For every meaningful feature or fix:
 - [ ] Execute the adapter test suite and verify retry behavior against a real CircleCI read-only connection after explicit authorization.
 
 **Verification boundary:** this is a source-level resilience improvement only. No tests were executed, no CircleCI request was sent from this development session, and no pipeline or CircleCI resource was modified.
+
+## Stage 66 — Reconcile run discovery with the current CircleCI API v3 contract — 2026-11-18
+
+- [x] Re-check the current official API v3 reference: run collections require project/user scoping, use opaque cursor pagination, and accept at most 20 items per page **(выполнено — official documentation review)**.
+- [x] Confirm the current adapter's run listing uses `filter[project_id]`, a maximum page size of 20, and bounded cursor traversal; the project-ownership lookup remains bounded to 20 pages / 400 recent runs **(выполнено — source inspection)**.
+- [x] Confirm the official run reference documents `phase` and `current_outcome`, and the current mapper reads `current_outcome` through its shared status normalization path **(выполнено — documentation/source cross-check)**.
+- [ ] Verify the exact VCS revision response field and nesting against a real, authorized CircleCI API v3 run response. The public reference confirms that a run carries VCS context, but the accessible operation description does not specify the revision field path; do not treat the current `references.event.attributes.vcs.revision` / `attributes.vcs_revision` fallbacks as runtime-confirmed.
+- [ ] Add or adjust fixtures only after the actual response shape is confirmed; then run adapter tests and TypeScript checks through the authorized opt-in CircleCI workflow.
+
+**Verification boundary:** official API documentation and source were inspected; no CircleCI API request, test run, or pipeline execution was performed. VCS revision mapping remains explicitly unverified.
