@@ -44,6 +44,9 @@ describe("browser dashboard security", () => {
     expect(DASHBOARD_HTML).toContain('request("/api/v1/diagnostics/"+encodeURIComponent(runId)+"?"+scopeQuery())');
     expect(DASHBOARD_HTML).toContain('report.completeness.diagnostics_included');
     expect(DASHBOARD_HTML).toContain('report.completeness.diagnostics_limited=failedCount>diagnostics.length');
+    expect(DASHBOARD_HTML).toContain('report.completeness.export_complete=report.completeness.runs_limited!==true&&report.events?.available===true&&report.completeness.diagnostics_included===true');
+    expect(DASHBOARD_HTML).toContain('report.completeness.export_complete?"Assistant report exported.');
+    expect(DASHBOARD_HTML).toContain('"Partial assistant report exported. Review run, event and diagnostic completeness markers');
     expect(DASHBOARD_HTML).toContain('"Partial assistant report exported.');
     expect(DASHBOARD_HTML).toContain('blob.size>600000');
     expect(DASHBOARD_HTML).toContain('new Blob([serialized],{type:"application/json"})');
