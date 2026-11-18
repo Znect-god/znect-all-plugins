@@ -104,6 +104,19 @@ describe("unified CircleCI test result normalization", () => {
   });
 
 
+
+  it("marks a valid JUnit subset partial when the artifact collector hit its cap", () => {
+    const result = normalizeJobTestResults({
+      junitIncomplete: true,
+      junitArtifacts: [{
+        content: '<testsuite><testcase classname="pkg.Math" name="collected"/></testsuite>'
+      }]
+    });
+    expect(result).toMatchObject({
+      status: "partial", sources: "junit_only", total: 1, passed: 1, incomplete: true
+    });
+  });
+
   it("marks an unavailable JSONL source partial when JUnit records remain available", () => {
     const result = normalizeJobTestResults({
       jsonlUnavailable: true,
