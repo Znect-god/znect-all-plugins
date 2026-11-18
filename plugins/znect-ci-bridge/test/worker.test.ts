@@ -519,7 +519,6 @@ describe("Worker HTTP boundary", () => {
   });
 
   it("returns CircleCI connection status through the authenticated API", async () => {
-    const projectId = "123e4567-e89b-42d3-a456-426614174000";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
@@ -539,8 +538,10 @@ describe("Worker HTTP boundary", () => {
     await expect(response.json()).resolves.toMatchObject({
       connected: true,
       provider: "circleci",
+      provider_availability: "available",
       permissions: "read-only",
       project: { id: "znect-forge", name: "Znect Forge" },
+      connection: { id: "forge-circleci", status: "configured" },
       read_probe: { recent_runs_available: 0 }
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
