@@ -69,7 +69,8 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
       projectId: PROJECT_ID,
       workflowId: WORKFLOW_ID,
       status: "success",
-      commitSha: SOURCE_SHA
+      commitSha: SOURCE_SHA,
+      branch: undefined
     });
     expect(fetchMock.mock.calls.every(([url, init]) =>
       String(url).startsWith("https://api.github.com/repos/Znect-god/znect-build/") &&
