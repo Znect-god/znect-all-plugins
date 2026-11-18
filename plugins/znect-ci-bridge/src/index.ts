@@ -771,6 +771,7 @@ function createServer(env: Env) {
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResultsContent = report.content;
+            testResultsContent = report.content;
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
             testResultsState = testResultsStatus({ content: report.content, truncated: report.truncated });
             if (report.truncated) reportDataIncomplete = true;
@@ -1266,8 +1267,9 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           }
           const artifactsState = reportArtifactsStatus({ artifacts: reportArtifacts, incomplete: artifactCollectionIncomplete });
           const testSummary = normalizeJobTestResults({
-            jsonl: testResults,
+            jsonl: testResultsContent,
             jsonlTruncated: testResultsState === "partial",
+            jsonlUnavailable: testResultsError !== undefined,
             junitArtifacts: reportArtifacts as Array<{ content?: string; execution?: number; error?: string }>
           });
           if (testSummary.incomplete) reportDataIncomplete = true;
