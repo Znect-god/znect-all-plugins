@@ -1,3 +1,9 @@
+## 2026-11-18 — reconcile plugin metadata and historical architecture notes
+
+- Removed the retired Android exporter from current plugin platform, dependency, security and assistant-access metadata.
+- Moved earlier GitHub Actions/Preview checks into an explicitly historical evidence section; current-head validation is pending through central Znect Build.
+- Replaced the obsolete CircleCI executor policy with the central Znect Build target and marked conflicting earlier architecture notes as superseded.
+
 ## 2026-11-18 — verify aggregate report diagnostic-link contract
 
 - Extended the aggregate CircleCI report regression test to assert the exact failed-run UUID, status, same-origin diagnostics path, and selected project/connection query scope.
