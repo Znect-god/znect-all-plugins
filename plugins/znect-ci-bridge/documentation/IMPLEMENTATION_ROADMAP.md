@@ -438,3 +438,11 @@ For every meaningful feature or fix:
 - The CircleCI Android job already invokes testDebugUnitTest and assembleDebug; it will now compile the Kotlin source instead of silently omitting the Kotlin plugin configuration.
 - No local Gradle execution or APK build has been performed in this session. CircleCI execution remains unverified until a run result is observable; no passing status is claimed.
 - Remaining: inspect the first CircleCI Android job result, fix any observed failure, then complete a user-device install/runtime check separately. The CircleCI read-only ChatGPT access limitation remains open; no credential/authentication boundary was weakened.
+
+
+## 13. CircleCI execution scope hardening — 2026-11-18
+
+- Restricted both CI Bridge validation jobs to the isolated `feature/ci-bridge-android-exporter` branch and repository default branch `main`; unrelated branches will not consume CI minutes from this workflow **(выполнено — CircleCI configuration)**.
+- Confirmed the configured `cimg/android:2024.01.1` Docker image is a published CircleCI Android image with JDK 17 and Android SDK tooling; the job installs API 35 platform/build-tools explicitly **(выполнено — official image metadata/documentation review)**.
+- The branch's latest GitHub commit currently has no check runs or commit statuses. This does not prove that CircleCI is disconnected, but no CircleCI execution result is presently available to verify.
+- No workflow dispatch, pipeline mutation, deployment, or secret access was performed.
