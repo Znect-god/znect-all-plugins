@@ -484,3 +484,10 @@ For every meaningful feature or fix:
 - Hardened Disconnect so cached report deletion is checked instead of assuming every file was removed; the UI now distinguishes verified cleanup from a failed cache-deletion attempt **(выполнено — source fix)**.
 - Keystore alias deletion and cached-report deletion are reported independently, while preferences and encrypted credential clearing remain synchronous and checked.
 - No Android runtime, filesystem fault-injection, Gradle test or CircleCI execution was performed; source behavior still requires device verification.
+
+
+## 19. Android event cursor numeric compatibility — 2026-11-18
+
+- Aligned the Android report validator with the Worker API's `Number.isSafeInteger(after)` contract: event cursors must be non-negative JSON integers no larger than JavaScript's maximum safe integer **(выполнено — source fix)**.
+- Added a regression test for a cursor above the safe-integer range **(выполнено — test source added; execution pending)**.
+- Android module test sources now total 29 cases: 8 origin + 18 report-schema/privacy + 3 Bearer-token tests. None has been executed; build and device checks remain pending.
