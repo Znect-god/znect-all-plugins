@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18  
+**Updated:** 2026-11-18 (CircleCI pipeline definition added)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `test/ci-bridge-webhook-ingress-contract`  
@@ -202,8 +202,9 @@ For every meaningful feature or fix:
 ## 9. Work stages — 2026-11-18
 
 1. **Repository inventory and architecture alignment — (выполнено).** Existing work in All Plugins and Build reviewed; ownership boundaries and unavailable Build read interface recorded.
-2. **Bridge source development and regression coverage — in progress.** CircleCI slug-alias consistency and workflow URL port validation implemented; broader source/security review continues. Added tests are not executed.
-3. **Authorized validation and live integration — pending.** Exact-head typecheck/tests, isolated Preview and real CircleCI delivery checks remain separate gates. No CI or deployment is started without explicit authorization.
+2. **Bridge source hardening and regression coverage — (выполнено as source implementation).** CircleCI slug-alias consistency and workflow URL port validation implemented with focused regression tests. Tests remain unexecuted.
+3. **CircleCI validation pipeline definition — (выполнено).** Added a branch-scoped CircleCI configuration for dependency installation, TypeScript/unit checks, Preview smoke-script syntax validation and Wrangler dry-run. The workflow is configured for the isolated engineering branch only and contains no deploy or build-execution job.
+4. **CircleCI execution and result review — pending.** Pipeline has not been triggered. Run it only after explicit authorization; record the exact pipeline/commit and investigate any failures before proceeding to Preview or live webhook verification.
 
 ## 10. Next development priorities
 
@@ -220,3 +221,12 @@ For every meaningful feature or fix:
 - Reviewed all nine CI Bridge-related branches in `Znect-god/znect-all-plugins`. The active engineering branch is `test/ci-bridge-webhook-ingress-contract`; `feature/ci-bridge-test-reports` is its ancestor, while the older webhook, smoke-test, free-channel and prototype branches are historical/diverged work lines. No branch was merged or deleted.
 - Reviewed `Znect-god/znect-build` and its main README, implementation status, architecture, request/result contracts and project inventory. Confirmed that it is the central application build/orchestration repository; GitHub Actions executes central recipes, while project repositories retain source ownership. The current Build implementation is not a general Bridge diagnostics API, and live execution remains gated.
 - The Bridge remains in `znect-all-plugins` for plugin source development. It must not be relocated into `znect-build` or duplicate application build recipes.
+
+
+## 12. CircleCI validation workflow — 2026-11-18
+
+- Added the repository-root `.circleci/config.yml` for the isolated branch `test/ci-bridge-webhook-ingress-contract`.
+- Uses Node.js 24.11.0, matching the minimum Node engine declared by the committed dependency lockfile.
+- The job runs `npm ci`, `npm run check` (TypeScript typecheck and Vitest suite), `node --check scripts/preview-smoke-test.mjs`, and `npx wrangler deploy --dry-run`.
+- The Wrangler command is validation-only; no deployment is performed. No CircleCI job starts a build, triggers Forge, changes provider configuration, or uses secrets.
+- The workflow is branch-filtered to the current isolated CI Bridge engineering branch. No CircleCI pipeline has been triggered; the configuration is authored but not runtime-validated.
