@@ -9,6 +9,7 @@ import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
 import { correlateEventsWithRuns } from "./correlation";
 import { inspectCiBridgeProvenance } from "./provenance";
+import { collectJobReportArtifacts, MAX_REPORT_ARTIFACTS_PER_JOB, MAX_REPORT_BYTES_PER_JOB } from "./diagnostic-artifacts";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
@@ -50,57 +51,6 @@ function getCircleCiAdapter(env: Env, projectId: string, connectionId?: string) 
     scope: { projectId: project.id, connectionId: connection.id },
     adapter: createCircleCiReadOnlyAdapter(env.CIRCLECI_TOKEN, connection.projectSlug!, project.id, connection.id)
   };
-}
-
-const MAX_REPORT_ARTIFACTS_PER_JOB = 4;
-const MAX_REPORT_BYTES_PER_JOB = 500_000;
-
-async function collectJobReportArtifacts(
-  adapter: ReturnType<typeof createCircleCiReadOnlyAdapter>,
-  scope: { projectId: string; connectionId: string },
-  jobId: string
-): Promise<{
-  artifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }>;
-  incomplete: boolean;
-  limitReached: boolean;
-}> {
-  const artifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }> = [];
-  let incomplete = false;
-  let limitReached = false;
-  let remainingBytes = MAX_REPORT_BYTES_PER_JOB;
-  const listed = await adapter.listArtifacts(scope, jobId);
-  const candidates = listed.filter((artifact) => /(?:junit|test-results).*\.xml$/i.test(artifact.path));
-  if (candidates.length > MAX_REPORT_ARTIFACTS_PER_JOB) {
-    incomplete = true;
-    limitReached = true;
-  }
-  for (const artifact of candidates.slice(0, MAX_REPORT_ARTIFACTS_PER_JOB)) {
-    if (remainingBytes <= 0 || (typeof artifact.size === "number" && artifact.size > remainingBytes)) {
-      incomplete = true;
-      limitReached = true;
-      continue;
-    }
-    try {
-      const report = await adapter.getArtifact(scope, jobId, artifact.path, remainingBytes, artifact.execution);
-      remainingBytes = Math.max(0, remainingBytes - new TextEncoder().encode(report.content).byteLength);
-      artifacts.push({
-        path: artifact.path,
-        ...(typeof artifact.size === "number" ? { size: artifact.size } : {}),
-        ...(typeof report.execution === "number" ? { execution: report.execution } : {}),
-        content: report.content
-      });
-      if (report.truncated) incomplete = true;
-    } catch {
-      artifacts.push({
-        path: artifact.path,
-        ...(typeof artifact.size === "number" ? { size: artifact.size } : {}),
-        ...(typeof artifact.execution === "number" ? { execution: artifact.execution } : {}),
-        error: "Unable to retrieve this report artifact."
-      });
-      incomplete = true;
-    }
-  }
-  return { artifacts, incomplete, limitReached };
 }
 
 function circleCiV1ProjectPath(projectSlug: string): string {
