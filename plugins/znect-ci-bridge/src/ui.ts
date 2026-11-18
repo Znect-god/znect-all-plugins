@@ -173,6 +173,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         report.completeness.diagnostics_included=diagnosticsReturned===diagnostics.length&&failedCount<=diagnostics.length;
         report.completeness.diagnostics_returned=diagnosticsReturned;
         report.completeness.diagnostics_limited=failedCount>diagnostics.length;
+        report.completeness.export_complete=report.completeness.runs_limited!==true&&report.events?.available===true&&report.completeness.diagnostics_included===true;
         var serialized=JSON.stringify(report,null,2);
         var blob=new Blob([serialized],{type:"application/json"});
         if(blob.size>600000)throw new Error("The combined assistant report exceeds the 600 KB export limit.");
@@ -186,7 +187,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         link.click();
         link.remove();
         window.setTimeout(function(){URL.revokeObjectURL(objectUrl);},1000);
-        setMessage(report.completeness.diagnostics_included?"Assistant report exported. Review the JSON before sharing it with ChatGPT.":"Partial assistant report exported. Review missing or limited diagnostics before sharing it with ChatGPT.",report.completeness.diagnostics_included?"good":"error");
+        setMessage(report.completeness.export_complete?"Assistant report exported. Review the JSON before sharing it with ChatGPT.":"Partial assistant report exported. Review run, event and diagnostic completeness markers before sharing it with ChatGPT.",report.completeness.export_complete?"good":"error");
       });
     }).catch(function(error){
       if(version===sessionVersion&&requestId===exportRequestId)setMessage(error.message,"error");
