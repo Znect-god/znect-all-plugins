@@ -46,6 +46,11 @@ jobs:
           name: Run Android unit tests and assemble debug APK
           command: cd plugins/znect-ci-bridge/android-exporter && ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug
           no_output_timeout: 20m
+      - store_test_results:
+          path: plugins/znect-ci-bridge/android-exporter/app/build/test-results/testDebugUnitTest
+      - store_artifacts:
+          path: plugins/znect-ci-bridge/android-exporter/app/build/outputs/apk/debug/app-debug.apk
+          destination: android-exporter/app-debug.apk
 
 workflows:
   ci-bridge-validation:
