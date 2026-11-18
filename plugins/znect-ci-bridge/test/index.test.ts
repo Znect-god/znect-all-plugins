@@ -275,14 +275,10 @@ describe("MCP tool schemas and error boundary", () => {
         properties?: Record<string, { type?: string; maximum?: number; minimum?: number; enum?: string[] }>;
       };
     }>;
-    expect(tools).toHaveLength(19);
+    expect(tools).toHaveLength(15);
     expect(tools.every((tool) => tool.annotations?.readOnlyHint === true)).toBe(true);
     expect(tools.map((tool) => tool.name)).toContain("list_recent_events");
     expect(tools.map((tool) => tool.name)).toContain("correlate_recent_events");
-    for (const name of ["check_znect_build_connection", "list_build_runs", "get_build_run_details", "list_build_run_artifacts"]) {
-      expect(tools.map((tool) => tool.name)).toContain(name);
-    }
-
     const byName = Object.fromEntries(tools.map((tool) => [tool.name, tool]));
     for (const name of ["check_connection", "list_recent_builds", "get_build_details", "get_build_logs", "list_recent_runs", "get_run_details", "get_job_details", "get_job_logs", "get_job_test_results", "list_job_artifacts", "get_job_artifact", "diagnose_run", "correlate_recent_events"]) {
       expect(byName[name].inputSchema?.properties?.project_id).toMatchObject({ type: "string" });
@@ -296,7 +292,6 @@ describe("MCP tool schemas and error boundary", () => {
         max_chars: { type: "integer", minimum: 1, maximum: 80_000 }
       }
     });
-    expect(byName.list_build_runs.inputSchema?.properties?.limit).toMatchObject({ type: "integer", minimum: 1, maximum: 20 });
     expect(byName.get_run_details.inputSchema?.properties?.run_id).toMatchObject({
       type: "string",
       format: "uuid"
