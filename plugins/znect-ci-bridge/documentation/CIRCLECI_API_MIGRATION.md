@@ -31,6 +31,12 @@ Sources:
 5. **Legacy build number mapping:** the v1.1 build number is not a v3 UUID. Never pass a build number as a v3 resource ID or guess a match.
 6. **Logs:** v3 exposes stdout/stderr by job UUID, step number and execution index. The implementation must preserve byte limits and redact output before returning it.
 
+## Job execution timestamp semantics
+
+The CircleCI API v3 developer guide's single-job response example names `started_at` and `ended_at` as execution timestamps. The adapter now maps only those fields to `CiJob.startedAt` and `CiJob.completedAt`. It does not treat `created_at`, `start_time`, `stop_time` or `stopped_at` as execution timestamps. A queued job without a documented start/end field therefore has no execution interval in the shared model.
+
+The regression fixture supplies only creation/legacy aliases and expects both execution timestamps to remain absent. This test-source coverage is pending execution.
+
 ## Run outcome semantics
 
 CircleCI documents that a Run's `current_outcome` is authoritative because reruns can change the outcome; it is not interchangeable with a generic `outcome` field. The adapter now uses `current_outcome` first for Run status and does not allow a stale `outcome` field to override it. Workflow/job status normalization remains separate because those resources have their own outcome contract.
