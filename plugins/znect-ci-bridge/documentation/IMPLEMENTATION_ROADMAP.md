@@ -4,8 +4,8 @@
 **Updated:** 2026-11-18 (CircleCI-first CI Bridge development alignment)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
-**Active working branch:** `test/ci-bridge-webhook-ingress-contract`  
-**Base:** `c72a67e33177985a57f4d9d6180e4e8d8a970edb`  
+**Active working branch:** `feature/ci-bridge-android-exporter`  
+**Previous engineering base:** `test/ci-bridge-webhook-ingress-contract`  
 **Cost constraint:** free tiers/included quotas only; no paid add-ons, auto-refill, or unapproved Production deployment.
 
 This is the living implementation roadmap. Update it with every meaningful implementation change. When source implementation and its regression coverage are added, mark it **(выполнено)**. Test execution, live provider verification, deployment and operational readiness remain separate statuses. Do not confuse implementation with verification, deployment, or operational readiness.
@@ -23,7 +23,13 @@ This is the living implementation roadmap. Update it with every meaningful imple
 
 No PR merge, default-branch update, CI pipeline run, build, deployment, Preview refresh, Production change, or CircleCI action is authorized by this roadmap alone.
 
-## 2. Intended result
+## 2. Delivery stages
+
+1. **Core CircleCI diagnostics and private report API — (выполнено):** provider adapter, authenticated bounded Browser API, webhook inbox, event correlation and aggregate `/api/v1/report` source are present.
+2. **Android private report handoff — source implementation (выполнено):** native exporter source, local Keystore-backed credential storage, strict HTTPS report fetch, schema checks and explicit Sharesheet export are present. Build and device verification remain pending.
+3. **CircleCI validation and operational proof — in progress:** validate the exact candidate branch in CircleCI only after authorization, then verify a real CircleCI event and private report handoff. No run, build, deployment or secret access is authorized by this roadmap.
+
+## 3. Intended result
 
 ChatGPT and authorized users should be able to inspect current Znect project build health through a private, bounded report containing:
 - registered projects, repositories and CI connections;
@@ -36,7 +42,7 @@ ChatGPT and authorized users should be able to inspect current Znect project bui
 
 The Bridge must remain read-only with respect to CI execution and project source/configuration: no trigger, retry, cancel, deployment, configuration-write or source-modification operations.
 
-## 3. Current implementation inventory
+## 4. Current implementation inventory
 
 ### 3.1 Core Worker and access control
 
@@ -136,6 +142,17 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [ ] Verify freshness, pagination/truncation indicators and failure behavior; stale reports must not be presented as current.
 - [ ] Confirm operation stays within CircleCI and Cloudflare free/included quotas; quotas are finite.
 
+### 3.10 Android private report exporter
+
+- [x] Isolated native Android module under `android-exporter/` with HTTPS-only origin policy and fixed report endpoint **(выполнено — source implementation)**.
+- [x] Android Keystore AES-GCM credential storage and app-private preferences **(выполнено — source implementation)**.
+- [x] Bounded 100 KB report retrieval, redirect rejection, credential-field scan and explicit FileProvider/Sharesheet export **(выполнено — source implementation)**.
+- [x] Validate report identity, CircleCI provider, read-only permissions, ISO timestamp, project/connection metadata, bounded run/event arrays and completeness metadata **(выполнено — source implementation; not yet compiled)**.
+- [x] Eight origin-policy unit-test cases authored **(выполнено — test source only)**.
+- [ ] Add report-schema tests and local disconnect/key-deletion UX.
+- [ ] Add device-auth/biometric confirmation and verify lifecycle/error handling.
+- [ ] Run Android Gradle tests/build only after explicit authorization; no APK or device verification is claimed.
+
 ### 3.9 CircleCI validation pipeline
 
 - [x] Root `.circleci/config.yml` defines the CI Bridge validation job: `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run. **(выполнено — source configuration)**
@@ -143,7 +160,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [ ] Run the CircleCI pipeline on the exact candidate branch/SHA after explicit user authorization.
 - [ ] Review actual CircleCI job results, logs, tests and Wrangler dry-run output; do not infer success from config presence.
 
-## 4. Validation and release gates
+## 5. Validation and release gates
 
 ### Gate A — source validation
 - [ ] Dependency install, typecheck and complete unit/integration test suite on the exact candidate SHA.
@@ -177,9 +194,9 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [ ] User approval for PR/merge/release and separately for any Production deployment.
 - **Current state:** not release-ready; no Production deployment is authorized.
 
-## 5. Branch and repository policy
+## 6. Branch and repository policy
 
-- Continue source work in `Znect-god/znect-all-plugins`, currently on `test/ci-bridge-webhook-ingress-contract`.
+- Continue source work in `Znect-god/znect-all-plugins`, on the isolated branch `feature/ci-bridge-android-exporter`.
 - Keep changes isolated. Do not merge, open a PR, or update `main` without explicit approval.
 - Older branches (`feat/ci-bridge-circleci-webhooks`, `feature/ci-bridge-test-reports`, `feature/znect-ci-bridge-source`, `work/znect-ci-bridge-free-channel-v0.2.0`, `work/znect-ci-bridge-mcp-v0.2.0`) are historical work lines/prototypes; do not develop them in parallel unless a specific recovery or comparison requires it.
 - The `docs/ci-bridge-implementation-roadmap` branch contains the earlier roadmap source; this living copy is maintained alongside the active engineering branch so implementation status and future work stay together.
@@ -187,7 +204,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - Do not trigger GitHub Actions, CircleCI, builds, deployments, Preview refreshes or Production changes without explicit authorization.
 - Do not request already-configured credentials again. Never put secret values in code, docs, commits, chat or logs.
 
-## 6. Operating rule for roadmap updates
+## 7. Operating rule for roadmap updates
 
 For every meaningful feature or fix:
 1. Update the code and relevant tests/docs.
@@ -196,7 +213,7 @@ For every meaningful feature or fix:
 4. Record the exact commit/branch and any remaining limitations.
 5. Do not mark a feature deployed or operational merely because its source code exists.
 
-## 7. Development log — 2026-11-17
+## 8. Development log — 2026-11-17
 
 - Added the living roadmap to the active engineering branch and linked it from the plugin README and Usage Guide.
 - Hardened internal event-page parsing, project-slug ownership checks, duplicate/order/cursor consistency validation and empty-page cursor handling; malformed pages fail closed.
@@ -206,7 +223,7 @@ For every meaningful feature or fix:
 - Aligned project-registry validation with the two CircleCI GitHub slug forms already accepted by webhook normalization; added a registry regression test.
 - Added a focused Browser API regression test for a malformed event-store page. This test has been authored but not executed.
 
-## 8. Development log — 2026-11-18
+## 9. Development log — 2026-11-18
 
 - Completed the repository inventory stage: reviewed the active CI Bridge branch and the current Znect Build main-branch README, implementation status, request/result contracts, project inventory and central workflow definitions.
 - Confirmed that Znect Build has request validation, request/result schemas, central orchestration and a central Android recipe prepared, but hosted-runner/credential gates and the Forge execution freeze still prevent an end-to-end build. No Bridge-facing result read API is present in the reviewed contracts or workflow outputs.
@@ -390,3 +407,12 @@ For every meaningful feature or fix:
 - Added unit-test source for strict HTTPS-origin validation. **Test execution pending; no build or APK was produced.**
 - No live API request was made; no token or other secret was requested/read. No CircleCI pipeline, CI workflow, build, deployment or device installation was run.
 - Remaining work: source review and additional test coverage; then, only after explicit authorization, local Gradle build, tests and Android device verification as separate steps.
+
+
+## 10. Development log — 2026-11-18 (Android exporter and CircleCI alignment)
+
+- Confirmed the root `.circleci/config.yml` exists on the Android exporter branch and defines validation only: `npm ci`, `npm run check`, smoke-script syntax check and Wrangler dry-run; it contains no deploy step.
+- Confirmed `Znect-god/znect-build` is a separate central build repository whose current README documents GitHub Actions as its executor. This remains separate from CI Bridge source development and its CircleCI validation; no Znect Build workflow was invoked.
+- Confirmed the report schema emitted by `/api/v1/report`: `service`, `report_version`, `provider`, `permissions`, `project`, `connection`, `runs.items`, `events.items`, `completeness`, and `read_only`.
+- Hardened Android report validation to check the actual CircleCI report schema, ISO-8601 generation timestamp, connection metadata, array bounds/counts and completeness section.
+- No CircleCI pipeline, Gradle build, unit test, live API request, deployment or secret access was performed.
