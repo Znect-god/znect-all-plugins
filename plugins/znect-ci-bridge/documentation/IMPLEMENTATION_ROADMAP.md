@@ -497,5 +497,13 @@ For every meaningful feature or fix:
 - The Android exporter now binds a report to the exact CircleCI connection selected in local configuration; a valid report for a different connection is rejected before export **(выполнено — source fix)**.
 - The response must declare JSON media type before parsing. Private report writes now use a temporary file and rename-based finalization, and prior cache cleanup is checked **(выполнено — source fix)**.
 - Activity teardown now suppresses late UI callbacks and avoids publishing a report after destruction; in-flight executor work is interrupted on teardown **(выполнено — source fix; device lifecycle verification pending)**.
-- Added two report-validator regression tests for selected-connection acceptance and mismatch rejection. Android test sources now total 31 cases: 8 origin + 20 report-schema/privacy + 3 Bearer-token tests; execution remains pending.
+- Added two report-validator regression tests for selected-connection acceptance and mismatch rejection. Android test sources then totaled 31 cases: 8 origin + 20 report-schema/privacy + 3 Bearer-token tests; execution remains pending.
 - No Gradle tests, APK build, CircleCI run, live API request, deployment or device verification was performed.
+
+
+## 21. Exact event cursor integer bounds — 2026-11-18
+
+- Replaced floating-point range comparisons in the Android JSON integer validator with exact decimal comparisons. This closes a precision edge case where the largest safe JavaScript integer and the next integer can round to the same IEEE-754 double **(выполнено — source fix)**.
+- Added a regression test for a floating-point event cursor at (2^{53}), in addition to the existing oversized-Long test **(выполнено — test source added; execution pending)**.
+- Android test sources now total 32 cases: 8 origin + 21 report-schema/privacy + 3 Bearer-token tests. None has been executed.
+- No build, CircleCI run, APK, live API call, deployment or device verification was performed.
