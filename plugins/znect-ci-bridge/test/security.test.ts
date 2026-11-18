@@ -197,6 +197,16 @@ describe("fetchAllowedArtifact", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects an untrusted initial URL before making a network request", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchAllowedArtifact(new URL("https://attacker.example/private-data"))
+    ).rejects.toThrow("Artifact download URL is not on an allowed HTTPS host.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("follows a redirect only when the destination remains allowlisted", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(null, {
