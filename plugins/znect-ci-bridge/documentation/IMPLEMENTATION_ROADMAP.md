@@ -1259,3 +1259,12 @@ For every meaningful feature or fix:
 - [ ] Review actual CircleCI provenance artifacts to confirm the recorded source ref, requested SHA and resolved checkout SHA agree.
 
 **Verification boundary:** source, CircleCI configuration and regression-test updates are committed in their respective development branches. This closes a source-level gap where a manifest could name an obsolete or unrelated branch even though the SHA itself was exact. No tests, CircleCI pipeline, live API request, Preview/Production deployment, secret access or runtime configuration change was performed.
+
+### Stage 86 — Validate upstream response budgets before network access — 2026-11-18
+
+- [x] Validate CircleCI text-response byte budgets as non-negative safe integers before issuing the API request.
+- [x] Validate artifact-download byte budgets before listing artifact metadata or contacting the download host.
+- [x] Add regression-test source proving negative and unsafe-integer budgets are rejected without any network request.
+- [ ] Execute focused CircleCI client tests, full Vitest suite and TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
+
+**Verification boundary:** implementation and regression-test source are committed. This prevents invalid internal budgets from causing unnecessary authenticated API or artifact requests before the existing bounded-reader validation runs. No tests, CircleCI API request, CircleCI pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
