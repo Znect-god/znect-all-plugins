@@ -8,8 +8,9 @@ A native Android helper for a user-initiated, manual handoff of the private CI B
 ## Requirements
 
 - Android 8.0 (API 26) or newer.
-- Android Studio / Android Gradle Plugin 8.7.3 and JDK 17 to build.
+- Android Gradle Plugin 8.7.3 and JDK 17.
 - Android SDK 35.
+- Gradle 8.9 Wrapper is committed (`gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar` and properties). The wrapper JAR is sourced from the official `gradle/gradle` `v8.9.0` tag and checked against Gradle's published SHA-256; the distribution URL is pinned and its official SHA-256 is configured.
 
 ## Setup
 
@@ -38,7 +39,7 @@ The app does not include a default API origin or project identifier. Do not past
 - Device screen-lock/biometric confirmation is not implemented yet.
 - The user must explicitly configure the API origin, project and token locally.
 - The exported report can contain private project/run metadata; review it before sharing.
-- Eight HTTPS-origin tests and ten report-schema/privacy tests have been added but not executed. No Gradle build, installation, live API request, CircleCI pipeline or deployment has been run.
+- Eight HTTPS-origin tests and ten report-schema/privacy tests have been authored. The Android module now has a pinned Gradle 8.9 Wrapper and a CircleCI job for JVM tests plus debug APK assembly; execution and device verification remain pending.
 
 ## Implemented in this source prototype
 
@@ -49,6 +50,7 @@ The app does not include a default API origin or project identifier. Do not past
 - Local disconnect action that clears the encrypted credential, Keystore key entry and temporary report.
 - Local temporary JSON export and explicit Android Sharesheet handoff through FileProvider.
 - Cleartext traffic disabled and system trust anchors required.
+- Gradle 8.9 Wrapper with upstream JAR checksum verification and pinned distribution checksum.
 - Unit-test source for accepted/rejected API origins.
 - Isolated report validator with unit-test source for identity, read-only permission, project scope, timestamp, collection bounds/counts, completeness and recursive sensitive-key detection.
 
