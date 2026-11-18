@@ -54,6 +54,26 @@ function runTitle(run: JsonRecord): string {
   return optionalText(run.display_title) ?? optionalText(run.name) ?? "";
 }
 
+function safeRunUrl(value: unknown, runId: string): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.origin !== "https://github.com" ||
+      url.port !== "" ||
+      url.username !== "" ||
+      url.password !== "" ||
+      url.pathname !== `/Znect-god/znect-build/actions/runs/${runId}` ||
+      url.search !== "" ||
+      url.hash !== ""
+    ) return undefined;
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 function mapRun(value: unknown, projectId: string): CiRun {
   if (!isRecord(value)) throw new Error("GitHub Actions returned a malformed workflow run.");
   const id = String(safeInteger(value.id, "workflow run ID"));
@@ -69,7 +89,7 @@ function mapRun(value: unknown, projectId: string): CiRun {
     ...(optionalText(value.head_sha) ? { commitSha: optionalText(value.head_sha) } : {}),
     ...(optionalText(headCommit.message) ? { commitMessage: optionalText(headCommit.message) } : {}),
     ...(iso(value.run_started_at ?? value.created_at) ? { startedAt: iso(value.run_started_at ?? value.created_at) } : {}),
-    ...(optionalText(value.html_url) ? { url: optionalText(value.html_url) } : {})
+    ...(safeRunUrl(value.html_url, id) ? { url: safeRunUrl(value.html_url, id) } : {})
   };
 }
 
