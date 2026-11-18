@@ -2,10 +2,11 @@
 
 **Status: `in-development` — experimental; not production-ready.**  
 **Version:** `0.1.0`  
-**Current CI diagnostics provider:** CircleCI Cloud (read-only; live API verification remains separate from source implementation). Projects and CI connections are explicitly registered; no project is injected as a default. Znect Build remains the separate central build system for other Znect application builds; CI Bridge source validation and development checks run through CircleCI.  
-**Architecture:** one Bridge instance with a validated multi-project registry and a provider-neutral, read-only CircleCI adapter. CircleCI also runs CI Bridge's own validation pipeline; that execution role is separate from the Bridge's read-only CircleCI diagnostics API.
+**Observed CI diagnostics provider:** CircleCI Cloud (read-only; live API verification remains separate from source implementation). Projects and CI connections are explicitly registered; no project is injected as a default.  
+**CI Bridge validation executor:** central Znect Build; there is no standalone CircleCI workflow in this repository.  
+**Architecture:** one existing Bridge instance with a validated multi-project registry, provider-neutral read-only adapters, private Browser JSON API, signed webhook inbox and bounded assistant report.
 
-Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting CI events and inspecting CircleCI runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. The authenticated Browser JSON API is the private report source. The existing browser dashboard now provides an explicit bounded assistant-report download, including up to three failed-run diagnostic bundles; the Android exporter remains an optional manual Sharesheet path. Direct automatic ChatGPT authentication to this private API remains an open platform limitation. MCP is not required and GitHub Actions / Znect Build are not used to execute CI Bridge validation or the ChatGPT report request.
+Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting CI events and inspecting registered CircleCI runs, workflows, jobs, logs, test results and artifacts. Its authenticated Browser JSON API is the private report source. The existing dashboard provides an explicit bounded assistant-report JSON download, including up to three failed-run diagnostic bundles. Direct automatic ChatGPT authentication to this private API remains an open platform limitation. MCP is optional legacy functionality, not a required ChatGPT channel.
 
 > **Development notice:** Treat every feature as unverified unless this repository explicitly marks the exact check as passed. Unit tests, mocked API tests, Wrangler dry-runs and synthetic webhook tests do not prove full live integration. Do not use this prototype for production decisions or as the only CI monitoring channel.
 
@@ -13,12 +14,10 @@ Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting
 
 > **Authoritative current engineering snapshot:** the notes below retain historical context. Where an older entry conflicts with this snapshot, this snapshot and the maintained implementation roadmap take precedence.
 
-- **CI executor:** CircleCI only for ongoing CI Bridge development and validation, through the committed `.circleci/config.yml`. GitHub Actions entries below are historical evidence only; GitHub Actions and Znect Build are not current runners for CI Bridge. No CircleCI run result for the current engineering head has been verified.
-- **Assistant access:** the authenticated GET-only Browser JSON API (`/api/v1/*`) using the separate `WEB_ACCESS_TOKEN` is the private report source. The web dashboard's **Export assistant report** action downloads the bounded aggregate report plus up to three failed-run diagnostic bundles, marking partial data and enforcing a 600 KB total cap. The user reviews and manually attaches the JSON to ChatGPT; direct automatic ChatGPT authentication remains unsupported. The Android exporter is an optional Sharesheet path. MCP remains optional legacy functionality and is not required.
-- **Android exporter:** native Kotlin source prototype is present under `android-exporter/`. It uses Android Keystore-backed encrypted credentials, validates report scope/schema, checks the CircleCI read path plus the private report endpoint, and shares only through the Android Sharesheet. Forty-eight Android JVM test cases are authored but unexecuted; no APK or device verification is claimed.
-- **Browser API regression coverage:** tests cover MCP/Browser token separation, authenticated GET-only enforcement, scoped CircleCI status, and safe unavailable-provider responses; execution on this branch remains pending.
-- **Branch and release boundary:** work remains isolated on `feature/ci-bridge-android-exporter`. No Production deployment, release, CircleCI pipeline mutation, or CI Bridge production setting change is authorized or performed.
-- **CircleCI setup:** see [CIRCLECI_SETUP.md](documentation/CIRCLECI_SETUP.md). Connecting the repository in CircleCI is a user-side prerequisite; do not replace a missing CircleCI run with GitHub Actions or a manual API trigger.
+- **CI executor:** Znect Build is the required central executor for CI Bridge validation. The standalone `.circleci/config.yml` and Android exporter have been removed; do not restore a parallel executor. The target/recipe must be correctly registered and explicitly enabled before an authorized run. No current-head validation result is claimed.
+- **Assistant access:** the authenticated GET-only Browser JSON API (`/api/v1/*`) using the separate `WEB_ACCESS_TOKEN` is the private report source. The dashboard's **Export assistant report** action downloads the bounded aggregate report plus up to three failed-run diagnostic bundles, marks partial data and enforces a 600 KB total cap. The user reviews and manually attaches the JSON to ChatGPT; direct automatic ChatGPT authentication remains unverified. No token is included in the export.
+- **Browser API regression coverage:** tests cover authenticated GET-only enforcement, scoped CircleCI status, report aggregation/redaction and dashboard export; execution on the current head remains pending.
+- **Branch and release boundary:** work remains isolated on `feature/ci-bridge-android-exporter` (legacy branch name; Android exporter source has been removed). No Production deployment, release, Znect Build execution or production setting change is authorized or claimed.
 
 
 - Historical integration branch: `feature/ci-bridge-test-reports`. Current isolated engineering branch: `feature/ci-bridge-android-exporter` in [Znect-god/znect-all-plugins](https://github.com/Znect-god/znect-all-plugins). The previous webhook-ingress branch is its engineering base.
@@ -93,11 +92,9 @@ The inbox does **not** push unsolicited messages into an open ChatGPT conversati
 
 ## Free ChatGPT access (no MCP)
 
-The supported assistant interface is the authenticated Browser JSON API. ChatGPT access must use a private report handoff that reads this API directly; MCP is not required and is not the supported channel. GitHub Actions report workflows are not part of the active CI Bridge access path. The existing dashboard now offers **Export assistant report**: it calls the private aggregate endpoint, retrieves up to three separately bounded failed-run diagnostics for the selected project/connection, marks incomplete or capped diagnostics, and downloads a single JSON file with a 600 KB ceiling. The user must review and explicitly attach that file to ChatGPT; this is a private manual handoff, not automatic ChatGPT API authentication.
+The supported assistant interface is the authenticated Browser JSON API. The existing dashboard offers **Export assistant report**: it calls the private aggregate endpoint, retrieves up to three separately bounded failed-run diagnostics for the selected project/connection, marks incomplete or capped diagnostics, and downloads a single JSON file with a 600 KB ceiling. The user reviews and explicitly attaches that file to ChatGPT. This is a private manual handoff, not automatic ChatGPT API authentication.
 
-CircleCI runs CI Bridge's own validation pipeline from the repository's root `.circleci/config.yml`. This is distinct from the Bridge's read-only CircleCI adapter, which inspects registered projects' pipelines and never starts, retries, cancels or modifies them.
-
-See `documentation/ASSISTANT_CHANNEL.md` for the supported access boundary and `documentation/IMPLEMENTATION_ROADMAP.md` for remaining handoff work.
+The API remains Bearer-protected, GET-only, rate-limited, project/connection-scoped, bounded and redacted. No token is placed in a URL or exported JSON. Direct automatic ChatGPT authentication remains an open integration requirement; do not weaken the API to work around it.
 
 ## Secrets and configuration
 
@@ -118,18 +115,9 @@ The npm `allowScripts` policy is intentionally version-pinned: `esbuild@0.28.2` 
 
 ## Development
 
-Use Node.js 24 on a supported desktop/Linux environment for local source validation:
+CI Bridge source validation must use the central Znect Build recipe. Do not add a root `.circleci/config.yml`, revive an independent CircleCI executor, or route checks through GitHub Actions outside Znect Build. The central Node.js/Cloudflare Worker recipe and its registered target must be verified on the exact source SHA before any validation result is claimed.
 
-```bash
-npm ci
-npm run check
-node --check scripts/preview-smoke-test.mjs
-npx wrangler deploy --dry-run
-```
-
-These commands are local validation steps, not a project build or deployment. Android ARM64 Termux is not a supported Wrangler/workerd deployment environment. **CI Bridge's own source validation is defined in the root `.circleci/config.yml` and is executed by CircleCI.** Znect Build remains a separate central build system for other Znect application builds; its executor is documented in that repository and is not used to validate or run CI Bridge.
-
-The CircleCI validation config runs the Node/Worker checks and a separate Android exporter job (Gradle unit tests plus debug APK assembly). It is restricted to `main` and `feature/ci-bridge-android-exporter`, stores JUnit results and the debug APK as CircleCI artifacts, and has no deployment or release-signing step. The pipeline has not been verified for the current exporter branch. See [`documentation/CIRCLECI_SETUP.md`](documentation/CIRCLECI_SETUP.md) for project setup and artifact retrieval.
+For local engineering inspection only, the package scripts remain `npm run typecheck` and `npm test`/`npm run check`; local commands do not substitute for the agreed Znect Build validation path. No CI execution, Preview deployment or Production change is authorized by this document alone.
 
 ## Safety and limitations
 
@@ -154,6 +142,3 @@ CI Bridge includes a read-only adapter and authenticated Browser JSON API for ce
 The central recipe's manifest is uploaded as a private GitHub Actions artifact. Source code now implements bounded retrieval of only the manifest JSON from that ZIP; job-log ZIP parsing and structured test report ingestion remain future work. This retrieval code has not yet been executed or live-verified. The central target is still disabled and no live connection is claimed.
 
 
-## CircleCI validation pipeline
-
-The root `.circleci/config.yml` defines the CI Bridge validation workflow on CircleCI using Node.js 24.11.0 and the Android SDK/JDK image. It installs package dependencies, runs `npm audit --audit-level=high`, runs typecheck and unit tests, validates the smoke-test script syntax, performs Wrangler dry-run, and runs Android JVM tests plus debug APK assembly. The workflow stores test results and the debug APK as job artifacts. It does not deploy, access Cloudflare credentials, sign a release, or mutate monitored CircleCI pipelines. Pipeline execution status must be verified separately in CircleCI; adding the config is not evidence that checks passed. See [`documentation/CIRCLECI_SETUP.md`](documentation/CIRCLECI_SETUP.md).
