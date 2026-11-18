@@ -1098,3 +1098,14 @@ For every meaningful feature or fix:
 - [ ] Execute focused provider/API tests and TypeScript checks through the authorized opt-in CircleCI workflow.
 - [ ] Verify duplicate-path artifact behavior against a live authorized parallel job.
 - **Verification boundary:** source and regression-test fixtures updated against CircleCI's public CLI v3 model; no tests, live API calls, pipeline, deployment or credentials accessed.
+
+
+### Stage 73 — Keep parallel artifact identity in diagnostic result types
+- [x] Audit both MCP `diagnose_run` and Browser JSON API diagnostics for execution-index propagation through JUnit artifact selection and output **(выполнено — static source inspection)**.
+- [x] Correct the MCP diagnostics artifact collection type so its optional `execution` property matches the provider contract and the emitted report object **(выполнено — source update; TypeScript check pending)**.
+- [x] Confirm diagnostics pass each artifact's execution index into exact-path retrieval and surface the returned execution index; when multiple eligible JUnit artifacts exist, the current one-artifact cap is reported as incomplete rather than silently presented as complete **(выполнено — static source inspection)**.
+- [x] Confirm failed-step stdout/stderr retrieval passes the step's parallel execution index; structured job test results remain a job-level JSONL endpoint without an execution selector **(выполнено — static source inspection)**.
+- [ ] Execute TypeScript check and focused diagnostics/provider tests through the authorized opt-in CircleCI workflow.
+- [ ] Verify parallel execution log and artifact behavior against a live authorized CircleCI job.
+
+**Verification boundary:** source audit identified a TypeScript excess-property mismatch: the MCP diagnostics artifact collection type omitted the optional `execution` field even though the provider contract and pushed report object include it. The type was corrected. The current diagnostic design deliberately caps JUnit artifact retrieval at one per job and flags multiple eligible reports as incomplete; this does not yet aggregate all per-execution JUnit files. No tests, typecheck, live API request, CircleCI pipeline, deployment or runtime configuration change was performed.
