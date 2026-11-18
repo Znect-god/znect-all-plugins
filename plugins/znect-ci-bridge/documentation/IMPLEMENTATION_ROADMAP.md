@@ -1243,7 +1243,7 @@ For every meaningful feature or fix:
 
 - [x] Reject negative, fractional, unsafe-integer and non-numeric artifact `size` metadata rather than silently omitting it or using it in aggregate-byte budget decisions.
 - [x] Preserve valid zero-byte and positive safe-integer artifact sizes.
-- [x] Add provider regression-test source for negative artifact sizes.
+- [x] Add provider regression-test source for negative, fractional, unsafe-integer and non-numeric sizes, plus valid zero-byte and positive integer sizes.
 - [ ] Execute the provider and artifact-collector Vitest suites plus TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
 
 **Verification boundary:** source-level validation and regression-test source are committed. The CircleCI v3 API remains read-only; no live API request or pipeline was made, and tests/typecheck remain unexecuted.
