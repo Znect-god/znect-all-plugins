@@ -115,7 +115,9 @@ describe("unified CircleCI test result normalization", () => {
   it.each([
     '<!DOCTYPE testsuite [<!ENTITY x SYSTEM "https://example.invalid/x">]><testsuite/>',
     '<testsuite><testcase name="broken"></testsuite>',
-    '<testsuite><testcase name="missing-end">'
+    '<testsuite><testcase name="missing-end">',
+    '<testsuite/>trailing-garbage',
+    '<testsuite/><testsuite/>'
   ])("rejects unsafe or malformed JUnit XML: %s", (xml) => {
     const result = normalizeJobTestResults({ junitArtifacts: [{ content: xml }] });
     expect(result).toMatchObject({
