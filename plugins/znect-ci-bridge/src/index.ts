@@ -10,7 +10,7 @@ import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
 import { correlateEventsWithRuns } from "./correlation";
 import { inspectCiBridgeProvenance } from "./provenance";
 import { collectJobReportArtifacts, MAX_REPORT_ARTIFACTS_PER_JOB, MAX_REPORT_BYTES_PER_JOB } from "./diagnostic-artifacts";
-import { buildDiagnosticsSummary, reportArtifactsStatus, testResultsStatus } from "./diagnostic-completeness";
+import { buildDiagnosticsSummary, failedStepLogsStatus, reportArtifactsStatus, testResultsStatus } from "./diagnostic-completeness";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
@@ -714,15 +714,18 @@ function createServer(env: Env) {
             }));
 
           const failedStepLogs: Array<Record<string, unknown>> = [];
+          let failedStepLogsIncomplete = false;
           for (const step of failedSteps) {
             for (const action of step.actions) {
               if (logActionsInspected >= 3) {
                 logActionLimitReached = true;
+                failedStepLogsIncomplete = true;
                 break;
               }
               const stepNum = action.stepNumber;
               if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) {
                 reportDataIncomplete = true;
+                failedStepLogsIncomplete = true;
                 continue;
               }
               logActionsInspected++;
@@ -739,10 +742,14 @@ function createServer(env: Env) {
                     redactKnownSecrets(result.text, env), 12_000, result.truncated
                   );
                   output[stream] = limitedOutput.text;
-                  if (limitedOutput.truncated) reportDataIncomplete = true;
+                  if (limitedOutput.truncated) {
+                    reportDataIncomplete = true;
+                    failedStepLogsIncomplete = true;
+                  }
                 } catch {
                   output[stream] = "Unable to retrieve this output stream.";
                   reportDataIncomplete = true;
+                  failedStepLogsIncomplete = true;
                 }
               }
               failedStepLogs.push({
@@ -791,6 +798,11 @@ function createServer(env: Env) {
             outcome: job.status,
             failed_steps: failedSteps,
             failed_step_logs: failedStepLogs,
+            failed_step_logs_status: failedStepLogsStatus({
+              failedActionsCount: failedSteps.reduce((count, step) => count + step.actions.length, 0),
+              logsCount: failedStepLogs.length,
+              incomplete: failedStepLogsIncomplete
+            }),
             test_results: testResults,
             test_results_error: testResultsError,
             test_results_status: testResultsState,
@@ -1174,12 +1186,19 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             return actions.length ? [{ name: step.name, execution: step.execution, actions }] : [];
           });
           const failedStepLogs: Array<Record<string, unknown>> = [];
+          let failedStepLogsIncomplete = false;
           for (const step of details.steps ?? []) {
             for (const action of step.actions) {
               if ((action.status !== "failed" && action.outcome !== "failed") || action.isInsignificant === true) continue;
-              if (logActionsInspected >= 3) { logActionLimitReached = true; incomplete = true; break; }
+              if (logActionsInspected >= 3) {
+                logActionLimitReached = true;
+                failedStepLogsIncomplete = true;
+                incomplete = true;
+                break;
+              }
               if (typeof action.stepNumber !== "number" || !Number.isInteger(action.stepNumber) || action.stepNumber < 0) {
                 reportDataIncomplete = true;
+                failedStepLogsIncomplete = true;
                 incomplete = true;
                 continue;
               }
@@ -1192,10 +1211,15 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
                   });
                   const limitedOutput = limitText(redactKnownSecrets(result.text, env), 12_000, result.truncated);
                   output[stream] = limitedOutput.text;
-                  if (limitedOutput.truncated) { reportDataIncomplete = true; incomplete = true; }
+                  if (limitedOutput.truncated) {
+                    reportDataIncomplete = true;
+                    failedStepLogsIncomplete = true;
+                    incomplete = true;
+                  }
                 } catch {
                   output[stream] = "Unable to retrieve this output stream.";
                   reportDataIncomplete = true;
+                  failedStepLogsIncomplete = true;
                   incomplete = true;
                 }
               }
@@ -1236,6 +1260,11 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             job: details,
             failed_steps: failedSteps,
             failed_step_logs: failedStepLogs,
+            failed_step_logs_status: failedStepLogsStatus({
+              failedActionsCount: failedSteps.reduce((count, step) => count + step.actions.length, 0),
+              logsCount: failedStepLogs.length,
+              incomplete: failedStepLogsIncomplete
+            }),
             test_results: testResults,
             test_results_error: testResultsError,
             test_results_status: testResultsState,
