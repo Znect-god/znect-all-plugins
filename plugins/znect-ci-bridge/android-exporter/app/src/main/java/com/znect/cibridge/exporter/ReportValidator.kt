@@ -8,6 +8,7 @@ import org.json.JSONObject
  * Kept independent of Activity/UI code so its contract can be unit-tested.
  */
 internal object ReportValidator {
+    private const val MAX_SAFE_INTEGER = 9_007_199_254_740_991L
     private val sensitiveKey = Regex("(?i)(token|secret|authorization|password|api[_-]?key)")
 
     private fun isInteger(value: Any?, min: Long, max: Long): Boolean =
@@ -72,7 +73,7 @@ internal object ReportValidator {
             eventItems.length() <= 20 &&
                 isInteger(requestedEvents, 1, 20) &&
                 isInteger(eventCount, 0, 20) &&
-                isInteger(nextCursor, 0, Long.MAX_VALUE) &&
+                isInteger(nextCursor, 0, MAX_SAFE_INTEGER) &&
                 eventItems.length().toLong() == (eventCount as Number).toLong() &&
                 (eventCount as Number).toLong() <= (requestedEvents as Number).toLong() &&
                 events.opt("available") is Boolean &&
