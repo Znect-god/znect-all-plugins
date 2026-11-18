@@ -41,6 +41,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function assertAllowedKeys(value: Record<string, unknown>, allowed: readonly string[], field: string): void {
+  const unexpected = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unexpected.length > 0) {
+    throw new Error(`Unknown project registry field(s) at ${field}: ${unexpected.join(", ")}.`);
+  }
+}
+
 function requiredString(value: unknown, field: string, max = 160): string {
   if (typeof value !== "string" || value.length === 0 || value.length > max || value.trim() !== value) {
     throw new Error(`Invalid project registry field: ${field}.`);
@@ -66,6 +73,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
   if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.projects)) {
     throw new Error("Project registry must use schema version 1 and contain a projects array.");
   }
+  assertAllowedKeys(parsed, ["version", "projects"], "root");
   if (parsed.projects.length > 100) throw new Error("Project registry supports at most 100 projects.");
 
   const projectIds = new Set<string>();
@@ -74,6 +82,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
 
   for (const [projectIndex, candidate] of parsed.projects.entries()) {
     if (!isRecord(candidate)) throw new Error(`Invalid project at index ${projectIndex}.`);
+    assertAllowedKeys(candidate, ["id", "name", "repositories", "components", "connections"], `projects[${projectIndex}]`);
     const id = requiredString(candidate.id, `projects[${projectIndex}].id`, 63);
     if (!ID_PATTERN.test(id) || projectIds.has(id)) throw new Error(`Invalid or duplicate project ID: ${id}.`);
     projectIds.add(id);
@@ -88,6 +97,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
 
     const repositories: ProjectRepository[] = repositoriesRaw.map((item, index) => {
       if (!isRecord(item)) throw new Error(`Invalid repository at projects[${projectIndex}].repositories[${index}].`);
+      assertAllowedKeys(item, ["fullName", "componentId"], `projects[${projectIndex}].repositories[${index}]`);
       const fullName = requiredString(item.fullName, `projects[${projectIndex}].repositories[${index}].fullName`, 200);
       if (!REPOSITORY_PATTERN.test(fullName)) throw new Error(`Invalid repository name: ${fullName}.`);
       const componentId = item.componentId === undefined
@@ -98,6 +108,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
 
     const components: ProjectComponent[] = componentsRaw.map((item, index) => {
       if (!isRecord(item)) throw new Error(`Invalid component at projects[${projectIndex}].components[${index}].`);
+      assertAllowedKeys(item, ["id", "name", "repository", "pathPrefix"], `projects[${projectIndex}].components[${index}]`);
       const componentId = requiredString(item.id, `projects[${projectIndex}].components[${index}].id`, 63);
       if (!ID_PATTERN.test(componentId)) throw new Error(`Invalid component ID: ${componentId}.`);
       const componentName = requiredString(item.name, `projects[${projectIndex}].components[${index}].name`);
@@ -132,6 +143,7 @@ export function parseProjectRegistry(raw: string): ProjectRegistry {
 
     const connections: ProjectConnection[] = connectionsRaw.map((item, index) => {
       if (!isRecord(item)) throw new Error(`Invalid connection at projects[${projectIndex}].connections[${index}].`);
+      assertAllowedKeys(item, ["id", "provider", "projectSlug"], `projects[${projectIndex}].connections[${index}]`);
       const connectionId = requiredString(item.id, `projects[${projectIndex}].connections[${index}].id`, 63);
       if (!ID_PATTERN.test(connectionId)) throw new Error(`Invalid connection ID: ${connectionId}.`);
       const provider = item.provider;
