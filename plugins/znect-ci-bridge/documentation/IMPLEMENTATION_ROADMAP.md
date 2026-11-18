@@ -997,3 +997,9 @@ For every meaningful feature or fix:
 - [ ] Execute adapter/provenance tests, TypeScript checks and the full suite on the exact source SHA through the authorized opt-in CircleCI workflow.
 
 **Verification boundary:** these are source and test-fixture corrections. No test suite or CircleCI pipeline was executed.
+## 63. Match CircleCI API v3 outcome vocabulary in provenance tests — 2026-11-18
+
+- [x] Use the documented API v3 successful job outcome `succeeded` in the positive adapter-level provenance test; the validator accepts both `succeeded` and the existing normalized `success` representation **(выполнено — test source correction)**.
+- [ ] Execute the focused provenance tests and confirm the runtime adapter returns the expected API v3 outcome string.
+
+**Verification boundary:** the test fixture now models CircleCI's documented API v3 vocabulary. The test has not been executed.
