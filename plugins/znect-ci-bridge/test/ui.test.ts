@@ -45,7 +45,8 @@ describe("browser dashboard security", () => {
     expect(DASHBOARD_HTML).toContain('report.completeness.diagnostics_included');
     expect(DASHBOARD_HTML).toContain('report.completeness.diagnostics_limited=failedCount>diagnostics.length');
     expect(DASHBOARD_HTML).toContain('"Partial assistant report exported.');
-    expect(DASHBOARD_HTML).toContain('serialized.length>600000');
+    expect(DASHBOARD_HTML).toContain('blob.size>600000');
+    expect(DASHBOARD_HTML).toContain('new Blob([serialized],{type:"application/json"})');
     expect(DASHBOARD_HTML).toContain('URL.createObjectURL(blob)');
     expect(DASHBOARD_HTML).toContain('link.download="znect-ci-report-"');
     expect(DASHBOARD_HTML).toContain('eventsRequestId++;exportRequestId++');
