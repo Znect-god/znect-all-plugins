@@ -1,3 +1,13 @@
+## 2026-11-18 — Znect Build read-only adapter implementation
+
+- Added a GET-only GitHub Actions adapter for the fixed central repository `Znect-god/znect-build`.
+- Added MCP tools for connection probing, verified central run listing/details and run-scoped artifact metadata.
+- Added source ownership verification using the central validation artifact name: registered project ID, SHA-256 source-repository fingerprint, validated source SHA and exact run ID.
+- Updated the central workflow on the isolated Znect Build branch to publish the validated source fingerprint in its validation artifact name. The branch remains unmerged and no workflow was triggered.
+- Extended the provider-neutral artifact contract to preserve run-scoped artifacts without assigning them to jobs.
+- Explicitly report GitHub Actions job-log ZIP and generic test-report limitations rather than presenting them as CircleCI-style output.
+- Added mocked adapter tests; they have not been executed on the current branch head.
+
 ## 2026-11-18 — Central Znect Build onboarding correction
 
 - Removed the standalone CircleCI validation workflow; Znect project builds and CI Bridge validation must go through Znect Build.
