@@ -8,7 +8,7 @@ The intended ChatGPT access path must work on the Free plan and must not require
 - Znect Build is the separate development repository and owner of central validation recipes and policy.
 - CI Bridge reads CircleCI through its bounded, read-only API v3 adapter.
 - The private Browser JSON API exposes bounded GET-only project, run, event, correlation and aggregate-report data using a separate `WEB_ACCESS_TOKEN`.
-- The dashboard can export a bounded JSON report for explicit user-reviewed handoff to ChatGPT.
+- The dashboard can export a bounded JSON report for explicit user-reviewed handoff to ChatGPT. The report labels this as a manual attachment flow, declares that automatic API access is not established, and never includes the Bearer token.
 - MCP remains optional compatibility functionality. It is not the required assistant channel.
 
 ## Security and provider boundaries
@@ -39,8 +39,8 @@ The intended ChatGPT access path must work on the Free plan and must not require
 - Browser API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`; the secret is distinct from `CIRCLECI_TOKEN`.
 - API routes are GET-only and CORS is disabled. Do not claim that arbitrary cross-origin browser JavaScript or a ChatGPT conversation can call the endpoint directly.
 - The Worker checks the Bearer token, applies rate limiting, scopes requests to registered project/connection entries, bounds response sizes and redacts configured secrets.
-- The dashboard can authenticate interactively and export a bounded report; its token is kept in tab memory and is not included in the exported report.
-- A private Bearer-protected REST endpoint is not automatically callable by ChatGPT. Until a supported authenticated integration is demonstrated end-to-end on ChatGPT Free, user-reviewed JSON export remains the honest fallback.
+- The dashboard can authenticate interactively and export a bounded report; its token is kept in tab memory and is not included in the exported report. Each failed-job diagnostic carries a normalized `test_summary` with source coverage, observed-record counts, duplicate/conflict indicators and completeness status.
+- A private Bearer-protected REST endpoint is not automatically callable by ChatGPT. Until a supported authenticated integration is demonstrated end-to-end on ChatGPT Free, user-reviewed JSON export remains the honest fallback. The aggregate report now includes `assistant_handoff.mode=user_reviewed_json_attachment`, `automatic_api_access=false`, `mcp_required=false`, `bearer_token_included=false` and `test_summary_count_scope=observed_records`.
 - Never weaken authentication, expose an unauthenticated report endpoint, put a token in a URL, or ask the user to paste a token into the conversation to simulate connectivity.
 
 ## Remaining work
