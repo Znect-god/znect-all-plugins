@@ -21,7 +21,7 @@ CI Bridge нужно закончить в `znect-all-plugins`; перенос �
 - Signed webhook inbox, bounded event storage, replay protection и conservative event-to-run correlation.
 - Browser dashboard для статусов, runs, diagnostics, webhook events и correlation.
 - `GET /api/v1/report` для bounded assistant report.
-- Dashboard action **Export assistant report**: aggregate report + максимум три failed-run diagnostics, UUID validation, scope isolation, partial-result markers, 600 KB ceiling, download JSON.
+- Dashboard action **Export assistant report**: aggregate report + максимум три failed-run diagnostics, UUID validation, scope isolation, partial-result markers, 600 KB ceiling, download JSON. Each diagnostic job includes `test_summary` (passed/failed/skipped/unknown observed counts, source coverage, deduplication/conflict and incomplete flags).
 - Отдельный GitHub Actions-based Znect Build adapter и маршруты `/api/v1/build/*` удалены; центральная диагностика Znect Build будет идти через обычное CircleCI project connection.
 
 ## 3. Безопасность и ограничения
@@ -48,8 +48,8 @@ CI Bridge нужно закончить в `znect-all-plugins`; перенос �
 1. Выбрать project и connection в существующей dashboard.
 2. Проверить, что Browser API запросы идут с Bearer header и не пересекают scope.
 3. Запустить **Export assistant report**.
-4. Проверить `completeness`, partial/limited diagnostics и отсутствие секретов.
-5. Только после пользовательской проверки приложить JSON к разговору ChatGPT.
+4. Проверить `completeness`, `assistant_handoff`, partial/limited diagnostics и отсутствие секретов. Значения `test_summary.total` — только число наблюдённых записей, а не гарантированное полное число тестов проекта.
+5. Только после пользовательской проверки приложить JSON к разговору ChatGPT. Это ручная передача; `automatic_api_access` остаётся `false`, MCP не требуется.
 
 Это ручная передача файла. Она не доказывает прямую автоматическую аутентификацию ChatGPT к Browser API. Для завершения интеграции требуется поддерживаемый private auth/handoff механизм без раскрытия секрета и без обязательного MCP.
 
