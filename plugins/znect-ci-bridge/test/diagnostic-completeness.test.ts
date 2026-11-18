@@ -80,10 +80,12 @@ describe("diagnostic source completeness", () => {
 
 describe("failed-step log completeness", () => {
   it("distinguishes not-applicable, available, partial and unavailable logs", () => {
-    expect(failedStepLogsStatus({ failedActionsCount: 0, logsCount: 0, incomplete: false })).toBe("not_applicable");
-    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, incomplete: false })).toBe("available");
-    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 1, incomplete: false })).toBe("partial");
-    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, incomplete: true })).toBe("partial");
-    expect(failedStepLogsStatus({ failedActionsCount: 1, logsCount: 0, incomplete: true })).toBe("unavailable");
+    expect(failedStepLogsStatus({ failedActionsCount: 0, logsCount: 0, successfulLogsCount: 0, incomplete: false })).toBe("not_applicable");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, successfulLogsCount: 2, incomplete: false })).toBe("available");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 1, successfulLogsCount: 1, incomplete: false })).toBe("partial");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, successfulLogsCount: 2, incomplete: true })).toBe("partial");
+    expect(failedStepLogsStatus({ failedActionsCount: 1, logsCount: 0, successfulLogsCount: 0, incomplete: true })).toBe("unavailable");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, successfulLogsCount: 0, incomplete: true })).toBe("unavailable");
+    expect(failedStepLogsStatus({ failedActionsCount: 2, logsCount: 2, successfulLogsCount: 1, incomplete: true })).toBe("partial");
   });
 });
