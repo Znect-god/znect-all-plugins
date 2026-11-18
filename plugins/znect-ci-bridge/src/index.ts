@@ -765,10 +765,12 @@ function createServer(env: Env) {
           }
 
           let testResults = "";
+          let testResultsContent = "";
           let testResultsError: string | undefined;
           let testResultsState: "available" | "partial" | "unavailable" | "empty" = "unavailable";
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
+            testResultsContent = report.content;
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
             testResultsState = testResultsStatus({ content: report.content, truncated: report.truncated });
             if (report.truncated) reportDataIncomplete = true;
@@ -793,8 +795,9 @@ function createServer(env: Env) {
           }
           const artifactsState = reportArtifactsStatus({ artifacts, incomplete: artifactCollectionIncomplete });
           const testSummary = normalizeJobTestResults({
-            jsonl: testResults,
+            jsonl: testResultsContent,
             jsonlTruncated: testResultsState === "partial",
+            jsonlUnavailable: testResultsError !== undefined,
             junitArtifacts: artifacts
           });
           if (testSummary.incomplete) reportDataIncomplete = true;
@@ -1235,6 +1238,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             if (logActionLimitReached) break;
           }
           let testResults: string | undefined;
+          let testResultsContent = "";
           let testResultsError: string | undefined;
           let testResultsState: "available" | "partial" | "unavailable" | "empty" = "unavailable";
           try {
