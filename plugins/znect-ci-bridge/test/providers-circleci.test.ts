@@ -52,7 +52,7 @@ describe("CircleCI read-only provider adapter", () => {
       branch: "main",
       commitSha: "abc123",
       commitMessage: "Fix tests",
-      startedAt: "2026-11-15T10:00:00.000Z"
+      createdAt: "2026-11-15T10:00:00.000Z"
     }]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
