@@ -584,7 +584,7 @@ For every meaningful feature or fix:
 
 ## 28. CircleCI connection-check clarity and provider-failure coverage — 2026-11-18
 
-- [x] Correct Android connection-check progress text: it now describes checking the CircleCI read connection and private report endpoint, not authenticating a ChatGPT conversation **(выполнено — UI wording corrected)**.
+- [x] Correct Android connection-check progress text and button label: the action is now **Check CircleCI + ChatGPT report path**, and the result explicitly says it does not authenticate a ChatGPT conversation **(выполнено — UI wording corrected)**.
 - [x] Add Worker coverage for an unavailable CircleCI read probe, including safe generic error output, absence of false read-only/connected claims, and GET-only upstream calls **(выполнено — test source added)**.
 - [ ] Run the updated Worker and Android suites in CircleCI and inspect the actual test results and APK artifact.
 - Note: the Android check verifies the app's authenticated Bridge → CircleCI read path and report endpoint. It does not prove a separate ChatGPT session has connected or consumed the report.
