@@ -63,3 +63,5 @@ The `ci-bridge-android-exporter` CircleCI job runs the JVM unit tests and assemb
 
 
 Bearer credentials are validated against the RFC 6750 `b64token` character set (including underscore), with a 4096-character upper bound. The policy has focused JVM tests for accepted token characters, whitespace/CRLF rejection and length bounds.
+
+The report validator also checks that requested limits, returned counts, failed-run counts, JSON item types, event cursor and completeness flags are mutually consistent before the file can be shared.
