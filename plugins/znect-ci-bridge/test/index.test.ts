@@ -365,6 +365,15 @@ describe("MCP tool schemas and error boundary", () => {
     const projectId = "123e4567-e89b-42d3-a456-426614174010";
     const workflowId = "123e4567-e89b-42d3-a456-426614174012";
     const jobId = "123e4567-e89b-42d3-a456-426614174013";
+    const jobList = Array.from({ length: 41 }, (_, index) => ({
+      id: index === 0 ? jobId : `123e4567-e89b-42d3-a456-${String(1000 + index).padStart(12, "0")}`,
+      references: { project: { id: projectId }, workflow: { id: workflowId } },
+      attributes: {
+        name: index === 0 ? "unit-tests" : `passing-job-${index}`,
+        phase: "completed",
+        outcome: index === 0 ? "failed" : "success"
+      }
+    }));
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
       if (url.pathname === "/api/v3/projects") {
@@ -379,13 +388,7 @@ describe("MCP tool schemas and error boundary", () => {
       if (url.pathname === "/api/v3/workflows") {
         return Response.json({ data: [{ id: workflowId, references: { run: { id: RUN_ID } }, attributes: { name: "build-and-test" } }], page: { next: null } });
       }
-      if (url.pathname === "/api/v3/jobs") {
-        return Response.json({ data: [{
-          id: jobId,
-          references: { project: { id: projectId }, workflow: { id: workflowId } },
-          attributes: { name: "unit-tests", phase: "completed", outcome: "failed" }
-        }] });
-      }
+      if (url.pathname === "/api/v3/jobs") return Response.json({ data: jobList });
       if (url.pathname === `/api/v3/jobs/${jobId}`) {
         return Response.json({ data: {
           id: jobId,
@@ -427,6 +430,15 @@ describe("MCP tool schemas and error boundary", () => {
       stdout: "parallel worker output",
       stderr: "parallel worker output"
     }]);
+    expect(result.workflows[0]).toMatchObject({
+      jobs_total: 41,
+      jobs_inspected: 40,
+      jobs_truncated: true,
+      failed_jobs_total: null,
+      failed_jobs_observed: 1,
+      failed_jobs_diagnostics_returned: 1,
+      failed_jobs_diagnostics_truncated: false
+    });
     const logRequests = fetchMock.mock.calls.filter(([input]) => {
       const url = new URL(String(input));
       return url.pathname.endsWith("/stdout") || url.pathname.endsWith("/stderr");
