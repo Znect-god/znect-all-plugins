@@ -17,7 +17,7 @@ internal object ReportValidator {
             value.toDouble() >= min.toDouble() &&
             value.toDouble() <= max.toDouble()
 
-    fun validate(report: JSONObject, expectedProject: String) {
+    fun validate(report: JSONObject, expectedProject: String, expectedConnection: String? = null) {
         require(
             report.opt("service") == "znect-ci-bridge" &&
                 isInteger(report.opt("report_version"), 1, 1) &&
@@ -40,9 +40,11 @@ internal object ReportValidator {
 
         val connection = report.optJSONObject("connection")
             ?: throw IllegalArgumentException("The report has no connection metadata.")
+        val returnedConnectionId = connection.opt("id") as? String
         require(connection.opt("provider") == "circleci" &&
-            (connection.opt("id") as? String)?.isNotBlank() == true
-        ) { "The report has invalid CircleCI connection metadata." }
+            !returnedConnectionId.isNullOrBlank() &&
+            (expectedConnection.isNullOrBlank() || returnedConnectionId == expectedConnection)
+        ) { "The report has invalid or mismatched CircleCI connection metadata." }
 
         val runs = report.optJSONObject("runs")
             ?: throw IllegalArgumentException("The report is missing its run section.")
