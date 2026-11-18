@@ -55,7 +55,7 @@ describe("diagnostic source completeness", () => {
     expect(buildDiagnosticsSummary({ ...base, failedJobLimitReached: true }).incomplete).toBe(true);
     expect(buildDiagnosticsSummary({ ...base, jobsTruncated: true }).incomplete).toBe(true);
     expect(buildDiagnosticsSummary({ ...base, workflowsInspected: 1 }).incomplete).toBe(true);
-    expect(buildDiagnosticsSummary({ ...base, reportArtifactLimitReached: true }).incomplete).toBe(false);
+    expect(buildDiagnosticsSummary({ ...base, reportArtifactLimitReached: true }).incomplete).toBe(true);
   });
 
   it("keeps the artifact-limit indicator distinct while incomplete report data controls overall completeness", () => {
