@@ -1,10 +1,14 @@
 ## Unreleased
 
 - Consolidated the active development location to the single permanent `ci-bridge` branch. `main` remains the shared plugin repository branch; `znect-build` owns build recipes and configuration; CircleCI is the build execution environment.
+- Audited the canonical source tree and corrected the stale plugin maturity/catalog metadata and branch references; removed a duplicate test object key.
+- Hardened the internal event-store page response allowlist so unexpected envelope fields are rejected before Browser API/MCP serialization.
+- Added `completeness.events_limited` and made dashboard report export remain partial when the bounded webhook event page reaches its requested limit.
+- Added regression-test source for event-page envelope rejection and saturated report pagination. Test execution remains pending; no CircleCI pipeline or deployment was run.
 
-## Unreleased
+## 2026-11-18 — finalize canonical branch consolidation
 
-- Clarified that `feature/ci-bridge-android-exporter` is a historical branch name for the single Znect CI Bridge plugin, not a separate Android application; documented that the complete current source is on the feature branch while `main` retains only the earlier prototype registration and README.
+- Clarified that `feature/ci-bridge-android-exporter` was only the historical consolidation source name, not a separate Android application. The complete current source is maintained on `ci-bridge`; the ten obsolete CI Bridge branches were removed, and `main` retains the shared plugin-catalog role.
 
 ## 2026-11-18 — repair Preview smoke-test API contract
 
