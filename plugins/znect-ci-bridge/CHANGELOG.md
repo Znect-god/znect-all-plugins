@@ -1,3 +1,7 @@
+## Unreleased
+
+- Clarified that `feature/ci-bridge-android-exporter` is a historical branch name for the single Znect CI Bridge plugin, not a separate Android application; documented that the plugin source is currently on the feature branch and is not yet present in `main`.
+
 ## 2026-11-18 — repair Preview smoke-test API contract
 
 - Added the required registered project and CircleCI connection scope to Browser API status, run, report, diagnostics and event requests.
