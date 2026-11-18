@@ -180,6 +180,28 @@ describe("unified CircleCI test result normalization", () => {
     });
   });
 
+
+  it("rejects JSONL records with malformed parallel execution metadata", () => {
+    const result = normalizeJobTestResults({
+      jsonl: JSON.stringify({ classname: "pkg.Math", name: "bad-execution", result: "success", execution: -1 })
+    });
+    expect(result).toMatchObject({
+      status: "partial", total: 0, malformed_jsonl_records: 1, incomplete: true
+    });
+  });
+
+  it("rejects JUnit artifacts with malformed parallel execution metadata", () => {
+    const result = normalizeJobTestResults({
+      junitArtifacts: [{
+        execution: -1,
+        content: '<testsuite><testcase classname="pkg.Math" name="must-not-be-unscoped"/></testsuite>'
+      }]
+    });
+    expect(result).toMatchObject({
+      status: "unavailable", total: 0, malformed_junit_reports: 1, incomplete: true
+    });
+  });
+
   it("does not reconcile records with different known parallel execution indexes", () => {
     const result = normalizeJobTestResults({
       jsonl: JSON.stringify({ classname: "pkg.Math", name: "same", result: "success", execution: 0 }),
