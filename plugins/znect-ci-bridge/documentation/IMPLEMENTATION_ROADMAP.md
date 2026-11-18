@@ -967,7 +967,7 @@ For every meaningful feature or fix:
 
 - [x] Restrict CircleCI job discovery to the uniquely named exact-SHA validation workflow instead of querying every workflow; reject duplicate target workflows/jobs and incomplete job scans **(выполнено — source implementation)**.
 - [x] Verify the returned artifact paths match the exact requested manifest and resolved-SHA paths before parsing their contents **(выполнено — source implementation)**.
-- [x] Add regression-test source for unrelated workflow exclusion, missing validation workflow, bounded job-scan overflow, exact job UUID mismatch and artifact path mismatch **(выполнено — test source added; execution pending)**.
+- [x] Add regression-test source for unrelated workflow exclusion, missing validation workflow, bounded job-scan overflow, exact job UUID mismatch, pipeline/workflow/recipe SHA mismatch, missing/truncated artifacts, failed-recipe outcome and artifact path mismatch **(выполнено — test source added; execution pending)**.
 - [ ] Run focused provenance tests and TypeScript/Vitest checks through the authorized opt-in CircleCI path; no test execution is claimed yet.
 
 **Verification boundary:** this stage improves source-level resource bounds and artifact identity checks. Test source has not been executed; no CircleCI pipeline or runtime operation was performed.
