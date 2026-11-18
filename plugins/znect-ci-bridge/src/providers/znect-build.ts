@@ -449,6 +449,7 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
         !Array.isArray(parsed.validation_steps) ||
         JSON.stringify(parsed.validation_steps) !== JSON.stringify([
           "npm ci",
+          "npm audit --audit-level=high",
           "npm run check",
           "node --check scripts/preview-smoke-test.mjs",
           "npx --no-install wrangler deploy --dry-run"
