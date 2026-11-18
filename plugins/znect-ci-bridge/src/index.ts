@@ -1167,17 +1167,16 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       let jobLimitReached = false;
       let reportDataIncomplete = false;
       let reportArtifactLimitReached = false;
-      let incomplete = false;
 
       for (const workflow of workflows.slice(0, 5)) {
         const jobs = await adapter.listJobs(scope, run.id, workflow.id);
         const inspectedJobs = jobs.slice(0, 40);
         const jobsTruncated = jobs.length > inspectedJobs.length;
-        if (jobsTruncated) { jobLimitReached = true; incomplete = true; }
+        if (jobsTruncated) { jobLimitReached = true; }
         const failedJobs = inspectedJobs.filter((job) => job.status === "failed" || job.status === "failure");
         const reports: Array<Record<string, unknown>> = [];
         for (const job of failedJobs) {
-          if (failedJobsInspected >= 3) { failedJobLimitReached = true; incomplete = true; break; }
+          if (failedJobsInspected >= 3) { failedJobLimitReached = true; break; }
           failedJobsInspected++;
           const details = await adapter.getJob(scope, job.id);
           if (details.workflowId !== workflow.id) throw new Error("CI job does not belong to the selected run workflow.");
@@ -1193,13 +1192,11 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
               if (logActionsInspected >= 3) {
                 logActionLimitReached = true;
                 failedStepLogsIncomplete = true;
-                incomplete = true;
                 break;
               }
               if (typeof action.stepNumber !== "number" || !Number.isInteger(action.stepNumber) || action.stepNumber < 0) {
                 reportDataIncomplete = true;
                 failedStepLogsIncomplete = true;
-                incomplete = true;
                 continue;
               }
               logActionsInspected++;
@@ -1214,13 +1211,11 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
                   if (limitedOutput.truncated) {
                     reportDataIncomplete = true;
                     failedStepLogsIncomplete = true;
-                    incomplete = true;
                   }
                 } catch {
                   output[stream] = "Unable to retrieve this output stream.";
                   reportDataIncomplete = true;
                   failedStepLogsIncomplete = true;
-                  incomplete = true;
                 }
               }
               failedStepLogs.push({ step_num: action.stepNumber, execution: step.execution, action_name: action.name, ...output });
@@ -1234,12 +1229,11 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
             testResultsState = testResultsStatus({ content: report.content, truncated: report.truncated });
-            if (report.truncated) { reportDataIncomplete = true; incomplete = true; }
+            if (report.truncated) { reportDataIncomplete = true; }
           } catch {
             testResultsError = "Unable to retrieve structured test results.";
             testResultsState = testResultsStatus({ error: testResultsError });
             reportDataIncomplete = true;
-            incomplete = true;
           }
           let reportArtifacts: Array<Record<string, unknown>> = [];
           let artifactCollectionIncomplete = false;
@@ -1247,13 +1241,12 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             const collected = await collectJobReportArtifacts(adapter, scope, job.id);
             reportArtifacts = collected.artifacts;
             artifactCollectionIncomplete = collected.incomplete;
-            if (collected.incomplete) { reportDataIncomplete = true; incomplete = true; }
+            if (collected.incomplete) { reportDataIncomplete = true; }
             if (collected.limitReached) reportArtifactLimitReached = true;
           } catch {
             reportArtifacts.push({ error: "Unable to list job artifacts." });
             artifactCollectionIncomplete = true;
             reportDataIncomplete = true;
-            incomplete = true;
           }
           const artifactsState = reportArtifactsStatus({ artifacts: reportArtifacts, incomplete: artifactCollectionIncomplete });
           reports.push({
@@ -1281,8 +1274,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           failed_jobs: reports
         });
       }
-      if (workflows.length > 5) incomplete = true;
-      const payload = {
+            const payload = {
         project: { id: project.id, name: project.name, provider: adapter.provider },
         run,
         provenance,
