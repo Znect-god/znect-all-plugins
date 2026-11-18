@@ -1252,7 +1252,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             testResultsState = testResultsStatus({ error: testResultsError });
             reportDataIncomplete = true;
           }
-          let reportArtifacts: Array<Record<string, unknown>> = [];
+          let reportArtifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }> = [];
           let artifactCollectionIncomplete = false;
           try {
             const collected = await collectJobReportArtifacts(adapter, scope, job.id);
@@ -1270,7 +1270,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             jsonl: testResultsContent,
             jsonlTruncated: testResultsState === "partial",
             jsonlUnavailable: testResultsError !== undefined,
-            junitArtifacts: reportArtifacts as Array<{ content?: string; execution?: number; error?: string }>
+            junitArtifacts: reportArtifacts
           });
           if (testSummary.incomplete) reportDataIncomplete = true;
           reports.push({
