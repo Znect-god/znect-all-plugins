@@ -610,7 +610,8 @@ function createServer(env: Env) {
       const safe = artifacts.map((artifact) => ({
         id: artifact.id,
         path: artifact.path,
-        size: artifact.size
+        size: artifact.size,
+        execution: artifact.execution
       }));
       const payload = redactKnownSecrets(JSON.stringify({ job_id, artifacts: safe }, null, 2), env);
       return { content: [{ type: "text", text: stringifyBoundedJson(JSON.parse(payload), 30_000) }] };
@@ -627,12 +628,13 @@ function createServer(env: Env) {
         project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(),
         job_id: z.string().uuid(),
         artifact_path: z.string().min(1).max(512),
+        execution: z.number().int().min(0).optional(),
         max_chars: z.number().int().min(1).max(80_000).default(40_000)
       }
     },
-    async ({ project_id, connection_id, job_id, artifact_path, max_chars }) => {
+    async ({ project_id, connection_id, job_id, artifact_path, execution, max_chars }) => {
       const { scope, adapter } = getCircleCiAdapter(env, project_id, connection_id);
-      const result = await adapter.getArtifact(scope, job_id, artifact_path, max_chars * 4);
+      const result = await adapter.getArtifact(scope, job_id, artifact_path, max_chars * 4, execution);
       const redacted = redactKnownSecrets(result.content, env);
       const limited = limitText(redacted, max_chars, result.truncated);
       return {
@@ -641,6 +643,7 @@ function createServer(env: Env) {
           text: stringifyBoundedJson({
             job_id,
             artifact_path: result.path,
+            execution: result.execution,
             content: limited.text,
             truncated: limited.truncated
           }, 85_000)
@@ -779,8 +782,8 @@ function createServer(env: Env) {
             const reports = eligibleReports.slice(0, 1);
             for (const artifact of reports) {
               try {
-                const report = await adapter.getArtifact(scope, job.id, artifact.path, 500_000);
-                artifacts.push({ path: artifact.path, size: artifact.size, content: report.content });
+                const report = await adapter.getArtifact(scope, job.id, artifact.path, 500_000, artifact.execution);
+                artifacts.push({ path: artifact.path, size: artifact.size, execution: report.execution, content: report.content });
                 if (report.truncated) reportDataIncomplete = true;
               } catch {
                 artifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." });
@@ -1238,8 +1241,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             const artifacts = eligibleArtifacts.slice(0, 1);
             for (const artifact of artifacts) {
               try {
-                const content = await adapter.getArtifact(scope, job.id, artifact.path, 500_000);
-                reportArtifacts.push({ path: artifact.path, size: artifact.size, content: content.content });
+                const content = await adapter.getArtifact(scope, job.id, artifact.path, 500_000, artifact.execution);
+                reportArtifacts.push({ path: artifact.path, size: artifact.size, execution: content.execution, content: content.content });
                 if (content.truncated) { reportDataIncomplete = true; incomplete = true; }
               } catch {
                 reportArtifacts.push({ path: artifact.path, size: artifact.size, error: "Unable to retrieve this report artifact." });
