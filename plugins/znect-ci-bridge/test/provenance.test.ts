@@ -200,4 +200,79 @@ describe("CI Bridge provenance manifest schema", () => {
       [{ id: workflowId, runId, name: "ci-bridge-exact-sha-validation" }]);
     expect(result).toMatchObject({ status: "invalid", reason: "artifact_path_mismatch" });
   });
+
+  it("rejects run, workflow and recipe revision identity mismatches", async () => {
+    const runId = manifest.circleci.pipeline_id;
+    const workflowId = manifest.circleci.workflow_id;
+    const jobId = manifest.circleci.job_id;
+    const adapter = {
+      listJobs: async () => [{ id: jobId, projectId: "znect-build", workflowId, name: "validate-ci-bridge-source", status: "success" }],
+      listArtifacts: async () => [
+        { id: "manifest", path: "ci-bridge-validation-manifest.json", size: 900 },
+        { id: "sha", path: "resolved-source-sha.txt", size: 41 }
+      ],
+      getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
+        path: artifactPath,
+        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(manifest) : manifest.source_sha + "\n",
+        truncated: false
+      })
+    };
+    const scope = { projectId: "znect-build", connectionId: "build-circleci" };
+    const workflow = { id: workflowId, runId, name: "ci-bridge-exact-sha-validation" };
+    const baseRun = { id: runId, projectId: "znect-build", status: "success", commitSha: manifest.recipe_sha };
+    await expect(inspectCiBridgeProvenance(adapter as never, scope, { ...baseRun, id: "123e4567-e89b-42d3-a456-426614174010" }, [workflow]))
+      .resolves.toMatchObject({ status: "invalid", reason: "circleci_identity_or_sha_mismatch" });
+    await expect(inspectCiBridgeProvenance(adapter as never, scope, baseRun, [{ ...workflow, id: "123e4567-e89b-42d3-a456-426614174011" }]))
+      .resolves.toMatchObject({ status: "invalid", reason: "circleci_identity_or_sha_mismatch" });
+    await expect(inspectCiBridgeProvenance(adapter as never, scope, { ...baseRun, commitSha: "c".repeat(40) }, [workflow]))
+      .resolves.toMatchObject({ status: "invalid", reason: "circleci_identity_or_sha_mismatch" });
+  });
+
+  it("rejects missing and truncated provenance artifacts", async () => {
+    const runId = manifest.circleci.pipeline_id;
+    const workflowId = manifest.circleci.workflow_id;
+    const jobId = manifest.circleci.job_id;
+    const base = {
+      listJobs: async () => [{ id: jobId, projectId: "znect-build", workflowId, name: "validate-ci-bridge-source", status: "success" }],
+      listArtifacts: async () => [
+        { id: "manifest", path: "ci-bridge-validation-manifest.json", size: 900 },
+        { id: "sha", path: "resolved-source-sha.txt", size: 41 }
+      ]
+    };
+    const scope = { projectId: "znect-build", connectionId: "build-circleci" };
+    const run = { id: runId, projectId: "znect-build", status: "success", commitSha: manifest.recipe_sha };
+    const workflows = [{ id: workflowId, runId, name: "ci-bridge-exact-sha-validation" }];
+    const missing = { ...base, listArtifacts: async () => [{ id: "sha", path: "resolved-source-sha.txt", size: 41 }] };
+    await expect(inspectCiBridgeProvenance(missing as never, scope, run, workflows))
+      .resolves.toMatchObject({ status: "invalid", reason: "manifest_or_source_sha_artifact_missing_or_duplicate" });
+    const truncated = { ...base, getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
+      path: artifactPath, content: "", truncated: artifactPath === "ci-bridge-validation-manifest.json"
+    }) };
+    await expect(inspectCiBridgeProvenance(truncated as never, scope, run, workflows))
+      .resolves.toMatchObject({ status: "invalid", reason: "artifact_truncated" });
+  });
+
+  it("reports a structurally valid failed recipe as failed_recipe", async () => {
+    const failedManifest = { ...manifest, recipe_exit_code: 1, recipe_outcome: "failed" };
+    const runId = manifest.circleci.pipeline_id;
+    const workflowId = manifest.circleci.workflow_id;
+    const jobId = manifest.circleci.job_id;
+    const adapter = {
+      listJobs: async () => [{ id: jobId, projectId: "znect-build", workflowId, name: "validate-ci-bridge-source", status: "failed" }],
+      listArtifacts: async () => [
+        { id: "manifest", path: "ci-bridge-validation-manifest.json", size: 900 },
+        { id: "sha", path: "resolved-source-sha.txt", size: 41 }
+      ],
+      getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
+        path: artifactPath,
+        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(failedManifest) : manifest.source_sha + "\n",
+        truncated: false
+      })
+    };
+    await expect(inspectCiBridgeProvenance(adapter as never,
+      { projectId: "znect-build", connectionId: "build-circleci" },
+      { id: runId, projectId: "znect-build", status: "failed", commitSha: manifest.recipe_sha },
+      [{ id: workflowId, runId, name: "ci-bridge-exact-sha-validation" }]))
+      .resolves.toMatchObject({ status: "failed_recipe", recipe_exit_code: 1, recipe_outcome: "failed" });
+  });
 });
