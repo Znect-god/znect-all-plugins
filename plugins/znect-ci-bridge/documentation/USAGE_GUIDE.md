@@ -1,5 +1,8 @@
 # Znect CI Bridge — запуск, настройка и проверка
 
+> **ChatGPT access channel:** use the private Forge issue #8 command and the GitHub Actions report workflow. The workflow calls the authenticated Browser JSON API directly. MCP is not required and is not used as the ChatGPT channel. See [ASSISTANT_CHANNEL.md](ASSISTANT_CHANNEL.md). The historical MCP instructions below describe an optional legacy surface only.
+
+
 **Статус: `in-development` — разработка, экспериментальный прототип, не готов к Production.**  
 **Версия:** `0.1.0`  
 **Дата актуализации:** 2026-11-18  
