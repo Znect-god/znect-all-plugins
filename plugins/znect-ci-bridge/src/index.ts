@@ -915,7 +915,7 @@ function createServer(env: Env) {
         correlations,
         next_cursor: page.next_cursor,
         matching: {
-          strategy: "exact commit SHA + compatible branch + distance to the run execution interval within 24 hours",
+          strategy: "exact commit SHA + compatible branch + distance to the execution interval when available, otherwise the CircleCI API v3 run created_at timestamp (24-hour window)",
           max_candidates_per_event: 3,
           note: "A match is a correlation candidate, not proof that a webhook pipeline ID equals an API v3 run ID."
         }
@@ -1012,7 +1012,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         correlations: correlateEventsWithRuns(events, runs),
         next_cursor: page.next_cursor,
         matching: {
-          strategy: "exact commit SHA + compatible branch + distance to the run execution interval within 24 hours",
+          strategy: "exact commit SHA + compatible branch + distance to the execution interval when available, otherwise the CircleCI API v3 run created_at timestamp (24-hour window)",
           max_candidates_per_event: 3,
           note: "Correlations are heuristic candidates; webhook pipeline IDs are not assumed to be API v3 run IDs."
         }
