@@ -128,6 +128,9 @@ export async function inspectCiBridgeProvenance(
     if (manifestArtifact.truncated || sourceShaArtifact.truncated) {
       return { status: "invalid", reason: "artifact_truncated" };
     }
+    if (manifestArtifact.path !== MANIFEST_PATH || sourceShaArtifact.path !== SOURCE_SHA_PATH) {
+      return { status: "invalid", reason: "artifact_path_mismatch" };
+    }
     let manifest: Record<string, unknown>;
     try { manifest = parseCiBridgeManifest(manifestArtifact.content); }
     catch (error) { return { status: "invalid", reason: error instanceof Error ? error.message : "manifest_invalid" }; }
