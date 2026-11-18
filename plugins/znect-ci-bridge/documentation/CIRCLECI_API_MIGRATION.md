@@ -31,6 +31,12 @@ Sources:
 5. **Legacy build number mapping:** the v1.1 build number is not a v3 UUID. Never pass a build number as a v3 resource ID or guess a match.
 6. **Logs:** v3 exposes stdout/stderr by job UUID, step number and execution index. The implementation must preserve byte limits and redact output before returning it.
 
+## Run outcome semantics
+
+CircleCI documents that a Run's `current_outcome` is authoritative because reruns can change the outcome; it is not interchangeable with a generic `outcome` field. The adapter now uses `current_outcome` first for Run status and does not allow a stale `outcome` field to override it. Workflow/job status normalization remains separate because those resources have their own outcome contract.
+
+The adapter test fixture intentionally supplies conflicting values (`outcome: success`, `current_outcome: failed`) and expects the Run to remain failed. This is test-source coverage only until the CircleCI suite executes.
+
 ## Run VCS field contract
 
 The machine-readable CircleCI API v3 response schema for `GET /api/v3/runs/:id` defines the run's VCS context under `references.event.attributes.vcs`, with:
