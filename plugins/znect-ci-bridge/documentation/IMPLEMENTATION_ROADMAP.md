@@ -158,8 +158,9 @@ The Bridge must remain read-only with respect to CI execution and project source
 
 - [x] Root `.circleci/config.yml` defines the CI Bridge validation job: `npm ci`, `npm run check`, smoke-script syntax validation and Wrangler dry-run. **(выполнено — source configuration)**
 - [x] Validation config does not deploy or mutate observed CircleCI project pipelines. **(выполнено — static source inspection)**
-- [ ] Run the CircleCI pipeline on the exact candidate branch/SHA after explicit user authorization.
+- [ ] Run the CircleCI pipeline on the exact candidate branch/SHA. User authorization received; execution is blocked in this session because no authenticated CircleCI control/API connection is available. Do not substitute GitHub Actions or Cloudflare checks.
 - [ ] Review actual CircleCI job results, logs, tests and Wrangler dry-run output; do not infer success from config presence.
+- [ ] Add Android exporter validation to CircleCI. Current config validates only the Worker; Android module has no Gradle wrapper committed, so it is not yet buildable through the checked-in project wrapper.
 
 ## 5. Validation and release gates
 
@@ -417,3 +418,12 @@ For every meaningful feature or fix:
 - Confirmed the report schema emitted by `/api/v1/report`: `service`, `report_version`, `provider`, `permissions`, `project`, `connection`, `runs.items`, `events.items`, `completeness`, and `read_only`.
 - Hardened Android report validation to check the actual CircleCI report schema, ISO-8601 generation timestamp, connection metadata, array bounds/counts and completeness section.
 - No CircleCI pipeline, Gradle build, unit test, live API request, deployment or secret access was performed.
+
+
+## 11. Verification review — 2026-11-18 (authorization received)
+
+- User approved proceeding with verification.
+- Inspected `.circleci/config.yml`: it defines a single Worker validation job (`npm ci`, `npm run check`, smoke-script syntax check, Wrangler `deploy --dry-run`) and contains no Android exporter job.
+- Inspected Android exporter module: Gradle project files and test source exist, but `gradlew` and `gradle/wrapper/gradle-wrapper.properties` are absent. Android Gradle verification cannot be reproduced from the repository as currently committed.
+- Checked commit status/check-runs for candidate SHA `5a2ef7800f41191118791cd3adc8aab77730be4a`: no CircleCI status was reported. The one completed successful check is `Workers Builds: znect-ci-bridge` from the Cloudflare GitHub App, not CircleCI; it must not be reported as CircleCI validation.
+- No CircleCI run could be started or inspected because this session has no authenticated CircleCI API/control connection. No GitHub Actions, pipeline, Gradle tests/build, deployment, live API request or secret access was used as a substitute.
