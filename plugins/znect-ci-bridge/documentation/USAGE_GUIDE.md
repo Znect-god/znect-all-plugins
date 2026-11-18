@@ -142,6 +142,7 @@ PR #5 остаётся Draft и не объединён. Его base — `featur
 | `CIRCLECI_TOKEN` | CircleCI API access | Cloudflare Worker Secret |
 | `MCP_ACCESS_TOKEN` | MCP Bearer auth | Cloudflare Preview Secret |
 | `WEB_ACCESS_TOKEN` | Browser API Bearer auth | Cloudflare Preview Secret |
+| `ZNECT_BUILD_GITHUB_TOKEN` | Read-only central Build workflow/run/job/artifact metadata | Cloudflare Preview Secret (pending; no value stored in repository) |
 | `CIRCLECI_WEBHOOK_SECRET` | HMAC подпись webhook | GitHub Actions Secret и matching Cloudflare Preview Secret; тот же signing secret в CircleCI |
 
 Preview и Production secrets не наследуются друг от друга. Не использовать один и тот же секрет для разных назначений. Не вставлять значения в чат, Git, README, workflow logs, URL или shell arguments.
@@ -332,3 +333,8 @@ JSON API:
 - [CircleCI API migration notes](CIRCLECI_API_MIGRATION.md)
 - [Security review](SECURITY_REVIEW.md)
 - [Project README](../README.md)
+
+
+### Znect Build read-only connection (source implemented; live setup pending)
+
+The Bridge now includes a GitHub Actions read-only adapter for `Znect-god/znect-build`. Its runtime registry entry must use provider `znect-build` and map to exactly one registered source repository. Configure `ZNECT_BUILD_GITHUB_TOKEN` only after issuing a repository-scoped token with Actions read-only access. The token is not required for CircleCI-only Bridge operation. The central validation-artifact fingerprint change is on an isolated, unmerged Znect Build branch, so live run discovery will fail closed until the central change is approved and available. No build trigger or deployment capability is added to the Bridge.
