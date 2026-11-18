@@ -1,3 +1,11 @@
+## 2026-11-18 — retire GitHub Actions central Build adapter
+
+- Removed the separate `znect-build` provider type, GitHub Actions REST adapter, ZIP manifest parser, MCP tools, Browser API `/api/v1/build/*` routes and `ZNECT_BUILD_GITHUB_TOKEN` requirement.
+- Restricted the provider contract and project registry to CircleCI; Znect Build is now registered as a normal CircleCI project connection.
+- Removed the obsolete central Build adapter and ZIP parser tests; added a regression check that retired Build routes return 404 without upstream requests and updated registry tests to CircleCI-only.
+- Rewrote provider, usage, registry, Free access and Znect Build connection documentation to use CircleCI API v3 run/job/artifact reads.
+- Test source was updated but not executed. No CircleCI pipeline, live API probe, Preview deployment or Production change was performed.
+
 ## 2026-11-18 — CircleCI execution alignment
 
 - Corrected the CI Bridge validation architecture: CircleCI is the execution platform; Znect Build remains the development and central recipe repository.
