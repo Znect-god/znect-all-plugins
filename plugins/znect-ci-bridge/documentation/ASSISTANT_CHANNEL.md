@@ -1,6 +1,6 @@
 # Znect CI Bridge — free ChatGPT access channel
 
-**Status:** authenticated Browser JSON API is implemented; a direct private report handoff still requires completion and live verification.  
+**Status:** authenticated Browser JSON API and Android manual report-exporter source are implemented; Android build/device verification and live handoff remain pending.  
 **Primary CI provider:** CircleCI.  
 **ChatGPT transport:** free authenticated Browser JSON API + private report handoff.  
 **MCP:** optional legacy surface only; not required and not the ChatGPT communication channel.  
@@ -66,10 +66,10 @@ Current OpenAI documentation confirms that the Apps SDK is built on MCP. Custom 
 Accordingly:
 - The private Browser JSON API remains the canonical report source and stays Bearer-protected.
 - Direct automatic ChatGPT retrieval is currently blocked by the available account/platform integration path; do not claim it is working.
-- The next fallback under design is a user-operated Android report exporter. It should keep the credential in Android Keystore, fetch only the bounded read-only report, save a redacted JSON file locally, and invoke the Android Sharesheet only after explicit user action.
-- The user then explicitly attaches the report to ChatGPT. This is a manual secure handoff, not direct automatic API access.
-- No credential is placed in chat, URL, report, source or logs. No public endpoint, MCP dependency, GitHub Actions runner, paid intermediary or background upload is introduced.
-- The exporter is not implemented or verified yet. No live API request, secret read, test, pipeline, build or deployment has been performed.
+- An isolated native Android exporter source prototype now exists in `plugins/znect-ci-bridge/android-exporter/` on branch `feature/ci-bridge-android-exporter`.
+- It stores the Bearer credential locally using Android Keystore AES-GCM, requests only the bounded read-only report over HTTPS, validates the CircleCI report schema and shares a private JSON file only after an explicit Sharesheet action.
+- This is a manual secure handoff, not direct automatic ChatGPT API access. No credential is placed in chat, URL, report, source or logs.
+- Source implementation is not a verified APK: Gradle tests/build, device installation, live API request, CircleCI pipeline and deployment have not been run.
 
 Official platform references:
 - https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt
