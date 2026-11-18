@@ -534,3 +534,11 @@
 - Require CI Bridge validation provenance to use the canonical `ci-bridge` source ref.
 - Harden the opt-in Znect Build CircleCI exact-SHA workflow to reject non-canonical refs and source commits that are not reachable from the canonical branch tip.
 - Add regression-test source for canonical source-ref and commit-ancestry enforcement.
+
+
+### Parallel execution diagnostics and truthful failure totals — 2026-11-18
+- Fixed `diagnose_run` to use the normalized parallel execution index when retrieving failed-step stdout/stderr and when reporting each failed step.
+- Corrected the Browser API regression fixture to use CircleCI API v3's nested step-array representation for `parallel_executions`.
+- Prevented truncated job collections from presenting the observed failed-job count as a complete total; reports now distinguish unknown total, observed failures and capped diagnostic details.
+- Added MCP regression-test source covering execution index 1 and incomplete job-list counts.
+- Tests and TypeScript checks remain unexecuted pending the authorized opt-in CircleCI validation workflow.
