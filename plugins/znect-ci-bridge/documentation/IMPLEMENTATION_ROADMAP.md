@@ -578,4 +578,5 @@ For every meaningful feature or fix:
 - [x] Restore the Android connection-check button after a failed report fetch; previously it could remain disabled until Activity recreation **(выполнено — source fix)**.
 - [x] Remove duplicate button-state restoration in the connection-check error handler **(выполнено — source cleanup)**.
 - [x] Fix the Worker CircleCI status API test to provide its required `project_id=znect-forge` query parameter. The previous test invoked the endpoint without required project scope and expected a success response, inconsistent with the handler's 400 validation **(выполнено — test source fix)**.
+- [x] Strengthen the status API test to assert `provider_availability`, read-only permission and the exact registered CircleCI connection ID/status **(выполнено — test source fix)**.
 - [ ] Execute Worker and Android test suites in CircleCI. Source corrections are not evidence of passing tests.
