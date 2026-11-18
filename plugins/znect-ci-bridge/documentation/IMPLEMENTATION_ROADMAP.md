@@ -524,4 +524,5 @@ For every meaningful feature or fix:
 
 - The exporter now tracks its active HTTPS connection and disconnects it when the Activity is destroyed, in addition to interrupting the executor and suppressing late UI callbacks **(выполнено — source fix; Android runtime verification pending)**.
 - A queued request exits before decrypting the local credential when its Activity has already been destroyed. An in-flight request is disconnected on teardown; network cancellation behavior still requires device verification.
+- The response decoder now rejects malformed UTF-8 rather than silently replacing invalid byte sequences before JSON validation **(выполнено — source fix)**.
 - No Gradle test, APK build, CircleCI run or device verification was performed.
