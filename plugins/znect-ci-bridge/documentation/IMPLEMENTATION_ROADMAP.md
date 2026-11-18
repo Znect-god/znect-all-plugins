@@ -718,3 +718,16 @@ For every meaningful feature or fix:
 - [ ] Verify the exporter on a physical Android device and continue the separate private Browser JSON API / ChatGPT authentication feasibility work.
 
 **Verification boundary:** 48 is the count of authored JUnit test methods, not a passing-test count. No Android test execution, APK assembly, CircleCI run, device test, ChatGPT session authentication or deployment is established by these documentation corrections.
+
+
+## 40. Harden project component path-prefix validation — 2026-11-18
+
+- [x] Identify a registry-validation gap: component path prefixes were described as safe relative paths but accepted dot segments, encoded traversal strings, backslashes and ambiguous path characters **(выполнено — concrete source finding)**.
+- [x] Require non-empty slash-separated path segments restricted to ASCII letters, digits, dot, underscore and hyphen; continue accepting the documented `app/` prefix **(выполнено — source fix)**.
+- [x] Reject absolute paths, empty segments, `.` / `..`, percent-encoded traversal/separators, backslashes, query and fragment characters **(выполнено — source fix)**.
+- [x] Add focused registry regression cases for dot segments, encoded traversal, backslashes, empty segments, query and fragment input **(выполнено — tests authored; execution pending)**.
+- [x] Document the exact path-prefix contract in the project registry guide **(выполнено — documentation updated)**.
+- [ ] Run the Worker typecheck and complete Vitest suite through CircleCI; no test result is claimed.
+- [ ] Obtain and inspect the actual CircleCI pipeline and Android exporter results/artifact for the current branch head.
+
+**Verification boundary:** this change tightens configuration parsing and adds regression-test source only. No local or CircleCI test execution, APK build, device verification, ChatGPT authentication or deployment is claimed.
