@@ -588,3 +588,11 @@ For every meaningful feature or fix:
 - [x] Add Worker coverage for an unavailable CircleCI read probe, including safe generic error output, absence of false read-only/connected claims, and GET-only upstream calls **(выполнено — test source added)**.
 - [ ] Run the updated Worker and Android suites in CircleCI and inspect the actual test results and APK artifact.
 - Note: the Android check verifies the app's authenticated Bridge → CircleCI read path and report endpoint. It does not prove a separate ChatGPT session has connected or consumed the report.
+
+
+## 29. Repository boundary audit — 2026-11-18
+
+- [x] Rechecked the separate `Znect-god/znect-build` project documentation and the shared `Znect-god/znect-all-plugins` implementation **(выполнено — repository source review)**.
+- [x] Confirmed that Znect Build documents its own central orchestration through GitHub Actions and explicitly states that it performs no CircleCI actions; it is a separate system and is not the CI executor for CI Bridge validation **(выполнено — boundary documented)**.
+- [x] Keep CI Bridge validation isolated to the CircleCI workflow in `.circleci/config.yml`; do not treat Znect Build or GitHub Actions statuses as CircleCI evidence **(выполнено — scope confirmed)**.
+- [ ] Verify that the CircleCI project is connected to `Znect-god/znect-all-plugins` and obtain actual CircleCI job results. No CircleCI-specific connected action is available in this session, so this operational verification remains pending.
