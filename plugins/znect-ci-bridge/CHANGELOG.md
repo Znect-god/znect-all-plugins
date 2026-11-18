@@ -6,7 +6,9 @@
 - Updated the central workflow on the isolated Znect Build branch to publish the validated source fingerprint in its validation artifact name. The branch remains unmerged and no workflow was triggered.
 - Extended the provider-neutral artifact contract to preserve run-scoped artifacts without assigning them to jobs.
 - Explicitly report GitHub Actions job-log ZIP and generic test-report limitations rather than presenting them as CircleCI-style output.
-- Added mocked adapter tests; they have not been executed on the current branch head.
+- Added mocked adapter tests for source ownership, job-parent verification, run-scoped artifacts, unsupported ZIP log semantics and bounded ownership probes; they have not been executed on the current branch head.
+- Added the central GitHub token to configured-secret redaction and added a regression test.
+- Kept the central workflow's repository head branch/SHA separate from the validated project source revision; the run status is explicitly described as a workflow conclusion, not a project build result.
 
 ## 2026-11-18 — Central Znect Build onboarding correction
 
