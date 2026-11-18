@@ -146,7 +146,8 @@ The Bridge must remain read-only with respect to CI execution and project source
 
 - [x] Confirm Znect Build is the central executor for CI Bridge validation; no independent CircleCI or GitHub Actions executor is supported **(выполнено — architecture decision)**.
 - [x] Remove the redundant root `.circleci/config.yml` and the optional Android report-exporter application, tests, Gradle wrapper and setup guides **(выполнено — cleanup commit)**.
-- [ ] Confirm the central Node.js/Cloudflare Worker recipe is present on the intended Znect Build branch and matches the current Bridge package scripts.
+- [x] Confirm the central Node.js/Cloudflare Worker recipe is present on `feat/ci-bridge-node-worker-recipe` and matches the current Bridge package scripts **(выполнено — source review)**.
+- [x] Add `npm audit --audit-level=high` to the central recipe and its provenance manifest; update the Bridge read-only manifest validator and add regression coverage for both the complete validation list and omission of the audit step **(выполнено — source/test implementation; execution pending)**.
 - [ ] Register the CI Bridge validation target in Znect Build with the correct repository, branch and pinned source revision; keep it disabled until explicitly authorized.
 - [ ] Validate dependency install, typecheck, full Vitest suite, audit and Wrangler bundle dry-run through Znect Build on the exact candidate SHA.
 - [ ] Retrieve the private report/validation manifest through the existing read-only Znect Build adapter and confirm source SHA ownership.
@@ -779,7 +780,22 @@ For every meaningful feature or fix:
 - [x] Preserve the existing Cloudflare Worker, CircleCI read-only diagnostics adapter, Browser JSON API, webhook inbox, dashboard and bounded assistant-report download **(выполнено — existing core paths retained)**.
 - [x] Rewrite the current assistant-channel and free-access documentation to remove Android Sharesheet as a supported route and establish Znect Build as the sole validation executor **(выполнено)**.
 - [x] Keep old Android/CircleCI execution notes only as historical records; they are superseded by this cleanup and must not be treated as current instructions **(выполнено)**.
-- [ ] Inspect the Znect Build recipe/target and align it with the remaining Worker validation requirements.
+- [x] Inspect the central Znect Build target: `znect-ci-bridge/worker-validation` is registered but `execution_enabled: false`; no validation run was triggered **(выполнено — registry source review)**.
+- [x] Inspect the Znect Build recipe and disabled target; align the Worker validation requirements and manifest contract, including a high-severity dependency audit **(выполнено — source review and coordinated source edits)**.
+- [ ] Review/merge the central recipe to Znect Build `main` through the approved process; the current feature branch is not yet the adapter's trusted main-branch workflow.
 - [ ] Execute the full validation only through Znect Build after explicit authorization; no test run, Preview deployment or Production change is claimed by this cleanup.
 
 **Verification boundary:** this stage removes redundant source/configuration and updates current documentation. It does not establish passing tests, a live Znect Build run, a Preview update, direct ChatGPT authentication or release readiness.
+
+
+## 46. Align central Znect Build validation and provenance — 2026-11-18
+
+- [x] Inspect the existing central Node/Cloudflare Worker recipe and registered CI Bridge target in `Znect-god/znect-build` **(выполнено — source review)**.
+- [x] Add a high-severity dependency audit (`npm audit --audit-level=high`) after deterministic `npm ci` and before typecheck/tests **(выполнено — central recipe source)**.
+- [x] Add the audit step to the machine-readable validation manifest and update the Bridge adapter's exact expected-step contract **(выполнено — source implementation)**.
+- [x] Add regression tests proving the Bridge accepts the complete recipe provenance and rejects a manifest that omits the dependency audit **(выполнено — test source added; execution pending)**.
+- [x] Keep the central target disabled and do not dispatch a workflow, modify secrets, or alter repository settings **(выполнено — registry remains execution_enabled=false)**.
+- [ ] Review the central recipe changes and their validation on the intended Znect Build branch; no test execution is claimed.
+- [ ] Continue with the private report/ChatGPT access path and exact-SHA validation readiness.
+
+**Verification boundary:** the recipe, manifest, adapter contract and regression-test source have been updated in their respective feature branches. Neither branch has been executed or merged by this stage; no CI run, test result, Preview deployment or Production change is claimed.
