@@ -3,6 +3,7 @@
 - Consolidated the active development location to the single permanent `ci-bridge` branch. `main` remains the shared plugin repository branch; `znect-build` owns build recipes and configuration; CircleCI is the build execution environment.
 - Audited the canonical source tree and corrected the stale plugin maturity/catalog metadata and branch references; removed a duplicate test object key.
 - Hardened the internal event-store page response allowlist so unexpected envelope fields are rejected before Browser API/MCP serialization.
+- Reject malformed CircleCI artifact byte-size metadata before it can affect bounded JUnit collection or report completeness.
 - Added `completeness.events_limited` and made dashboard report export remain partial when the bounded webhook event page reaches its requested limit.
 - Added regression-test source for event-page envelope rejection and saturated report pagination. Test execution remains pending; no CircleCI pipeline or deployment was run.
 
