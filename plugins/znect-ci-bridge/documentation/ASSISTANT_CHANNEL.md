@@ -65,6 +65,14 @@ The intended ChatGPT access path must work on the Free plan and must not require
 - No Preview/Production deployment without separate explicit authorization.
 - No claim of automatic ChatGPT Free connectivity based solely on the existence of the private API or dashboard export.
 
+## Confirmed Free-plan / no-MCP boundary — 2026-11-18
+
+- OpenAI's current help documentation describes custom MCP connections for Business and Enterprise/Edu; it does not establish personal Free access to custom MCP apps.
+- The plugin directory is available across plans, but individual plugin/app access depends on plan, region, interface and workspace permissions. Directory availability alone does not grant a custom private API connector.
+- GPT Actions can use Bearer/API-key or OAuth authentication, but creating a new custom GPT on a personal Free account is not an available implementation route.
+- Therefore automatic authenticated ChatGPT Free calls to the private Browser API without MCP are not currently an established supported capability. Do not claim otherwise or weaken authentication to force it.
+- The supported no-MCP free fallback remains a user-reviewed bounded JSON attachment exported from the authenticated dashboard. Automatic direct access is blocked pending an official compatible ChatGPT app/connector path and end-to-end verification on the target plan/region.
+
 ## Platform limitation
 
 A private Bearer-protected REST endpoint is not automatically callable by a ChatGPT conversation merely because the endpoint exists. The dashboard's user-reviewed JSON download is an explicit fallback handoff, not automatic ChatGPT authentication.
