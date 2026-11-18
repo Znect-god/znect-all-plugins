@@ -16,7 +16,7 @@
 - приватный Browser JSON API существует, но это само по себе не означает, что отдельный ChatGPT conversation может автоматически вызвать его с Bearer header;
 - Android-проверка подтверждает путь Android → Bridge → CircleCI и доступность отчёта, но не аутентифицирует ChatGPT;
 - передача отчёта в ChatGPT сейчас ручная через Sharesheet; автоматический ChatGPT authentication/handoff не подтверждён и остаётся открытым platform limitation;
-- 40 Android JVM test cases написаны, но не исполнены; сборка APK и проверка на устройстве не подтверждены;
+- 48 Android JVM test cases написаны (8 origin + 21 report/privacy + 3 Bearer policy + 11 CircleCI status + 5 report-file expiry), но не исполнены; сборка APK и проверка на устройстве не подтверждены;
 - CircleCI workflow config находится в репозитории, однако фактический запуск и результаты для текущего HEAD ещё не получены.
 
 ## 2. Поток данных
