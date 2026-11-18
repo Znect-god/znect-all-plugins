@@ -1,3 +1,12 @@
+## 2026-11-18 — CircleCI execution alignment
+
+- Corrected the CI Bridge validation architecture: CircleCI is the execution platform; Znect Build remains the development and central recipe repository.
+- Added a CircleCI exact-SHA validation workflow to the Znect Build feature branch. It is opt-in, disabled by default, and records both source and recipe SHAs plus CircleCI run identity.
+- Disabled legacy GitHub Actions jobs in the Znect Build feature branch; no GitHub Actions workflow is used as the current executor.
+- Updated the Znect Build README, architecture, operations, security model, roadmap and registry notes.
+- Updated the assistant-channel guide and plugin metadata to describe CircleCI execution and the remaining Free-plan authenticated-access limitation.
+- Added source-level contract assertions for the CircleCI workflow and inert legacy workflows. Tests, CircleCI connectivity and pipeline execution remain unverified.
+
 ## 2026-11-18 — verify ChatGPT custom MCP availability boundary
 
 - Checked current OpenAI Help Center guidance: custom MCP server connections are documented for Business and Enterprise/Edu, with Pro read/fetch support; Free is not listed as supported.
