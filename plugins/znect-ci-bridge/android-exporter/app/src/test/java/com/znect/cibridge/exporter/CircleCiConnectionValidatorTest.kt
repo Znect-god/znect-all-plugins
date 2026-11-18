@@ -18,8 +18,8 @@ class CircleCiConnectionValidatorTest {
             .put("connected", false)
             .put("provider_availability", "unavailable")
             .put("error", "Provider read probe failed.")
-            .remove("permissions")
-            .remove("read_probe")
+        response.remove("permissions")
+        response.remove("read_probe")
         val result = CircleCiConnectionValidator.validate(response, "project-1")
         assertFalse(result.connected)
         assertEquals("Provider read probe failed.", result.message)
@@ -56,8 +56,10 @@ class CircleCiConnectionValidatorTest {
     }
 
     @Test fun rejectsMissingReadProbe() {
+        val response = validStatus()
+        response.remove("read_probe")
         assertThrows(IllegalArgumentException::class.java) {
-            CircleCiConnectionValidator.validate(validStatus().remove("read_probe"), "project-1")
+            CircleCiConnectionValidator.validate(response, "project-1")
         }
     }
 
