@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (Znect Build executor alignment and removal of redundant companion workflow)  
+**Updated:** 2026-11-18 (report-link contract regression coverage and roadmap reconciliation)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `feature/ci-bridge-android-exporter` (legacy branch name; Android companion source removed)  
@@ -65,8 +65,8 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] CircleCI provider adapter for core API v3 operations **(выполнено)**.
 - [x] Project/run/job/workflow ownership checks and bounded run traversal **(выполнено)**.
 - [x] Optional read-only adapter for the separate `Znect-god/znect-build` repository exists as isolated/secondary integration code; it is not the CircleCI adapter and is not the CI Bridge validation executor. **(выполнено — source implementation; live verification pending)**
-- [ ] Keep the Znect Build adapter outside the primary ChatGPT/CircleCI report path; review whether it should remain optional or be removed in a later scoped cleanup.
-- [ ] Do not route CI Bridge validation through GitHub Actions or Znect Build.
+- [x] Keep the Znect Build read adapter isolated from the CircleCI assistant-report path; use it only for read-only central Build validation evidence and manifest retrieval **(выполнено — architecture boundary confirmed)**.
+- [x] Route CI Bridge source validation through the central Znect Build target only; do not create a repository-local CircleCI/GitHub Actions executor **(выполнено — architecture and cleanup committed; actual validation run pending)**.
 - [ ] Verify multi-project and multi-connection behavior against live, authorized projects.
 
 ### 3.3 CircleCI diagnostics
@@ -148,7 +148,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Remove the redundant root `.circleci/config.yml` and the optional Android report-exporter application, tests, Gradle wrapper and setup guides **(выполнено — cleanup commit)**.
 - [x] Confirm the central Node.js/Cloudflare Worker recipe is present on `feat/ci-bridge-node-worker-recipe` and matches the current Bridge package scripts **(выполнено — source review)**.
 - [x] Add `npm audit --audit-level=high` to the central recipe and its provenance manifest; update the Bridge read-only manifest validator and add regression coverage for both the complete validation list and omission of the audit step **(выполнено — source/test implementation; execution pending)**.
-- [ ] Register the CI Bridge validation target in Znect Build with the correct repository, branch and pinned source revision; keep it disabled until explicitly authorized.
+- [x] Register the `znect-ci-bridge/worker-validation` target in the isolated Znect Build feature branch with the source repository and validation recipe; keep it disabled until reviewed and explicitly authorized **(выполнено — registry source exists; target remains disabled)**.
 - [ ] Validate dependency install, typecheck, full Vitest suite, audit and Wrangler bundle dry-run through Znect Build on the exact candidate SHA.
 - [ ] Retrieve the private report/validation manifest through the existing read-only Znect Build adapter and confirm source SHA ownership.
 - [ ] Do not create an independent `.circleci/config.yml`, GitHub Actions runner or Android companion app as a workaround.
@@ -666,7 +666,7 @@ For every meaningful feature or fix:
 
 **Verification boundary:** source and tests are committed, but the five new tests have not been executed. The CircleCI run, APK assembly and physical-device behavior remain unverified.
 
-## 37. Remove the remaining GitHub Actions CI Bridge executor — 2026-11-18
+## 37. [SUPERSEDED] Remove the remaining GitHub Actions CI Bridge executor — historical snapshot
 
 - [x] Inspect all CI Bridge workflow files in the active engineering branch and identify the still-active `.github/workflows/znect-ci-bridge.yml`, which ran validation on pull requests and pushes to `main` **(выполнено — concrete configuration finding)**.
 - [x] Retire that workflow in place with an inert `if: false` job, empty permissions, and no checkout, runner work, tests, build, deployment or secret access **(выполнено — source/configuration fix)**.
@@ -680,7 +680,7 @@ For every meaningful feature or fix:
 
 **Verification boundary:** the legacy GitHub Actions workflow was disabled by committed source configuration. This does not establish a CircleCI run, passing tests, APK assembly, device verification or deployment.
 
-## 38. Final targeted review before CircleCI execution — 2026-11-18
+## 38. [SUPERSEDED] Final targeted review before CircleCI execution — historical snapshot
 
 - [x] Re-check the authenticated Browser JSON API status/report routes, bounded query parameters, GET-only access, provider error handling and event-page byte limits **(выполнено — source review)**.
 - [x] Re-check CircleCI adapter construction and cache lifetime; adapter instances are created per selected request, so failed per-instance promise caches do not persist as a cross-request outage **(выполнено — source review)**.
@@ -694,7 +694,7 @@ For every meaningful feature or fix:
 **Verification boundary:** this pass found no additional reproducible source defect, so no speculative code change was made. The GitHub workflow files remain inert; CircleCI is the only configured CI Bridge validation executor. No tests, CircleCI run, APK, device test, ChatGPT authentication or deployment are claimed.
 
 
-## 39. Correct Android test inventory across project documentation — 2026-11-18
+## 39. [SUPERSEDED] Correct Android test inventory across project documentation — historical snapshot
 
 - [x] Count the actual JUnit `@Test` declarations in all five Android test files: 8 origin-policy + 21 report-validator + 3 Bearer-token-policy + 11 CircleCI connection-status + 5 report-file-expiry = **48 authored tests** **(выполнено — source inventory inspected)**.
 - [x] Identify and correct the stale report-validator count (18 instead of 21) and stale totals (40/45 instead of 48) in the Android README, Assistant Channel, Free Access Plan and Usage Guide **(выполнено — documentation commits)**.
@@ -729,7 +729,7 @@ For every meaningful feature or fix:
 **Verification boundary:** the API now fails closed on stale incremental event pages and has a focused regression test. The test has not been executed; no CircleCI run, APK assembly, device verification, ChatGPT authentication or deployment is claimed.
 
 
-## 42. Clarify Android connection-check scope — 2026-11-18
+## 42. [SUPERSEDED] Clarify Android connection-check scope — historical snapshot
 
 - [x] Review the Android connection-check flow against its actual behavior: it authenticates to the private Browser JSON API, performs a CircleCI read-only status probe, then validates a bounded report response **(выполнено — source review)**.
 - [x] Identify misleading UI wording that named the check as a “ChatGPT report path”, which could imply that ChatGPT itself had authenticated **(выполнено — concrete UX finding)**.
@@ -739,7 +739,7 @@ For every meaningful feature or fix:
 
 **Verification boundary:** this is a source/UI wording correction only. It does not establish Android test execution, APK assembly, CircleCI execution, physical-device verification or ChatGPT authentication.
 
-## 43. Reconcile Android request lifecycle and CircleCI validation configuration — 2026-11-18
+## 43. [SUPERSEDED] Reconcile Android request lifecycle and CircleCI validation configuration — historical snapshot
 
 - [x] Review both Android status/report requests for HTTPS-only origin validation, explicit GET methods, disabled redirects, bounded response reads, JSON content-type checks and Bearer-token non-disclosure checks **(выполнено — source review)**.
 - [x] Review request cancellation and Activity teardown: the active HTTPS connection is disconnected and the single-thread executor is shut down when the Activity is destroyed **(выполнено — source review)**.
@@ -765,9 +765,9 @@ For every meaningful feature or fix:
 - [x] Preserve Bearer authentication in the request header only, GET-only access, in-memory token handling, and scope isolation when the user switches project/connection or disconnects **(выполнено — source implementation)**.
 - [x] Mark missing/limited diagnostics in the exported report, enforce a 600 KB total JSON ceiling, and download a single reviewable JSON file for explicit user handoff to ChatGPT **(выполнено — source implementation)**.
 - [x] Add dashboard regression coverage for report endpoint use, UUID validation, selected-scope diagnostics, size ceiling, partial-report state and download behavior **(выполнено — test source added; execution pending)**.
-- [x] Confirm the existing CircleCI Worker job runs `npm run check`, which invokes TypeScript typecheck and the complete Vitest suite including the new dashboard regression tests **(выполнено — config/package-script review; execution pending)**.
-- [x] Update the assistant-channel guide and README to describe the existing web-dashboard handoff and keep Android as an optional companion path **(выполнено — documentation updated)**.
-- [ ] Execute the Worker/dashboard regression suite through the configured CircleCI validation pipeline; no test execution is claimed.
+- [x] Confirm the central Znect Build recipe runs `npm run check`, which invokes TypeScript typecheck and the complete Vitest suite including dashboard regression tests **(выполнено — recipe/package-script review; execution pending)**.
+- [x] Update the assistant-channel guide and README to describe the existing web-dashboard handoff; the redundant Android companion path was subsequently removed in stage 45 **(выполнено — documentation updated and later reconciled)**.
+- [ ] Execute the Worker/dashboard regression suite through the central Znect Build validation target; no test execution is claimed.
 - [ ] Verify the export action against the existing isolated Cloudflare Preview, including one failed run with diagnostic output and a partial/unavailable diagnostic case. Do not create a new Worker or touch Production.
 
 **Verification boundary:** this is an incremental change to the existing dashboard and reuses the existing private Worker API. Source and regression-test changes are committed, but CircleCI execution and live Preview download have not yet been verified. No Worker deployment, secret access, CircleCI pipeline mutation, Production change or APK build is claimed.
@@ -813,3 +813,15 @@ For every meaningful feature or fix:
 - [ ] Run the dashboard and full Worker regression suites through the central Znect Build recipe on the exact candidate SHA.
 
 **Verification boundary:** the source and regression-test assertion are committed. No test execution, live Preview download or Znect Build run is claimed.
+
+
+## 48. Verify aggregate-report diagnostic link contract — 2026-11-18
+
+- [x] Compare the dashboard export's expected report fields with the existing Worker `GET /api/v1/report` response and `GET /api/v1/diagnostics/{run_uuid}` route **(выполнено — source review)**.
+- [x] Confirm the report returns UUID run identifiers, failed-run status, same-origin diagnostic paths, selected project/connection scope, and an explicit `diagnostics_included: false` marker before diagnostic bundles are fetched **(выполнено — source review)**.
+- [x] Extend the Worker report regression test to assert the exact diagnostic link path and query scope, failed-run count, and initial completeness marker **(выполнено — test source committed; execution pending)**.
+- [x] Confirm the dashboard validates UUIDs, reconstructs its own same-origin route, and never follows the endpoint string returned by the API **(выполнено — source review and existing regression assertion)**.
+- [ ] Run the report/API/dashboard regression suite through the central Znect Build recipe on the exact candidate source SHA.
+- [ ] Verify the same report and diagnostic round-trip against the existing Preview; no deployment or live request is performed in this stage.
+
+**Verification boundary:** the source contract and regression-test assertions now agree. This is static/source-level verification only; test execution and live Preview retrieval remain pending.
