@@ -10,6 +10,7 @@ import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
 import { correlateEventsWithRuns } from "./correlation";
 import { inspectCiBridgeProvenance } from "./provenance";
 import { collectJobReportArtifacts, MAX_REPORT_ARTIFACTS_PER_JOB, MAX_REPORT_BYTES_PER_JOB } from "./diagnostic-artifacts";
+import { buildDiagnosticsSummary, reportArtifactsStatus, testResultsStatus } from "./diagnostic-completeness";
 import {
   allowedArtifactUrl,
   fetchAllowedArtifact,
@@ -757,25 +758,32 @@ function createServer(env: Env) {
 
           let testResults = "";
           let testResultsError: string | undefined;
+          let testResultsState: "available" | "partial" | "unavailable" | "empty" = "unavailable";
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
+            testResultsState = testResultsStatus({ content: report.content, truncated: report.truncated });
             if (report.truncated) reportDataIncomplete = true;
           } catch {
             testResultsError = "Unable to retrieve structured test results.";
+            testResultsState = testResultsStatus({ error: testResultsError });
             reportDataIncomplete = true;
           }
 
           let artifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }> = [];
+          let artifactCollectionIncomplete = false;
           try {
             const collected = await collectJobReportArtifacts(adapter, scope, job.id);
             artifacts = collected.artifacts;
+            artifactCollectionIncomplete = collected.incomplete;
             if (collected.incomplete) reportDataIncomplete = true;
             if (collected.limitReached) reportArtifactLimitReached = true;
           } catch {
             artifacts = [{ error: "Unable to list job artifacts." }];
+            artifactCollectionIncomplete = true;
             reportDataIncomplete = true;
           }
+          const artifactsState = reportArtifactsStatus({ artifacts, incomplete: artifactCollectionIncomplete });
 
           diagnostics.push({
             job_id: job.id,
@@ -785,7 +793,9 @@ function createServer(env: Env) {
             failed_step_logs: failedStepLogs,
             test_results: testResults,
             test_results_error: testResultsError,
-            report_artifacts: artifacts
+            test_results_status: testResultsState,
+            report_artifacts: artifacts,
+            report_artifacts_status: artifactsState
           });
         }
 
@@ -807,19 +817,17 @@ function createServer(env: Env) {
         status_semantics: "CircleCI run, workflow, and job outcomes are provider-reported execution states; they are not independently verified project-release outcomes. Provenance is reported separately and only marked validated after strict manifest, artifact, SHA, pipeline, workflow and job cross-checks.",
         provenance,
         workflows: workflowReports,
-        diagnostics_summary: {
-          workflows_total: workflows.length,
-          workflows_inspected: workflowReports.length,
-          workflows_truncated: workflowLimitReached,
-          failed_jobs_inspected: failedJobsInspected,
-          failed_job_limit_reached: failedJobLimitReached,
-          jobs_truncated: jobLimitReached,
-          report_data_incomplete: reportDataIncomplete,
-          report_artifact_limit_reached: reportArtifactLimitReached,
-          incomplete: workflowLimitReached || jobLimitReached || failedJobLimitReached || logActionLimitReached || reportDataIncomplete,
-          log_actions_inspected: logActionsInspected,
-          log_action_limit_reached: logActionLimitReached
-        },
+        diagnostics_summary: buildDiagnosticsSummary({
+          workflowsTotal: workflows.length,
+          workflowsInspected: workflowReports.length,
+          failedJobsInspected,
+          failedJobLimitReached,
+          jobsTruncated: jobLimitReached,
+          reportDataIncomplete,
+          reportArtifactLimitReached,
+          logActionsInspected,
+          logActionLimitReached
+        }),
         limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: MAX_REPORT_ARTIFACTS_PER_JOB, max_report_bytes_per_job: MAX_REPORT_BYTES_PER_JOB }
       }, null, 2), env);
       const diagnosticData = JSON.parse(safePayload) as Record<string, unknown>;
@@ -1197,33 +1205,42 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           }
           let testResults: string | undefined;
           let testResultsError: string | undefined;
+          let testResultsState: "available" | "partial" | "unavailable" | "empty" = "unavailable";
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResults = report.content + (report.truncated ? "\n[TRUNCATED]" : "");
+            testResultsState = testResultsStatus({ content: report.content, truncated: report.truncated });
             if (report.truncated) { reportDataIncomplete = true; incomplete = true; }
           } catch {
             testResultsError = "Unable to retrieve structured test results.";
+            testResultsState = testResultsStatus({ error: testResultsError });
             reportDataIncomplete = true;
             incomplete = true;
           }
           let reportArtifacts: Array<Record<string, unknown>> = [];
+          let artifactCollectionIncomplete = false;
           try {
             const collected = await collectJobReportArtifacts(adapter, scope, job.id);
             reportArtifacts = collected.artifacts;
+            artifactCollectionIncomplete = collected.incomplete;
             if (collected.incomplete) { reportDataIncomplete = true; incomplete = true; }
             if (collected.limitReached) reportArtifactLimitReached = true;
           } catch {
             reportArtifacts.push({ error: "Unable to list job artifacts." });
+            artifactCollectionIncomplete = true;
             reportDataIncomplete = true;
             incomplete = true;
           }
+          const artifactsState = reportArtifactsStatus({ artifacts: reportArtifacts, incomplete: artifactCollectionIncomplete });
           reports.push({
             job: details,
             failed_steps: failedSteps,
             failed_step_logs: failedStepLogs,
             test_results: testResults,
             test_results_error: testResultsError,
-            report_artifacts: reportArtifacts
+            test_results_status: testResultsState,
+            report_artifacts: reportArtifacts,
+            report_artifacts_status: artifactsState
           });
         }
         workflowReports.push({
@@ -1241,19 +1258,17 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         run,
         provenance,
         workflows: workflowReports,
-        diagnostics_summary: {
-          workflows_total: workflows.length,
-          workflows_inspected: workflowReports.length,
-          workflows_truncated: workflows.length > 5,
-          failed_jobs_inspected: failedJobsInspected,
-          failed_job_limit_reached: failedJobLimitReached,
-          jobs_truncated: jobLimitReached,
-          report_data_incomplete: reportDataIncomplete,
-          report_artifact_limit_reached: reportArtifactLimitReached,
-          incomplete,
-          log_actions_inspected: logActionsInspected,
-          log_action_limit_reached: logActionLimitReached
-        },
+        diagnostics_summary: buildDiagnosticsSummary({
+          workflowsTotal: workflows.length,
+          workflowsInspected: workflowReports.length,
+          failedJobsInspected,
+          failedJobLimitReached,
+          jobsTruncated: jobLimitReached,
+          reportDataIncomplete,
+          reportArtifactLimitReached,
+          logActionsInspected,
+          logActionLimitReached
+        }),
         limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: MAX_REPORT_ARTIFACTS_PER_JOB, max_report_bytes_per_job: MAX_REPORT_BYTES_PER_JOB }
       };
       return boundedJson(redactedBoundedJson(payload, env, 120_000), 120_000);
