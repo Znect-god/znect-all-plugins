@@ -1121,6 +1121,13 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
         generated_at: generatedAt,
         provider: "circleci",
         permissions: "read-only",
+        assistant_handoff: {
+          mode: "user_reviewed_json_attachment",
+          automatic_api_access: false,
+          mcp_required: false,
+          bearer_token_included: false,
+          test_summary_count_scope: "observed_records"
+        },
         project: { id: project.id, name: project.name, status: "registered" },
         connection: { id: connection.id, status: "configured", provider: "circleci" },
         provider_status: "available",
