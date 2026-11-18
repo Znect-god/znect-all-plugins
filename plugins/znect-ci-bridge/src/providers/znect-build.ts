@@ -439,7 +439,6 @@ export class ZnectBuildReadOnlyAdapter implements ReadOnlyCiProviderAdapter {
         parsed.project_id !== scope.projectId ||
         typeof parsed.source_repository !== "string" ||
         parsed.source_repository.toLowerCase() !== this.expectedSourceRepository.toLowerCase() ||
-        parsed.source_sha !== run.commitSha ||
         typeof parsed.source_ref !== "string" || parsed.source_ref.length > 255 ||
         parsed.source_sha !== run.commitSha || !/^[0-9a-f]{40}$/.test(String(parsed.source_sha)) ||
         parsed.build_target !== "znect-ci-bridge/worker-validation" ||
