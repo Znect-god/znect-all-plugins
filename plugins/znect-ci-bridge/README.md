@@ -108,7 +108,7 @@ Never commit or disclose secret values. Configure secrets in the correct environ
 - `CIRCLECI_WEBHOOK_SECRET` — shared signing secret configured in CircleCI and the matching Worker Preview/Production environment.
 - `ZNECT_BUILD_GITHUB_TOKEN` — repository-scoped GitHub token with read-only Actions metadata/logs access to `Znect-god/znect-build`; no contents write, Actions write, dispatch, workflow, or administration permissions.
 
-Preview and Production secrets are independent. The current Preview workflow installs `CIRCLECI_WEBHOOK_SECRET` from the GitHub Actions secret into the named Preview. Do not infer that Production has any of these secrets.
+Preview and Production secrets are independent. The retired GitHub Actions Preview workflow is inert and is not a secret-delivery mechanism. Configure any required Preview webhook secret only through the authorized Cloudflare environment controls; do not infer that Preview or Production contains a secret, and do not expose or retrieve secret values.
 
 
 ### Dependency install-script policy
