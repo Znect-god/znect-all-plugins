@@ -100,7 +100,7 @@ describe("unified CircleCI test result normalization", () => {
 
   it("keeps XML reports without a root self-closing testsuite valid", () => {
     const result = normalizeJobTestResults({ junitArtifacts: [{ content: '<testsuite/>' }] });
-    expect(result).toMatchObject({ status: "empty", malformed_junit_reports: 0, incomplete: false });
+    expect(result).toMatchObject({ status: "empty", sources: "junit_only", malformed_junit_reports: 0, incomplete: false });
   });
 
 
@@ -124,6 +124,19 @@ describe("unified CircleCI test result normalization", () => {
     });
     expect(result).toMatchObject({
       status: "partial", total: 1, passed: 1, malformed_junit_reports: 1, incomplete: true
+    });
+  });
+
+
+  it("uses the JUnit status when a matching JSONL record has an unknown outcome", () => {
+    const result = normalizeJobTestResults({
+      jsonl: JSON.stringify({ classname: "pkg.Math", name: "unknown", result: "new-circleci-state" }),
+      junitArtifacts: [{
+        content: '<testsuite><testcase classname="pkg.Math" name="unknown"><failure/></testcase></testsuite>'
+      }]
+    });
+    expect(result).toMatchObject({
+      total: 1, failed: 1, unknown: 0, duplicate_reports_removed: 1, incomplete: false
     });
   });
 
