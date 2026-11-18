@@ -113,7 +113,17 @@
       "Complete broader live CircleCI API v3 run/workflow/job/log/artifact parity checks and an independent security review before any Production deployment.",
       "Consider a dedicated Cloudflare WAF/rate-limiting rule for distributed failed-authentication attempts and monitor shared-NAT effects."
     ],
-    "historical_ci_note": "The GitHub Actions runs listed in performed are historical evidence from before the CircleCI-only CI policy. They are not the current executor and must not be used for ongoing CI Bridge development or validation."
+    "historical_ci_note": "The GitHub Actions runs listed in performed are historical evidence from before the CircleCI-only CI policy. They are not the current executor and must not be used for ongoing CI Bridge development or validation.",
+    "current_branch_validation": {
+      "android_jvm_test_sources_authored": 32,
+      "android_jvm_test_execution": "pending",
+      "worker_regression_tests_added_in_current_hardening": 2,
+      "worker_test_execution": "pending",
+      "circleci_execution": "unverified",
+      "android_debug_apk": "not built or verified",
+      "device_verification": "pending",
+      "deployment": "not performed"
+    }
   },
   "secrets": [
     "CIRCLECI_TOKEN",
