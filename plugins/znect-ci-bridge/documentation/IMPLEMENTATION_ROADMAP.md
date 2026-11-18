@@ -379,3 +379,5 @@ For every meaningful feature or fix:
 - Because the user's primary client is Android, evaluate an Android-native companion/exporter using Android Keystore and the system Sharesheet before choosing a generic Node/Termux CLI. Do not assume Termux or any particular local runtime is installed.
 - Keep this fallback separately labelled **manual secure report handoff**; it does not satisfy the original direct automatic ChatGPT access requirement.
 - No exporter source code has been added yet. No secrets were requested/read, no API request was made, and no tests, CircleCI pipeline, build or deployment was run.
+
+- Added `documentation/ANDROID_REPORT_EXPORTER_DESIGN.md` with the proposed Android-native manual handoff architecture: Keystore-backed credential storage, fixed-origin HTTPS GET-only access to `/api/v1/report`, bounded report validation, private temporary export and explicit Sharesheet sharing. **(выполнено — design specification only; no app source or runtime verification)**
