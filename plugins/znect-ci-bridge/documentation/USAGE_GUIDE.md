@@ -1,6 +1,6 @@
 # Znect CI Bridge — запуск, настройка и проверка
 
-> **ChatGPT access channel:** use the private Forge issue #8 command and the Znect Build report workflow. The workflow calls the authenticated Browser JSON API directly. MCP is not required and is not used as the ChatGPT channel. See [ASSISTANT_CHANNEL.md](ASSISTANT_CHANNEL.md). The historical MCP instructions below describe an optional legacy surface only.
+> **ChatGPT access channel:** use the free authenticated Browser JSON API and its private report handoff. CircleCI is the CI tool; `znect-build` is a separate repository, not the CI provider or the CI Bridge validation executor. GitHub Actions is not the CI Bridge validation or ChatGPT report channel. MCP is optional legacy functionality only. See [ASSISTANT_CHANNEL.md](ASSISTANT_CHANNEL.md).
 
 
 **Статус: `in-development` — разработка, экспериментальный прототип, не готов к Production.**  
@@ -16,7 +16,7 @@
 
 **Живая дорожная карта:** [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md). Она отдельно отмечает реализованные пункты меткой **(разработано)** и оставляет тестирование, live-проверки, Preview, security review и выпуск самостоятельными незакрытыми этапами. Её необходимо обновлять вместе с каждой существенной реализацией.
 
-Ответственность репозиториев разделена: `znect-all-plugins` хранит исходный код и ведёт разработку CI Bridge; `znect-build` — отдельная централизованная система сборки приложений. Bridge не заменяет Build и не запускает сборки.
+Ответственность разделена: `znect-all-plugins` хранит исходный код и ведёт разработку CI Bridge; `znect-build` — отдельный GitHub-репозиторий Znect Build; CircleCI — CI-инструмент, который выполняет проверки CI Bridge и предоставляет данные для диагностики. Сам Bridge только читает данные зарегистрированных CircleCI-проектов и не управляет их pipeline.
 
 ## Актуальное уточнение — 15 ноября 2026
 
