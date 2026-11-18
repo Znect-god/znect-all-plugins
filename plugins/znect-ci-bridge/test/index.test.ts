@@ -361,6 +361,80 @@ describe("MCP tool schemas and error boundary", () => {
     expect(tools.some((tool) => /^(start|rerun|retry|cancel|deploy|trigger)_/i.test(tool.name))).toBe(false);
   });
 
+  it("uses the correct parallel execution index when diagnose_run retrieves failed-step logs", async () => {
+    const projectId = "123e4567-e89b-42d3-a456-426614174010";
+    const workflowId = "123e4567-e89b-42d3-a456-426614174012";
+    const jobId = "123e4567-e89b-42d3-a456-426614174013";
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/api/v3/projects") {
+        return Response.json({ data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }] });
+      }
+      if (url.pathname === "/api/v3/runs") {
+        return Response.json({ data: [{ id: RUN_ID, references: { project: { id: projectId } } }], page: { next: null } });
+      }
+      if (url.pathname === `/api/v3/runs/${RUN_ID}`) {
+        return Response.json({ data: { id: RUN_ID, references: { project: { id: projectId } }, attributes: { current_outcome: "failed", phase: "ended" } } });
+      }
+      if (url.pathname === "/api/v3/workflows") {
+        return Response.json({ data: [{ id: workflowId, references: { run: { id: RUN_ID } }, attributes: { name: "build-and-test" } }], page: { next: null } });
+      }
+      if (url.pathname === "/api/v3/jobs") {
+        return Response.json({ data: [{
+          id: jobId,
+          references: { project: { id: projectId }, workflow: { id: workflowId } },
+          attributes: { name: "unit-tests", phase: "completed", outcome: "failed" }
+        }] });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}`) {
+        return Response.json({ data: {
+          id: jobId,
+          references: { project: { id: projectId }, workflow: { id: workflowId } },
+          attributes: {
+            name: "unit-tests",
+            parallel_executions: [
+              [{ name: "worker zero", num: 2, phase: "completed", type: "run", outcome: "success" }],
+              [{ name: "worker one failed", num: 7, phase: "completed", type: "run", outcome: "failed", exit_code: 1 }]
+            ]
+          }
+        } });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}/stdout` || url.pathname === `/api/v3/jobs/${jobId}/stderr`) {
+        return new Response("parallel worker output", { status: 200 });
+      }
+      if (url.pathname === `/api/v3/jobs/${jobId}/tests`) return new Response(null, { status: 204 });
+      if (url.pathname === `/api/v3/jobs/${jobId}/artifacts`) return Response.json({ data: [] });
+      throw new Error("Unexpected CircleCI request: " + url.pathname);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(rpcRequest(31, "tools/call", {
+      name: "diagnose_run",
+      arguments: { project_id: "znect-forge", run_id: RUN_ID }
+    }), env, ctx);
+    const payload = await parseRpc(response);
+    expect(payload.result?.isError).not.toBe(true);
+    const result = JSON.parse(payload.result.content[0].text);
+    const failedJob = result.workflows[0].failed_jobs[0];
+
+    expect(failedJob.failed_steps).toMatchObject([{
+      execution_index: 1,
+      actions: [{ step_num: 7, status: "failed" }]
+    }]);
+    expect(failedJob.failed_step_logs).toMatchObject([{
+      step_num: 7,
+      execution: 1,
+      stdout: "parallel worker output",
+      stderr: "parallel worker output"
+    }]);
+    const logRequests = fetchMock.mock.calls.filter(([input]) => {
+      const url = new URL(String(input));
+      return url.pathname.endsWith("/stdout") || url.pathname.endsWith("/stderr");
+    });
+    expect(logRequests).toHaveLength(2);
+    expect(logRequests.every(([input]) => new URL(String(input)).searchParams.get("filter[execution]") === "1")).toBe(true);
+  });
+
   it("reports a safe MCP error when the event inbox Durable Object fails", async () => {
     const namespace = {
       idFromName: () => "forge",
