@@ -185,17 +185,31 @@ class MainActivity : Activity() {
             return
         }
         try {
-            val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-            if (store.containsAlias(KEY_ALIAS)) store.deleteEntry(KEY_ALIAS)
-            val saved = prefs.edit().remove(TOKEN_CIPHERTEXT).commit()
-            if (!saved) throw IllegalStateException("Local credential storage could not be cleared.")
+            if (!prefs.edit().clear().commit()) {
+                throw IllegalStateException("Local configuration could not be cleared.")
+            }
+            var keyRemoved = true
+            try {
+                val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                if (store.containsAlias(KEY_ALIAS)) store.deleteEntry(KEY_ALIAS)
+            } catch (_: Exception) {
+                keyRemoved = false
+            }
             tokenInput.text.clear()
-            latestReportFile?.delete()
+            originInput.text.clear()
+            projectInput.text.clear()
+            connectionInput.text.clear()
+            val reportDir = File(cacheDir, "reports")
+            reportDir.listFiles()?.forEach { it.delete() }
             latestReportFile = null
             shareButton.isEnabled = false
-            statusText.text = "Credential and temporary report cleared from this app."
+            statusText.text = if (keyRemoved) {
+                "All local configuration, credential data and temporary reports cleared."
+            } else {
+                "Local configuration and reports cleared, but Keystore key cleanup could not be verified."
+            }
         } catch (_: Exception) {
-            statusText.text = "Could not fully clear local credential material. Review app storage before reconnecting."
+            statusText.text = "Could not clear local configuration. Review app storage before reconnecting."
         }
     }
 
