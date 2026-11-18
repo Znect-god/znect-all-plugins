@@ -1165,14 +1165,14 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           request_fingerprint_artifact: requestEvidence?.path ?? null,
           validation_manifest_artifact: validationManifest?.path ?? null,
           manifest_available: Boolean(validationManifest),
-          manifest_content: "Private central workflow artifact; this API exposes metadata only."
+          manifest_content: "Retrieved separately through the authenticated validation-manifest endpoint; this run-details response contains artifact metadata only."
         },
         workflows: workflowReports,
         artifacts: { scope: "workflow_run", items: artifacts },
         capabilities: {
           job_logs: "unavailable_zip_archive",
           test_reports: "not_exposed_by_generic_github_actions_api",
-          artifact_content: "zip_archive_not_extracted"
+          artifact_content: "validation_manifest_available_via_dedicated_endpoint; other_zip_content_not_extracted"
         }
       }, env, 120_000), 120_000);
     }
