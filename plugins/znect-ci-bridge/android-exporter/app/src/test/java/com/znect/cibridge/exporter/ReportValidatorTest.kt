@@ -148,6 +148,14 @@ class ReportValidatorTest {
         }
     }
 
+    @Test fun rejectsFloatingPointEventCursorAboveSafeIntegerRange() {
+        val report = validReport()
+        report.getJSONObject("events").put("next_cursor", 9_007_199_254_740_992.0)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
     @Test fun rejectsRequestedLimitsOutsideContract() {
         val report = validReport()
         report.getJSONObject("events").put("requested", 21)
