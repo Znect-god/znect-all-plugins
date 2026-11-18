@@ -453,3 +453,13 @@
 - Distinguish wholly unavailable failed-step logs from partially retrieved logs when every output stream request fails.
 - Added focused regression-test source for source classification and shared completeness semantics.
 - Tests and TypeScript checks were not executed. No CircleCI API requests, pipeline execution, deployment or runtime configuration changes were performed.
+
+
+## 2026-11-18 — Unified CircleCI test result summaries
+
+- Added a bounded normalizer that combines CircleCI job JSONL records with per-execution JUnit XML artifacts into one per-job count summary.
+- Counts passed, failed, skipped and unknown test outcomes; retains malformed/truncated/incomplete indicators and source record counts.
+- Deduplicates only unambiguous one-to-one cross-source matches. Repeated identities that may represent retries or parallel shards remain separate and ambiguous groups are explicitly flagged.
+- Gives CircleCI JSONL precedence on one-to-one status conflicts while surfacing the conflict and marking the summary incomplete.
+- Exposes the same `test_summary` in both diagnostics paths, including the private Browser JSON API used for report handoff.
+- Added focused regression-test source. Tests and typecheck were not executed; no CircleCI API request, pipeline trigger, deployment or runtime configuration change was performed.
