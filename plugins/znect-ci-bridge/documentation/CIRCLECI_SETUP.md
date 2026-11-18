@@ -11,7 +11,7 @@
 
 The workflow runs two independent jobs:
 
-- `ci-bridge-validation`: installs the Worker package dependencies, runs `npm run check`, checks the smoke-test script syntax and runs Wrangler in dry-run mode. It does not deploy.
+- `ci-bridge-validation`: installs the Worker package dependencies, runs `npm audit --audit-level=high`, runs `npm run check`, checks the smoke-test script syntax and runs Wrangler in dry-run mode. It does not deploy.
 - `ci-bridge-android-exporter`: verifies the committed Gradle Wrapper JAR checksum, installs Android SDK 35 components, runs the Android JVM unit tests and assembles a debug APK.
 
 The Android job stores JUnit test results and, when the build succeeds, the APK at `android-exporter/app-debug.apk` in the CircleCI job artifacts. Open the completed Android job and use its Artifacts section to retrieve the file. The APK is an unsigned/debug validation artifact for manual review and installation, not a release build.
