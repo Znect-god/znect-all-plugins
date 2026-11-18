@@ -237,6 +237,7 @@ function parseJunitXml(content: string, execution?: number): ParsedTests {
         continue;
       }
       if (content.startsWith("<![CDATA[", index)) {
+        if (stack.length === 0) throw new Error("CDATA is not allowed outside the XML root element.");
         const end = content.indexOf("]]>", index + 9);
         if (end < 0) throw new Error("Unterminated XML CDATA.");
         index = end + 3;
@@ -284,8 +285,14 @@ function parseJunitXml(content: string, execution?: number): ParsedTests {
       if (!nameMatch) throw new Error("Invalid XML opening tag.");
       const name = nameMatch[1];
       const attrs = parseXmlAttributes(nameMatch[2]);
-      if (!rootSeen) rootSeen = true;
-      else if (rootClosed || stack.length === 0) throw new Error("Multiple XML root elements.");
+      if (!rootSeen) {
+        if (name !== "testsuite" && name !== "testsuites") {
+          throw new Error("JUnit XML root must be testsuite or testsuites.");
+        }
+        rootSeen = true;
+      } else if (rootClosed || stack.length === 0) {
+        throw new Error("Multiple XML root elements.");
+      }
 
       if (name === "testcase") {
         if (current) throw new Error("Nested JUnit testcases are invalid.");
