@@ -38,7 +38,7 @@ The app does not include a default API origin or project identifier. Do not past
 - Device screen-lock/biometric confirmation is not implemented yet.
 - The user must explicitly configure the API origin, project and token locally.
 - The exported report can contain private project/run metadata; review it before sharing.
-- Eight unit-test cases for HTTPS origin validation have been added but not executed. No Gradle build, installation, live API request, CircleCI pipeline or deployment has been run.
+- Eight HTTPS-origin tests and ten report-schema/privacy tests have been added but not executed. No Gradle build, installation, live API request, CircleCI pipeline or deployment has been run.
 
 ## Implemented in this source prototype
 
@@ -50,5 +50,6 @@ The app does not include a default API origin or project identifier. Do not past
 - Local temporary JSON export and explicit Android Sharesheet handoff through FileProvider.
 - Cleartext traffic disabled and system trust anchors required.
 - Unit-test source for accepted/rejected API origins.
+- Isolated report validator with unit-test source for identity, read-only permission, project scope, timestamp, collection bounds/counts, completeness and recursive sensitive-key detection.
 
 The first implementation intentionally has no background worker, scheduled polling, analytics, telemetry or server-side component.
