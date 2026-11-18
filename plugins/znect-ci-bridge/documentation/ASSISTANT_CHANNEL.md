@@ -2,17 +2,17 @@
 
 **Status:** authenticated Browser JSON API and Android manual report-exporter source are implemented; Android build/device verification and live handoff remain pending.  
 **Primary CI provider:** CircleCI.  
-**ChatGPT transport:** free authenticated Browser JSON API + private report handoff.  
+**Report source:** private authenticated Browser JSON API. **ChatGPT handoff:** explicit manual Android Sharesheet export; direct automatic ChatGPT authentication is not yet supported.  
 **MCP:** optional legacy surface only; not required and not the ChatGPT communication channel.  
 **Build executor for CI Bridge:** CircleCI. GitHub Actions / Znect Build are not used for CI Bridge validation.
 
 ## Request and response model
 
-1. An authorized user requests a CI Bridge report in ChatGPT.
-2. The report is obtained through the authenticated Browser JSON API, using the separate `WEB_ACCESS_TOKEN`.
-3. The API reads only registered CircleCI projects and connections and returns bounded, redacted status, run, workflow, job, diagnostic, test and event data.
-4. A private report handoff makes the resulting JSON available to ChatGPT without MCP and without a paid intermediary.
-5. ChatGPT analyzes the report; it cannot trigger, retry, cancel or modify CircleCI pipelines through this interface.
+1. The user configures the Android exporter locally with the private Bridge origin, registered project/connection IDs and a Bearer credential. The credential remains encrypted with Android Keystore.
+2. On explicit user action, Android calls the authenticated Browser JSON API using `WEB_ACCESS_TOKEN` and requests the bounded report.
+3. The Bridge reads only registered CircleCI projects and connections and returns bounded, redacted status, run, diagnostic and event data.
+4. Android validates the response and offers the JSON through the system Sharesheet. The user explicitly chooses ChatGPT or another destination.
+5. ChatGPT can analyze the shared report; the app does not authenticate a ChatGPT session or establish automatic ChatGPT-to-API access. The interface exposes no CircleCI trigger, retry, cancel or configuration-write operation.
 
 The direct API endpoints already implemented include:
 - `GET /api/v1/report?project_id=znect-forge&connection_id=circleci-main&run_limit=10&event_limit=20&after=0` — bounded aggregate report for ChatGPT, including recent CircleCI runs, failed-run diagnostic links, webhook events, correlation candidates and completeness/freshness metadata.
@@ -44,8 +44,8 @@ This execution pipeline is separate from the Bridge's CircleCI API adapter. The 
 
 ## Current source validation state — 2026-11-18
 
-- Android exporter: 32 JVM test cases are authored (8 origin, 21 report/privacy, 3 Bearer-token policy); none has been executed. APK assembly and device verification remain pending.
-- Worker Browser API: two additional regression cases cover separation of `MCP_ACCESS_TOKEN` from `WEB_ACCESS_TOKEN` and rejection of authenticated non-GET requests. Worker suite execution remains pending on the current branch.
+- Android exporter: 40 JVM test cases are authored (8 origin, 18 report/privacy, 3 Bearer-token policy, 11 CircleCI connection-status); none has been executed. APK assembly and device verification remain pending.
+- Worker Browser API regression source additionally covers token separation, authenticated GET-only enforcement, scoped CircleCI status and safe handling of an unavailable provider read probe. Worker suite execution remains pending on the current branch.
 - The Android client now checks the selected connection ID against the returned report, requires JSON media type, writes report files through temporary-file finalization, and suppresses late Activity UI callbacks after teardown.
 - Integer bounds for the event cursor use exact decimal comparison, including the JavaScript maximum-safe-integer edge.
 - CircleCI is the only current executor for CI Bridge development/validation. No CircleCI result is verified on the current head; no pipeline was manually triggered.
@@ -67,12 +67,12 @@ This execution pipeline is separate from the Bridge's CircleCI API adapter. The 
 - No paid service, add-on or auto-refill.
 - No Production deployment without separate explicit authorization.
 
-## ChatGPT platform limitation and manual fallback
+## ChatGPT platform limitation and manual handoff
 
 Current OpenAI documentation confirms that the Apps SDK is built on MCP. Custom MCP server connections are documented for Business and Enterprise/Edu workspaces and are web-only. This does not provide a direct custom REST/Bearer connector for a personal Free account.
 
 Accordingly:
-- The private Browser JSON API remains the canonical report source and stays Bearer-protected.
+- The private Browser JSON API remains the canonical report source and stays Bearer-protected. The Android app can authenticate to that API, but it cannot provide or inspect ChatGPT's own session credentials.
 - Direct automatic ChatGPT retrieval is currently blocked by the available account/platform integration path; do not claim it is working.
 - An isolated native Android exporter source prototype now exists in `plugins/znect-ci-bridge/android-exporter/` on branch `feature/ci-bridge-android-exporter`.
 - It stores the Bearer credential locally using Android Keystore AES-GCM, requests only the bounded read-only report over HTTPS, validates the CircleCI report schema and shares a private JSON file only after an explicit Sharesheet action.
