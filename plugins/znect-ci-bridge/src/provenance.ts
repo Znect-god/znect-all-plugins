@@ -70,20 +70,14 @@ export function parseCiBridgeManifest(raw: string): Record<string, unknown> {
   const c = m.circleci;
   if (!c || typeof c !== "object" || Array.isArray(c)) throw new Error("manifest_circleci_invalid");
   const ci = c as Record<string, unknown>;
-  const ciKeys = ["pipeline_id", "workflow_id", "job_id", "job", "build_num", "build_url"];
+  const ciKeys = ["pipeline_id", "workflow_id", "job_id", "job"];
   if (Object.keys(ci).length !== ciKeys.length || Object.keys(ci).some((key) => !ciKeys.includes(key)) ||
       typeof ci.pipeline_id !== "string" || !UUID_RE.test(ci.pipeline_id) ||
       typeof ci.workflow_id !== "string" || !UUID_RE.test(ci.workflow_id) ||
       typeof ci.job_id !== "string" || !UUID_RE.test(ci.job_id) ||
-      ci.job !== "validate-ci-bridge-source" ||
-      typeof ci.build_num !== "string" || !/^[1-9][0-9]{0,11}$/.test(ci.build_num) ||
-      typeof ci.build_url !== "string" || ci.build_url.length > 2048) {
+      ci.job !== "validate-ci-bridge-source") {
     throw new Error("manifest_circleci_invalid");
   }
-  let buildUrl: URL;
-  try { buildUrl = new URL(ci.build_url as string); } catch { throw new Error("manifest_circleci_invalid"); }
-  if (buildUrl.protocol !== "https:" || (buildUrl.hostname !== "app.circleci.com" && buildUrl.hostname !== "circleci.com") ||
-      buildUrl.username || buildUrl.password) throw new Error("manifest_circleci_invalid");
   return m;
 }
 
