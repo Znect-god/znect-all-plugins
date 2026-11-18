@@ -57,3 +57,16 @@ export function buildDiagnosticsSummary(input: DiagnosticsSummaryInput) {
     log_action_limit_reached: input.logActionLimitReached
   };
 }
+
+export type FailedStepLogsStatus = "available" | "partial" | "unavailable" | "not_applicable";
+
+export function failedStepLogsStatus(input: {
+  failedActionsCount: number;
+  logsCount: number;
+  incomplete: boolean;
+}): FailedStepLogsStatus {
+  if (input.failedActionsCount === 0) return "not_applicable";
+  if (input.logsCount === 0) return "unavailable";
+  if (input.incomplete || input.logsCount < input.failedActionsCount) return "partial";
+  return "available";
+}
