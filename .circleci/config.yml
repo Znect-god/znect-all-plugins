@@ -1,0 +1,42 @@
+version: 2.1
+
+jobs:
+  ci-bridge-checks:
+    docker:
+      - image: cimg/node:24.11.0
+    working_directory: ~/project
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - ci-bridge-npm-v1-{{ checksum "plugins/znect-ci-bridge/package-lock.json" }}
+            - ci-bridge-npm-v1-
+      - run:
+          name: Install CI Bridge dependencies
+          command: npm ci
+          working_directory: plugins/znect-ci-bridge
+      - save_cache:
+          key: ci-bridge-npm-v1-{{ checksum "plugins/znect-ci-bridge/package-lock.json" }}
+          paths:
+            - ~/.npm
+      - run:
+          name: TypeScript and unit tests
+          command: npm run check
+          working_directory: plugins/znect-ci-bridge
+      - run:
+          name: Validate Preview smoke-test script syntax
+          command: node --check scripts/preview-smoke-test.mjs
+          working_directory: plugins/znect-ci-bridge
+      - run:
+          name: Validate Wrangler deployment configuration (dry run only)
+          command: npx wrangler deploy --dry-run
+          working_directory: plugins/znect-ci-bridge
+
+workflows:
+  ci-bridge-validation:
+    jobs:
+      - ci-bridge-checks:
+          filters:
+            branches:
+              only:
+                - test/ci-bridge-webhook-ingress-contract
