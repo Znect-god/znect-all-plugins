@@ -1058,3 +1058,14 @@ For every meaningful feature or fix:
 - [ ] Inspect a real authorized CircleCI Run containing rerun history and confirm the returned current outcome against the live API.
 
 **Verification boundary:** the authoritative field rule is confirmed in CircleCI's current API v3 reference and the source/test fixture are updated. No test command, CircleCI API request, pipeline execution, deployment or runtime credential access was performed in this stage.
+
+## Stage 69 — Keep job execution timestamps distinct from queue/creation time — 2026-11-18
+
+- [x] Compare shared job timestamp mapping with CircleCI's API v3 developer-guide job response example, which defines `started_at` and `ended_at` as execution timestamps **(выполнено — official documentation/source review)**.
+- [x] Remove fallback mapping from `created_at`, `start_time`, `stop_time` and `stopped_at` into execution start/completion fields **(выполнено — adapter source correction)**.
+- [x] Add a queued-job regression fixture containing only creation/legacy aliases and assert that execution timestamps remain absent **(выполнено — test source update; execution pending)**.
+- [x] Document the distinction in the CircleCI API migration guide **(выполнено — documentation update)**.
+- [ ] Execute focused provider tests and TypeScript checks through the authorized opt-in CircleCI workflow after explicit execution approval.
+- [ ] Verify a live queued and completed job response from the configured CircleCI project.
+
+**Verification boundary:** source mapping and regression-test source are updated against CircleCI's published developer-guide example. No tests, live API requests, pipeline execution, deployment or credential changes were performed.
