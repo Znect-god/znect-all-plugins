@@ -913,3 +913,17 @@ For every meaningful feature or fix:
 - [ ] Finish a supported private ChatGPT Free handoff without mandatory MCP or weakened authentication.
 
 **Verification boundary:** both repositories and their isolated engineering branches are intact. This stage was a repository/source/documentation audit only; no branch was merged, no CI pipeline was triggered, no tests were executed, and no Preview/Production deployment or secret change occurred.
+
+
+## 55. Audit the live Znect Build CircleCI connection prerequisites — 2026-11-18
+
+- [x] Confirm the Bridge runtime loads project connections only from the `ZNECT_PROJECT_REGISTRY` environment binding; no project is implicitly registered when the binding is absent **(выполнено — source inspection)**.
+- [x] Confirm the documentation contains a separate `znect-build` registry entry using the CircleCI slug form `gh/Znect-god/znect-build`, while credentials remain outside the registry **(выполнено — documentation inspection)**.
+- [x] Confirm the Worker requires its existing server-side `CIRCLECI_TOKEN` for provider reads and the private Browser API requires a separate `WEB_ACCESS_TOKEN` **(выполнено — runtime interface/source inspection)**.
+- [x] Confirm no CircleCI or Cloudflare account-management connector is available in this session to inspect project setup or runtime secrets **(выполнено — available integration inventory)**.
+- [ ] Verify the exact project slug and project visibility from the authenticated CircleCI account; documentation's example slug is not live evidence.
+- [ ] Verify the Znect Build project is connected to CircleCI and uses this repository's `.circleci/config.yml`, with included/free quotas only.
+- [ ] Add the Znect Build entry to the existing private Worker `ZNECT_PROJECT_REGISTRY` without replacing existing projects, then perform an authenticated read-only status probe.
+- [ ] Confirm the Worker runtime's `CIRCLECI_TOKEN` can read the Znect Build CircleCI project and that no credential or registry value is exposed.
+
+**Verification boundary:** source and documentation prerequisites were audited. CircleCI account state, Cloudflare runtime bindings/secrets and live provider access are not accessible through the connected tools in this session. No runtime configuration was changed, no secret was read or modified, no CircleCI pipeline was started, and no deployment occurred.
