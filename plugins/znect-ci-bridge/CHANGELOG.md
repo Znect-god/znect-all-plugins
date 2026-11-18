@@ -1,3 +1,14 @@
+## 2026-11-18 — authoritative architecture correction: CircleCI-only CI execution
+
+- The current CI Bridge architecture uses CircleCI as the **only CI executor** for CI Bridge source validation and Android exporter checks, via the root `.circleci/config.yml`.
+- Znect Build remains a separate build/orchestration project and is not the CI Bridge validation executor.
+- The private authenticated Browser JSON API is the ChatGPT-facing report source. The Android exporter performs a local CircleCI read-path check and enables explicit manual report sharing through Android Sharesheet.
+- MCP is not required and is not used as the ChatGPT channel. Legacy MCP routes/tools are not the supported handoff.
+- GitHub Actions workflows/report collectors and private Forge inbox report plans described in older entries are historical/superseded, not active CI Bridge execution or ChatGPT transport.
+- The Browser API's existence does not prove that ChatGPT can automatically authenticate to it. Automatic ChatGPT session authentication remains an open platform limitation; the Android Sharesheet handoff is manual.
+- The current CircleCI pipeline has not yet produced verified results for the current engineering HEAD. Authored tests are not passed tests; no APK artifact is claimed until CircleCI supplies it.
+- No CircleCI pipeline mutation, Production deployment, secret retrieval or secret-setting change was performed.
+
 ## 2026-11-18 — Central Znect Build ownership clarification
 
 - Clarified that CI Bridge validation and all Znect builds are executed through `Znect-god/znect-build`.
