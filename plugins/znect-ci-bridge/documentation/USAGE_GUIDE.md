@@ -1,6 +1,6 @@
 # Znect CI Bridge — engineering and usage guide
 
-**Актуально на 2026-11-18.** Это руководство описывает существующий CI Bridge в ветке `feature/ci-bridge-android-exporter` (историческое имя ветки; Android companion source удалён).
+**Актуально на 2026-11-18.** Это руководство описывает CI Bridge в единственной постоянной рабочей ветке `ci-bridge` репозитория `Znect-god/znect-all-plugins`. Десять устаревших веток CI Bridge удалены после консолидации; `main` остаётся общей веткой каталога плагинов и не используется для разработки CI Bridge.
 
 > **Текущий архитектурный контракт:** CircleCI — исполнитель проверок CI Bridge и read-only provider для диагностики зарегистрированных проектов. Znect Build — репозиторий разработки и центральных рецептов. Проверки запускаются CircleCI по конфигурации `.circleci/config.yml` в Znect Build; отдельный GitHub Actions executor не используется. ChatGPT-facing источник — приватный Browser JSON API и ручной bounded JSON export. MCP не обязателен.
 
