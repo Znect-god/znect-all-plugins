@@ -22,7 +22,7 @@ Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for inspecting
 - The dashboard exports one bounded JSON report, including up to three failed-run diagnostic bundles, with a 600 KB byte-size ceiling and partial-data markers.
 - Znect Build's CircleCI exact-SHA workflow and the central validation recipe are implemented on an isolated feature branch. The workflow defaults to disabled and records source SHA, recipe SHA and CircleCI pipeline identity.
 - The Znect Build CircleCI project has not yet been configured or live-verified. No CircleCI pipeline or current-head test suite has been run.
-- A separate legacy adapter and Browser/MCP routes still read central Znect Build GitHub Actions runs. This path is not current CircleCI evidence and remains to be migrated or retired.
+- The separate GitHub Actions-based Znect Build adapter, provider type, Browser/MCP routes and GitHub token requirement have been removed. Znect Build must be registered as an ordinary CircleCI project connection.
 - Direct ChatGPT Free authentication to the private Browser API is unresolved. Manual JSON export remains the honest fallback; it is not automatic connectivity.
 - No current-branch Preview deployment, Production change, release or live CircleCI event round-trip is claimed.
 
@@ -62,7 +62,7 @@ The workflow performs no deployment. Its default is disabled; no pipeline is sta
 
 - Verify the Znect Build CircleCI project connection and free-plan quota availability.
 - After separate explicit authorization, run the exact-SHA validation workflow and inspect the real CircleCI manifest/artifact evidence.
-- Migrate or retire the legacy GitHub Actions-based Znect Build adapter and its routes/tests.
+- Register the Znect Build CircleCI project in the runtime project registry and verify its run/job/manifest-artifact reads through the generic CircleCI adapter.
 - Verify live CircleCI run/job/log/test/artifact reads and real webhook delivery through the existing CircleCI adapter.
 - Establish a supported private ChatGPT Free authentication/handoff path without MCP or weakened authentication.
 - Complete independent security review and release readiness.
