@@ -87,3 +87,12 @@ The event inbox cursor is always derived from the SQLite `seq` column. Stored ev
 
 
 **Build ownership:** CI Bridge validation and builds are executed only through central `Znect-god/znect-build`. CircleCI is an inspected read-only provider, not the CI Bridge build executor.
+
+
+## Central Znect Build adapter — ownership and evidence update
+
+The read-only adapter validates the central repository identity, workflow path, default branch, project run-name prefix, and the unexpired request-validation artifact fingerprint. The fingerprint binds the registered project ID, SHA-256 of the expected source repository, exact source SHA and central run ID. The adapter therefore does not mistake the central workflow's own GitHub head SHA for the checked-out project SHA.
+
+The Browser API exposes `/api/v1/build/status`, `/api/v1/build/runs` and `/api/v1/build/runs/{run_id}`. Run details include the verified project source SHA, request-fingerprint artifact metadata, the `znect-ci-bridge-validation-{run_id}` manifest artifact when present, and central job/step outcomes. Artifact contents remain private and are not downloaded/unpacked by this iteration; per-step logs and generic test reports remain unsupported. See `ZNECT_BUILD_CONNECTION.md` for the runtime registry entry and token permissions.
+
+The central recipe and target remain on an isolated Znect Build branch with `execution_enabled: false`. These source changes do not establish live provider availability or successful artifact publication.
