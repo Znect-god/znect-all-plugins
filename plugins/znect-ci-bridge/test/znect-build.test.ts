@@ -14,10 +14,10 @@ async function repositoryHash() {
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function runArtifact(name?: string) {
+async function runArtifact(name?: string, runId = RUN_ID) {
   return {
     id: 301,
-    name: name ?? `znect-build-request-${PROJECT_ID}-${await repositoryHash()}-${SOURCE_SHA}-${RUN_ID}`,
+    name: name ?? `znect-build-request-${PROJECT_ID}-${await repositoryHash()}-${SOURCE_SHA}-${runId}`,
     size_in_bytes: 512,
     expired: false
   };
@@ -130,7 +130,9 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
         status: "completed",
         conclusion: "success",
         steps: []
-      }));
+      }))
+      .mockResolvedValueOnce(response({ ...runRecord(), id: 999 }))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact(undefined, "999")] }));
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(adapter().getJob(scope, "401")).rejects.toThrow(/not belong/i);
@@ -138,8 +140,6 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
 
   it("does not fabricate per-step logs or job-scoped artifacts for GitHub Actions", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(response(runRecord()))
-      .mockResolvedValueOnce(response({ artifacts: [await runArtifact()] }))
       .mockResolvedValueOnce(response({
         id: 401,
         run_id: Number(RUN_ID),
@@ -147,7 +147,9 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
         status: "completed",
         conclusion: "success",
         steps: [{ number: 1, name: "Validate", status: "completed", conclusion: "success" }]
-      }));
+      }))
+      .mockResolvedValueOnce(response(runRecord()))
+      .mockResolvedValueOnce(response({ artifacts: [await runArtifact()] }));
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(adapter().getJobLogs(scope, "401", {
