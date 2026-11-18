@@ -78,7 +78,9 @@ describe("CircleCI read-only provider adapter", () => {
 
     const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god/znect-forge", "znect-forge", "circleci-main");
     const runs = await adapter.listRuns(scope, 1);
-    expect(runs[0]).not.toHaveProperty("commitSha");\n    expect(runs[0]).not.toHaveProperty("branch");\n    expect(runs[0]).not.toHaveProperty("commitMessage");
+    expect(runs[0]).not.toHaveProperty("commitSha");
+    expect(runs[0]).not.toHaveProperty("branch");
+    expect(runs[0]).not.toHaveProperty("commitMessage");
   });
 
   it("rejects a scope using a different registered connection before network access", async () => {
