@@ -531,6 +531,17 @@ class MainActivity : Activity() {
             shareButton.isEnabled = false
             return
         }
+        if (ReportFilePolicy.isExpired(file.lastModified(), System.currentTimeMillis(), REPORT_TTL_MS)) {
+            val removed = file.delete() || !file.exists()
+            latestReportFile = null
+            shareButton.isEnabled = false
+            statusText.text = if (removed) {
+                "The temporary report expired after 30 minutes and was deleted. Fetch a new report before sharing."
+            } else {
+                "The temporary report expired and cannot be shared, but its local deletion could not be verified. Use Disconnect and clear local data to retry cleanup."
+            }
+            return
+        }
         try {
             val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
             val send = Intent(Intent.ACTION_SEND).apply {
@@ -595,8 +606,8 @@ class MainActivity : Activity() {
             expiredReportCleanupFailed = true
             return
         }
-        val cutoff = System.currentTimeMillis() - REPORT_TTL_MS
-        files.filter { it.lastModified() < cutoff }.forEach { file ->
+        val now = System.currentTimeMillis()
+        files.filter { ReportFilePolicy.isExpired(it.lastModified(), now, REPORT_TTL_MS) }.forEach { file ->
             val removed = if (file.isDirectory) file.deleteRecursively() else file.delete()
             if (!removed && file.exists()) expiredReportCleanupFailed = true
         }
