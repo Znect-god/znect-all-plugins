@@ -1248,3 +1248,14 @@ For every meaningful feature or fix:
 
 **Verification boundary:** source-level validation and regression-test source are committed. The CircleCI v3 API remains read-only; no live API request or pipeline was made, and tests/typecheck remain unexecuted.
 
+
+### Stage 85 — Bind exact-SHA validation to the canonical development branch — 2026-11-18
+
+- [x] Require provenance manifests to identify `ci-bridge` as the only accepted CI Bridge source ref; reject obsolete feature-branch identities.
+- [x] Require the opt-in CircleCI exact-SHA workflow in the separate `Znect-god/znect-build` repository to accept only the canonical `ci-bridge` ref.
+- [x] Fetch the canonical branch tip and verify the requested source SHA is an ancestor of that tip before checking out the exact SHA for validation.
+- [x] Update provenance and Znect Build recipe-contract regression-test source for the canonical-ref and ancestry requirements.
+- [ ] Execute provenance tests, Znect Build contract tests, TypeScript checks and the full CI Bridge suite through the authorized opt-in CircleCI workflow.
+- [ ] Review actual CircleCI provenance artifacts to confirm the recorded source ref, requested SHA and resolved checkout SHA agree.
+
+**Verification boundary:** source, CircleCI configuration and regression-test updates are committed in their respective development branches. This closes a source-level gap where a manifest could name an obsolete or unrelated branch even though the SHA itself was exact. No tests, CircleCI pipeline, live API request, Preview/Production deployment, secret access or runtime configuration change was performed.
