@@ -134,4 +134,70 @@ describe("CI Bridge provenance manifest schema", () => {
       [{ id: workflowId, runId, name: "ci-bridge-exact-sha-validation" }]))
       .resolves.toMatchObject({ status: "invalid", reason: "manifest_or_source_sha_artifact_missing_or_duplicate" });
   });
+
+  it("does not scan unrelated workflow jobs and reports a missing validation workflow", async () => {
+    const listJobs = async () => { throw new Error("must not inspect unrelated workflows"); };
+    const result = await inspectCiBridgeProvenance({ listJobs } as never,
+      { projectId: "znect-build", connectionId: "build-circleci" },
+      { id: manifest.circleci.pipeline_id, projectId: "znect-build", status: "success" },
+      [{ id: "123e4567-e89b-42d3-a456-426614174004", runId: manifest.circleci.pipeline_id, name: "znect-build-validation" }]);
+    expect(result).toMatchObject({ status: "missing", reason: "validation_workflow_not_found" });
+  });
+
+  it("marks incomplete job scans unavailable instead of trusting a partial result", async () => {
+    const jobs = Array.from({ length: 41 }, (_, i) => ({ id: `job-${i}`, name: "unrelated" }));
+    const adapter = { listJobs: async () => jobs };
+    const result = await inspectCiBridgeProvenance(adapter as never,
+      { projectId: "znect-build", connectionId: "build-circleci" },
+      { id: manifest.circleci.pipeline_id, projectId: "znect-build", status: "success" },
+      [{ id: manifest.circleci.workflow_id, runId: manifest.circleci.pipeline_id, name: "ci-bridge-exact-sha-validation" }]);
+    expect(result).toMatchObject({ status: "unavailable", reason: "job_scan_limit_reached" });
+  });
+
+  it("rejects a manifest whose exact job UUID differs from the CircleCI job resource", async () => {
+    const runId = manifest.circleci.pipeline_id;
+    const workflowId = manifest.circleci.workflow_id;
+    const jobId = "123e4567-e89b-42d3-a456-426614174003";
+    const wrongJobManifest = { ...manifest, circleci: { ...manifest.circleci, job_id: "123e4567-e89b-42d3-a456-426614174009" } };
+    const adapter = {
+      listJobs: async () => [{ id: jobId, projectId: "znect-build", workflowId, name: "validate-ci-bridge-source", status: "success" }],
+      listArtifacts: async () => [
+        { id: "manifest", path: "ci-bridge-validation-manifest.json", size: 900 },
+        { id: "sha", path: "resolved-source-sha.txt", size: 41 }
+      ],
+      getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
+        path: artifactPath,
+        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(wrongJobManifest) : manifest.source_sha + "\\n",
+        truncated: false
+      })
+    };
+    const result = await inspectCiBridgeProvenance(adapter as never,
+      { projectId: "znect-build", connectionId: "build-circleci" },
+      { id: runId, projectId: "znect-build", status: "success", commitSha: manifest.recipe_sha },
+      [{ id: workflowId, runId, name: "ci-bridge-exact-sha-validation" }]);
+    expect(result).toMatchObject({ status: "invalid", reason: "circleci_identity_or_sha_mismatch" });
+  });
+
+  it("rejects artifact content returned under a different path", async () => {
+    const runId = manifest.circleci.pipeline_id;
+    const workflowId = manifest.circleci.workflow_id;
+    const jobId = "123e4567-e89b-42d3-a456-426614174003";
+    const adapter = {
+      listJobs: async () => [{ id: jobId, projectId: "znect-build", workflowId, name: "validate-ci-bridge-source", status: "success" }],
+      listArtifacts: async () => [
+        { id: "manifest", path: "ci-bridge-validation-manifest.json", size: 900 },
+        { id: "sha", path: "resolved-source-sha.txt", size: 41 }
+      ],
+      getArtifact: async (_scope: unknown, _job: string, artifactPath: string) => ({
+        path: artifactPath === "ci-bridge-validation-manifest.json" ? "unexpected.json" : artifactPath,
+        content: artifactPath === "ci-bridge-validation-manifest.json" ? JSON.stringify(manifest) : manifest.source_sha + "\\n",
+        truncated: false
+      })
+    };
+    const result = await inspectCiBridgeProvenance(adapter as never,
+      { projectId: "znect-build", connectionId: "build-circleci" },
+      { id: runId, projectId: "znect-build", status: "success", commitSha: manifest.recipe_sha },
+      [{ id: workflowId, runId, name: "ci-bridge-exact-sha-validation" }]);
+    expect(result).toMatchObject({ status: "invalid", reason: "artifact_path_mismatch" });
+  });
 });
