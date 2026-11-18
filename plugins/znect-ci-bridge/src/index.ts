@@ -7,7 +7,6 @@ import { describeProjectStatus, findCircleCiProject, findProject, loadProjectReg
 export { BuildEventStore };
 import { circleGet } from "./circleci";
 import { createCircleCiReadOnlyAdapter } from "./providers/circleci";
-import { createZnectBuildReadOnlyAdapter } from "./providers/znect-build";
 import { correlateEventsWithRuns } from "./correlation";
 import {
   allowedArtifactUrl,
@@ -24,7 +23,6 @@ interface Env {
   MCP_ACCESS_TOKEN: string;
   WEB_ACCESS_TOKEN: string;
   CIRCLECI_WEBHOOK_SECRET: string;
-  ZNECT_BUILD_GITHUB_TOKEN?: string;
   ZNECT_PROJECT_REGISTRY?: string;
   EVENT_STORE: DurableObjectNamespace;
   MCP_RATE_LIMITER: {
@@ -50,26 +48,6 @@ function getCircleCiAdapter(env: Env, projectId: string, connectionId?: string) 
     connection,
     scope: { projectId: project.id, connectionId: connection.id },
     adapter: createCircleCiReadOnlyAdapter(env.CIRCLECI_TOKEN, connection.projectSlug!, project.id, connection.id)
-  };
-}
-
-function getZnectBuildAdapter(env: Env, projectId: string, connectionId?: string) {
-  const project = findProject(getProjectRegistry(env), projectId);
-  if (!project) throw new Error(`Unknown Znect project: ${projectId}.`);
-  const connection = selectProjectConnection(project, "znect-build", connectionId);
-  if (project.repositories.length !== 1) {
-    throw new Error("Znect Build connection requires exactly one registered source repository for ownership verification.");
-  }
-  return {
-    project,
-    connection,
-    scope: { projectId: project.id, connectionId: connection.id },
-    adapter: createZnectBuildReadOnlyAdapter(
-      env.ZNECT_BUILD_GITHUB_TOKEN ?? "",
-      project.id,
-      connection.id,
-      project.repositories[0].fullName
-    )
   };
 }
 
@@ -944,110 +922,6 @@ function createServer(env: Env) {
   );
 
 
-  server.registerTool(
-    "check_znect_build_connection",
-    {
-      description: "Verify read-only access to the central Znect Build GitHub Actions repository for one registered Znect project. Does not trigger workflows or change builds.",
-      annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional() }
-    },
-    async ({ project_id, connection_id }) => {
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
-      try {
-        const runs = await adapter.listRuns(scope, 1);
-        return { content: [{ type: "text", text: redactedBoundedJson({
-          connected: true,
-          provider: adapter.provider,
-          project: { id: project.id, name: project.name, status: "registered" },
-          connection: { id: connection.id, status: "configured" },
-          provider_availability: "available",
-          permissions: "read-only",
-          read_probe: { verified_runs_available: runs.length }
-        }, env, 20_000) }] };
-      } catch {
-        return { content: [{ type: "text", text: redactedBoundedJson({
-          connected: false,
-          provider: adapter.provider,
-          project: { id: project.id, name: project.name, status: "registered" },
-          connection: { id: connection.id, status: "configured" },
-          provider_availability: "unavailable",
-          error: "Central Build read probe failed; check the repository-scoped read token and connection configuration."
-        }, env, 20_000) }] };
-      }
-    }
-  );
-
-  server.registerTool(
-    "list_build_runs",
-    {
-      description: "List verified central Znect Build workflow runs for one registered project. Ownership requires the central project/source fingerprint artifact; unverified runs are omitted. Read-only; limit 1–20.",
-      annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), limit: z.number().int().min(1).max(20).default(10) }
-    },
-    async ({ project_id, connection_id, limit }) => {
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
-      const runs = await adapter.listRuns(scope, limit);
-      return { content: [{ type: "text", text: redactedBoundedJson({
-        project: { id: project.id, name: project.name, provider: "znect-build" },
-        connection: { id: connection.id },
-        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status",
-        runs
-      }, env, 100_000) }] };
-    }
-  );
-
-  server.registerTool(
-    "get_build_run_details",
-    {
-      description: "Read one verified central Znect Build workflow run, its jobs and run-scoped artifact metadata. Does not retrieve or execute project builds.",
-      annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().regex(/^\d{1,16}$/) }
-    },
-    async ({ project_id, connection_id, run_id }) => {
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
-      const run = await adapter.getRun(scope, run_id);
-      const workflows = await adapter.listWorkflows(scope, run_id);
-      const workflowReports: Array<Record<string, unknown>> = [];
-      for (const workflow of workflows.slice(0, 5)) {
-        const jobs = await adapter.listJobs(scope, run_id, workflow.id);
-        workflowReports.push({ workflow, jobs: jobs.slice(0, 40), jobs_truncated: jobs.length > 40 });
-      }
-      const artifacts = adapter.listRunArtifacts ? await adapter.listRunArtifacts(scope, run_id) : [];
-      return { content: [{ type: "text", text: redactedBoundedJson({
-        project: { id: project.id, name: project.name, provider: "znect-build" },
-        connection: { id: connection.id },
-        run,
-        status_semantics: "GitHub Actions workflow status/conclusion; the verified request artifact binds the run to the project source SHA, and job step outcomes expose recipe progress. Use the dedicated Browser API endpoint /api/v1/build/runs/{run_id}/validation-manifest for bounded, validated manifest content.",
-        workflows: workflowReports,
-        artifacts: { scope: "workflow_run", items: artifacts },
-        capabilities: {
-          job_logs: "unavailable_zip_archive",
-          test_reports: "not_exposed_by_generic_github_actions_api",
-          artifact_content: "validation_manifest_available_via_dedicated_endpoint; other_zip_content_not_extracted"
-        }
-      }, env, 120_000) }] };
-    }
-  );
-
-  server.registerTool(
-    "list_build_run_artifacts",
-    {
-      description: "List verified central Znect Build workflow-run artifact metadata. Artifacts are run-scoped, not job-scoped; download URLs are not exposed. Read-only.",
-      annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().regex(/^\d{1,16}$/) }
-    },
-    async ({ project_id, connection_id, run_id }) => {
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, project_id, connection_id);
-      if (!adapter.listRunArtifacts) throw new Error("This provider does not expose run-scoped artifacts.");
-      const artifacts = await adapter.listRunArtifacts(scope, run_id);
-      return { content: [{ type: "text", text: redactedBoundedJson({
-        project: { id: project.id, name: project.name, provider: "znect-build" },
-        run_id,
-        artifact_scope: "workflow_run",
-        artifacts
-      }, env, 60_000) }] };
-    }
-  );
 
   return server;
 }
@@ -1077,108 +951,6 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       return boundedJson(JSON.stringify({ projects }), 20_000);
     }
 
-    if (url.pathname === "/api/v1/build/status") {
-      const projectId = url.searchParams.get("project_id");
-      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
-      try {
-        const runs = await adapter.listRuns(scope, 1);
-        return json({
-          service: "znect-ci-bridge",
-          connected: true,
-          provider: adapter.provider,
-          project: { id: project.id, name: project.name, status: "registered" },
-          connection: { id: connection.id, status: "configured" },
-          provider_availability: "available",
-          permissions: "read-only",
-          read_probe: { verified_runs_available: runs.length },
-          status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status"
-        });
-      } catch {
-        return json({
-          service: "znect-ci-bridge",
-          connected: false,
-          provider: adapter.provider,
-          project: { id: project.id, name: project.name, status: "registered" },
-          connection: { id: connection.id, status: "configured" },
-          provider_availability: "unavailable",
-          error: "Central Build read probe failed; check the repository-scoped read token and connection configuration."
-        });
-      }
-    }
-    if (url.pathname === "/api/v1/build/runs") {
-      const rawLimit = url.searchParams.get("limit");
-      const limit = rawLimit === null ? 10 : Number(rawLimit);
-      if (!Number.isInteger(limit) || limit < 1 || limit > 20) return json({ error: "limit must be an integer between 1 and 20." }, 400);
-      const projectId = url.searchParams.get("project_id");
-      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
-      const runs = await adapter.listRuns(scope, limit);
-      return boundedJson(redactedBoundedJson({
-        project: { id: project.id, name: project.name, provider: adapter.provider },
-        connection: { id: connection.id },
-        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status",
-        runs
-      }, env, 100_000), 100_000);
-    }
-    const manifestSegments = url.pathname.split("/");
-    if (manifestSegments.length === 7 && manifestSegments[1] === "api" &&
-        manifestSegments[2] === "v1" && manifestSegments[3] === "build" &&
-        manifestSegments[4] === "runs" && manifestSegments[6] === "validation-manifest") {
-      const runId = manifestSegments[5];
-      if (!/^\d{1,16}$/.test(runId)) return json({ error: "A numeric central Build run ID is required." }, 400);
-      const projectId = url.searchParams.get("project_id");
-      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
-      if (!adapter.getValidationManifest) return json({ error: "This provider does not expose validation manifests." }, 501);
-      const manifest = await adapter.getValidationManifest(scope, runId);
-      return boundedJson(redactedBoundedJson({
-        project: { id: project.id, name: project.name, provider: adapter.provider },
-        connection: { id: connection.id },
-        run_id: runId,
-        validation_manifest: manifest,
-        evidence: "Downloaded from the exact run-scoped private central artifact after request-fingerprint ownership verification; only the named JSON manifest was extracted."
-      }, env, 20_000), 20_000);
-    }
-    const buildRunSegments = url.pathname.split("/");
-    if (buildRunSegments.length === 6 && buildRunSegments[1] === "api" &&
-        buildRunSegments[2] === "v1" && buildRunSegments[3] === "build" && buildRunSegments[4] === "runs") {
-      const runId = buildRunSegments[5];
-      if (!/^\d{1,16}$/.test(runId)) return json({ error: "A numeric central Build run ID is required." }, 400);
-      const projectId = url.searchParams.get("project_id");
-      if (!projectId) return json({ error: "project_id query parameter is required." }, 400);
-      const { project, connection, scope, adapter } = getZnectBuildAdapter(env, projectId, url.searchParams.get("connection_id") ?? undefined);
-      const run = await adapter.getRun(scope, runId);
-      const workflows = await adapter.listWorkflows(scope, runId);
-      const workflowReports: Array<Record<string, unknown>> = [];
-      for (const workflow of workflows.slice(0, 5)) {
-        const jobs = await adapter.listJobs(scope, runId, workflow.id);
-        workflowReports.push({ workflow, jobs: jobs.slice(0, 40), jobs_truncated: jobs.length > 40 });
-      }
-      const artifacts = adapter.listRunArtifacts ? await adapter.listRunArtifacts(scope, runId) : [];
-      const validationManifest = artifacts.find((artifact) => artifact.path === `znect-ci-bridge-validation-${runId}`);
-      const requestEvidence = artifacts.find((artifact) => artifact.path.startsWith(`znect-build-request-${project.id}-`));
-      return boundedJson(redactedBoundedJson({
-        project: { id: project.id, name: project.name, provider: adapter.provider },
-        connection: { id: connection.id },
-        run,
-        status_semantics: "Central GitHub Actions workflow status/conclusion. The verified request artifact binds this run to the registered source repository and exact source SHA; job step outcomes report recipe execution status.",
-        validation_evidence: {
-          source_sha: run.commitSha ?? null,
-          request_fingerprint_artifact: requestEvidence?.path ?? null,
-          validation_manifest_artifact: validationManifest?.path ?? null,
-          manifest_available: Boolean(validationManifest),
-          manifest_content: "Retrieved separately through the authenticated validation-manifest endpoint; this run-details response contains artifact metadata only."
-        },
-        workflows: workflowReports,
-        artifacts: { scope: "workflow_run", items: artifacts },
-        capabilities: {
-          job_logs: "unavailable_zip_archive",
-          test_reports: "not_exposed_by_generic_github_actions_api",
-          artifact_content: "validation_manifest_available_via_dedicated_endpoint; other_zip_content_not_extracted"
-        }
-      }, env, 120_000), 120_000);
-    }
     if (url.pathname === "/api/v1/events") {
       if (!env.EVENT_STORE) return json({ error: "Event storage is not configured." }, 503);
       const afterRaw = url.searchParams.get("after") ?? "0";
