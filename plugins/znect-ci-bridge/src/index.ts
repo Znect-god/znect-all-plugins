@@ -1304,7 +1304,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           log_actions_inspected: logActionsInspected,
           log_action_limit_reached: logActionLimitReached
         },
-        limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: 1, max_report_bytes: 500_000 }
+        limits: { max_workflows: 5, max_jobs_per_workflow: 40, max_failed_jobs_per_run: 3, max_failed_actions_with_logs_per_run: 3, max_report_artifacts_per_job: MAX_REPORT_ARTIFACTS_PER_JOB, max_report_bytes_per_job: MAX_REPORT_BYTES_PER_JOB }
       };
       return boundedJson(redactedBoundedJson(payload, env, 120_000), 120_000);
     }
