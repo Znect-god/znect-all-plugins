@@ -8,7 +8,7 @@ A native Android helper for a user-initiated, manual handoff of the private CI B
 ## Requirements
 
 - Android 8.0 (API 26) or newer.
-- Android Gradle Plugin 8.7.3 and JDK 17.
+- Android Gradle Plugin 8.7.2, Kotlin Gradle Plugin 2.1.10 and JDK 17.
 - Android SDK 35.
 - Gradle 8.9 Wrapper is committed (`gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar` and properties). The wrapper JAR is sourced from the official `gradle/gradle` `v8.9.0` tag and checked against Gradle's published SHA-256; the distribution URL is pinned and its official SHA-256 is configured.
 
@@ -20,7 +20,7 @@ A native Android helper for a user-initiated, manual handoff of the private CI B
 4. Save configuration. The token is encrypted with an AES-GCM key held in Android Keystore; only ciphertext is stored in app-private preferences.
 5. Tap **Fetch report** to request the bounded read-only `GET /api/v1/report`.
 6. Review the report status, then tap **Share report** to open Android Sharesheet and explicitly choose ChatGPT.
-7. Use **Disconnect and clear local data** to remove the saved credential, its Keystore key entry and the temporary report.
+7. Use **Disconnect and clear local data** to remove all locally saved configuration, the encrypted credential, its Keystore key entry and cached reports.
 
 The app does not include a default API origin or project identifier. Do not paste tokens into ChatGPT, URLs, repository files, or issue comments.
 
@@ -39,7 +39,7 @@ The app does not include a default API origin or project identifier. Do not past
 - Device screen-lock/biometric confirmation is not implemented yet.
 - The user must explicitly configure the API origin, project and token locally.
 - The exported report can contain private project/run metadata; review it before sharing.
-- Eight HTTPS-origin tests and ten report-schema/privacy tests have been authored. The Android module now has a pinned Gradle 8.9 Wrapper, Android Gradle Plugin 8.7.2, Kotlin Android plugin 2.1.10, and a CircleCI job for JVM tests plus debug APK assembly; execution and device verification remain pending.
+- Eight HTTPS-origin tests, fourteen report-schema/privacy tests and three Bearer-token policy tests have been authored; none has been executed yet. The Android module now has a pinned Gradle 8.9 Wrapper, Android Gradle Plugin 8.7.2, Kotlin Android plugin 2.1.10, and a CircleCI job for JVM tests plus debug APK assembly; execution and device verification remain pending.
 
 ## Implemented in this source prototype
 
