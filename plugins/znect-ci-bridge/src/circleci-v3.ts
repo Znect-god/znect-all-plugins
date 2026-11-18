@@ -90,6 +90,9 @@ export async function circleV3GetText(
   path: string,
   maxBytes = MAX_TEXT_BYTES
 ): Promise<{ text: string; truncated: boolean }> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new Error("maxBytes must be a non-negative safe integer.");
+  }
   const url = validateApiPath(path);
   const response = await fetchWithSafeErrors(url.toString(), {
     method: "GET",
@@ -473,6 +476,9 @@ export async function getCircleCiJobArtifact(
   maxBytes = MAX_TEXT_BYTES,
   execution?: number
 ): Promise<{ path: string; text: string; truncated: boolean; execution?: number }> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new Error("maxBytes must be a non-negative safe integer.");
+  }
   if (execution !== undefined && (!Number.isInteger(execution) || execution < 0)) {
     throw new Error("Artifact execution must be a non-negative integer.");
   }
