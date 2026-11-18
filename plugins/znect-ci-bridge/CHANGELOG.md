@@ -1,3 +1,15 @@
+## 2026-11-18 — CircleCI validation workflow
+
+### Added
+- Added a root-level CircleCI configuration scoped to `test/ci-bridge-webhook-ingress-contract`.
+- The job uses Node.js 24.11.0 and runs `npm ci`, `npm run check`, Preview smoke-test script syntax validation, and `wrangler deploy --dry-run`.
+- The workflow contains no deploy, release, Forge build, or CircleCI mutation steps.
+
+### Validation status
+- Configuration and roadmap changes are committed to the isolated engineering branch.
+- CircleCI has not been triggered. Typecheck, tests, smoke-script check and Wrangler dry-run have therefore not been executed on this branch head.
+- No Preview or Production deployment was performed.
+
 ## 2026-11-18 — CircleCI slug and workflow URL validation alignment
 
 ### Fixed
