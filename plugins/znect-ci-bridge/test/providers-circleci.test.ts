@@ -36,6 +36,7 @@ describe("CircleCI read-only provider adapter", () => {
           },
           attributes: {
             phase: "ended",
+            outcome: "success",
             current_outcome: "failed",
             created_at: "2026-11-15T10:00:00Z"
           }
