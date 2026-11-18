@@ -531,3 +531,8 @@ For every meaningful feature or fix:
 
 - Added `npm audit --audit-level=high` to the CircleCI Worker validation job immediately after deterministic `npm ci`, so dependency advisories are checked by the current CircleCI executor rather than relying only on historical GitHub Actions evidence **(выполнено — CircleCI config source)**.
 - Updated the CircleCI setup guide and project README. No audit command or CircleCI job has been run on the current branch; result remains unverified.
+
+## 26. Android connection selection guidance — 2026-11-18
+
+- Updated the connection field hint and setup documentation: `connection_id` may be omitted only when the selected project has exactly one CircleCI connection; projects with multiple connections require an explicit ID **(выполнено — UI/docs clarification)**.
+- The returned report is independently checked against the selected connection ID when one is supplied.
