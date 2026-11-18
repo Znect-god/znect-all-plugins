@@ -1069,3 +1069,11 @@ For every meaningful feature or fix:
 - [ ] Verify a live queued and completed job response from the configured CircleCI project.
 
 **Verification boundary:** source mapping and regression-test source are updated against CircleCI's published developer-guide example. No tests, live API requests, pipeline execution, deployment or credential changes were performed.
+
+### Stage 70 — Align collection pagination and rate-limit behavior with the API v3 contract
+- [x] Re-check the current official API v3 reference for workflows, jobs, artifacts, stdout/stderr, tests and rate-limit responses.
+- [x] Correct migration documentation: workflows use opaque cursor pagination; jobs and job artifacts are documented as unpaginated collection responses and remain protected by explicit item-count bounds.
+- [x] Confirm 429 handling parses and reports a sanitized `Retry-After` value for JSON and text endpoints; the adapter intentionally does not sleep/retry inside a Worker request.
+- [ ] Execute focused provider/API tests and typecheck through the authorized CircleCI validation workflow.
+- [ ] Verify live pagination and 429 response behavior against an authorized CircleCI project.
+- **Verification boundary:** official documentation and source/tests inspected; documentation correction only. No tests, live API calls, pipeline, deployment or credentials accessed.
