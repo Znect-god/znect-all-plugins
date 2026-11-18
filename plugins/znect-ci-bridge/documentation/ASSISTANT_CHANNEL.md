@@ -1,77 +1,58 @@
-# Znect CI Bridge — private ChatGPT access channel
+# Znect CI Bridge — Assistant Channel and Free Access
 
-**Status:** authenticated Browser JSON API, bounded assistant report, and dashboard JSON export are implemented in source. Regression tests are authored; execution on the current head and live Preview verification remain pending.  
-**Observed CI provider:** CircleCI (read-only).  
-**CI Bridge validation executor:** Znect Build; no standalone CircleCI workflow is maintained in this repository.  
-**ChatGPT report source:** private authenticated Browser JSON API. **Current handoff:** user-reviewed JSON export from the existing dashboard. Direct automatic ChatGPT authentication to the private API remains an unresolved platform integration requirement.  
-**MCP:** legacy/optional only; it is not required for the intended ChatGPT channel.
+## Intended access model
 
-## Request and response model
+The intended ChatGPT access path must work on the Free plan and must not require a custom MCP connection.
 
-1. The user opens the existing Znect CI Bridge dashboard and selects a registered project and CircleCI connection.
-2. The dashboard uses the existing Browser API session authentication. The Bearer token remains in tab memory and is sent only in the Authorization header.
-3. On explicit action, **Export assistant report** calls authenticated `GET /api/v1/report` and retrieves up to three bounded failed-run diagnostic bundles through the existing diagnostics endpoint.
-4. The dashboard validates diagnostic run UUIDs, constructs same-origin GET paths, marks partial/limited results, and enforces a 600 KB total export ceiling.
-5. The browser downloads one JSON report. The user reviews it and explicitly attaches it to ChatGPT. The export contains no access token.
+- CircleCI is the CI execution platform. Znect Build is the development and central recipe repository.
+- CI Bridge reads CircleCI through its existing bounded, read-only CircleCI API v3 adapter.
+- The private Browser JSON API exposes bounded GET-only project, run, event, correlation and aggregate-report data using a separate `WEB_ACCESS_TOKEN`.
+- The dashboard can export a bounded JSON report for explicit user-reviewed handoff to ChatGPT.
+- MCP remains optional/legacy compatibility functionality. It is not the required assistant channel.
 
-This is a controlled manual report handoff. It does not claim that ChatGPT has authenticated directly to the private API.
+## Security and provider boundaries
 
-## Existing read-only endpoints
-
-- `GET /api/v1/report?project_id=...&connection_id=...&run_limit=10&event_limit=20&after=0` — bounded assistant report with recent runs, failed-run diagnostic references, webhook events, correlation candidates, freshness and completeness metadata.
-- `GET /api/v1/status` — scoped provider availability and read-probe status.
-- `GET /api/v1/runs`, `GET /api/v1/runs/{run_uuid}`, `GET /api/v1/diagnostics/{run_uuid}` — bounded run and diagnostic data.
-- `GET /api/v1/events`, `GET /api/v1/event-correlations` — webhook event history and conservative run correlations.
-
-All Browser API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`. The token must never be placed in a URL, report, repository file, issue, or ChatGPT message.
-
-## CI and provider boundaries
-
-- CircleCI is the observed CI provider. The Bridge may read registered CircleCI runs, jobs, logs, tests, artifacts, and signed webhook events.
-- The CircleCI adapter is strictly read-only: no trigger, retry, cancel, deployment, or configuration-write operations.
-- CI Bridge source validation belongs in the central Znect Build system. Do not add a standalone `.circleci/config.yml`, and do not bypass Znect Build with a second executor.
-- GitHub Actions workflow files in this repository remain inert/historical and are not an alternate validation path.
-
-## Security and cost boundaries
-
-- Keep `CIRCLECI_TOKEN`, `WEB_ACCESS_TOKEN`, and `CIRCLECI_WEBHOOK_SECRET` server-side; never retrieve or disclose their values in chat.
-- Preserve Bearer authentication, rate limiting, project/connection scope checks, bounded responses, redaction, and GET-only Browser API access.
-- Keep report payloads private and bounded. Do not post raw logs or diagnostics in public comments or repositories.
-- Use only approved free/included quotas. Do not enable paid add-ons, auto-refill, or unapproved Production deployment.
-- No Production deployment or CI execution is authorized by this document.
+- CI Bridge may inspect CircleCI pipelines, workflows, jobs, logs, tests and allowlisted artifacts.
+- CI Bridge must not trigger, retry, cancel, approve or modify CircleCI pipelines, jobs, project settings, contexts or environment variables.
+- CircleCI runs CI Bridge source validation using the centrally maintained recipe in `Znect-god/znect-build`; the exact source commit is supplied by full SHA.
+- GitHub Actions workflows are not executors. Legacy GitHub Actions files are inert.
+- Do not expose a public unauthenticated report endpoint, place credentials in query strings, or ask the user to paste secrets into ChatGPT.
+- Use only free/included CircleCI quotas. Do not enable paid add-ons, auto-refill, or unapproved deployment.
+- No CircleCI pipeline execution, Preview deployment or Production change is authorized by this document.
 
 ## Current validation state
 
-- The dashboard export and regression-test source are committed.
-- The Worker test suite, including dashboard regression tests, has not yet been executed on the exact current branch head.
-- Live Preview export and real CircleCI event round-trip remain unverified.
-- Direct ChatGPT authentication to the private Browser API is not established. Do not infer it from the existence of the endpoint or the manual JSON download.
+- Znect Build now contains a CircleCI configuration with automatic repository contract checks and an opt-in exact-SHA CI Bridge validation workflow.
+- The exact-SHA workflow defaults to disabled and records source SHA, recipe SHA and CircleCI pipeline identity in a manifest.
+- The Znect Build CircleCI project has not yet been configured or live-verified; no CircleCI pipeline or test suite has been run.
+- The CircleCI source/test configuration is committed on an isolated Znect Build feature branch; it is not merged into `main`.
+- The existing Bridge CircleCI API v3 adapter is implemented and remains the correct read-only provider path.
+- A separate legacy Znect Build adapter still reads GitHub Actions. It must be migrated to CircleCI evidence or retired before it can be treated as current.
+- Direct ChatGPT authentication to the private Browser API is not established. Do not infer it from the endpoint's existence or from the manual JSON download.
 
 ## Remaining work
 
-- [ ] Validate the exact source revision through the central Znect Build recipe after the target is correctly registered and explicitly enabled.
-- [ ] Inspect real typecheck, test, dependency-audit, and Worker-bundle validation results from Znect Build.
-- [ ] Verify authenticated report retrieval and dashboard export against the existing isolated Preview, without creating a new Worker or touching Production.
-- [ ] Verify that exported reports remain scoped, bounded, partial-aware, and free of credentials.
-- [ ] Establish a supported private ChatGPT-to-API authentication/handoff path; do not weaken authentication or claim automatic access without an end-to-end proof.
-- [ ] Complete authorized release-readiness checks and prepare the finished Reporting / Diagnostics v1 for transfer to `Znect-god/znect-build`.
+- [ ] Verify the Znect Build CircleCI project connection and free-plan resource availability without enabling paid add-ons.
+- [ ] Run Znect Build contract checks and, after explicit authorization, the CI Bridge exact-SHA validation workflow; record actual CircleCI run and artifact evidence.
+- [ ] Migrate or retire the legacy GitHub Actions-based Znect Build adapter, routes, tests and runtime token requirement; use CircleCI identifiers and artifacts only.
+- [ ] Verify CircleCI run, workflow, job, log, test and artifact reads through the existing Bridge CircleCI adapter.
+- [ ] Establish a supported private ChatGPT-to-Browser-API authentication/handoff path for Free users; do not weaken authentication or claim automatic access without an end-to-end proof.
+- [ ] Verify the existing isolated Preview only after separate explicit deployment authorization.
+- [ ] Complete independent security review and release readiness.
 
 ## Explicit exclusions
 
 - No mandatory MCP server or paid MCP distribution.
-- No standalone CircleCI validation workflow.
-- No GitHub Actions bypass of Znect Build.
+- No GitHub Actions executor or GitHub Actions run/status as CI Bridge validation evidence.
+- No CI Bridge tool or API operation that triggers, retries, cancels or modifies CircleCI.
 - No public unauthenticated report endpoint or query-string secrets.
-- No CI trigger/retry/cancel/configuration-write operation in the assistant-facing Bridge.
-- No Production deployment without separate explicit authorization.
+- No manual sharing of Bearer tokens or private credentials.
+- No Preview/Production deployment without separate explicit authorization.
 
 ## Platform limitation
 
 A private Bearer-protected REST endpoint is not automatically callable by a ChatGPT conversation merely because the endpoint exists. Until a supported authenticated integration is proven, the dashboard's user-reviewed JSON export is the explicit fallback handoff. It does not expose the token and must not be described as automatic ChatGPT connectivity.
 
-
-### Custom MCP availability check (2026-11-18)
-
-The current OpenAI Help Center documents custom MCP server connections for ChatGPT Business and Enterprise/Edu workspaces; it also notes that Pro users can connect custom servers with read/fetch permissions. Free is not listed as supporting custom MCP server connections. Therefore, a custom MCP app is not a valid assumption for the Free-tier access requirement and must not become a mandatory dependency. See [OpenAI Help Center — Connecting custom MCP servers in ChatGPT](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt).
+Custom MCP availability is not a substitute for the Free-plan requirement. The current OpenAI Help Center documents custom MCP server connections for Business and Enterprise/Edu workspaces and read/fetch support for Pro; Free is not listed. See [OpenAI Help Center — Connecting custom MCP servers in ChatGPT](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt).
 
 This does not prove that ChatGPT Free can directly authenticate to an arbitrary private REST endpoint. The direct Browser API route remains a platform capability to verify; until then, the bounded dashboard JSON download is the supported fallback.
