@@ -413,6 +413,30 @@ describe("CircleCI API v3 client", () => {
       .rejects.toThrow("repeated a pagination cursor while listing workflows");
   });
 
+  it("rejects duplicate run and workflow resources across distinct pagination pages", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }],
+        page: { next: "run-next" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }],
+        page: { next: null }
+      }), { status: 200 })));
+    await expect(listCircleCiRuns("token", PROJECT_ID, 2))
+      .rejects.toThrow("repeated a run ID across pagination pages");
+
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: "workflow-next" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }], page: { next: null }
+      }), { status: 200 })));
+    await expect(listCircleCiWorkflows("token", RUN_ID))
+      .rejects.toThrow("repeated a workflow ID across pagination pages");
+  });
+
   it("enforces a caller-selected page ceiling for workflow collections", async () => {
     const nextJobId = "123e4567-e89b-42d3-a456-426614174006";
     const fetchMock = vi.fn()
