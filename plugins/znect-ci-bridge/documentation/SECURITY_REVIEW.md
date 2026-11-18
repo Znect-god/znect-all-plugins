@@ -1,6 +1,6 @@
 # Security review notes
 
-> **Current channel boundary (2026-11-18):** ChatGPT-facing access uses the private authenticated Browser JSON API; the dashboard's bounded JSON download is an explicit manual fallback handoff. MCP is legacy optional functionality, not the ChatGPT channel. CircleCI is a read-only observed provider, not the CI Bridge validation executor. CI Bridge validation belongs exclusively to central Znect Build. The standalone `.circleci/config.yml` and Android exporter have been removed. The MCP-specific findings below apply only to the legacy optional surface; they do not make MCP a requirement.
+> **Current channel boundary (2026-11-18):** ChatGPT-facing access uses the private authenticated Browser JSON API; the dashboard's bounded JSON download is an explicit manual fallback handoff. MCP is legacy optional functionality, not the ChatGPT channel. CircleCI is the CI execution platform and observed provider; CI Bridge reads CircleCI only. Znect Build is the development and central recipe repository, and its `.circleci/config.yml` executes validation. GitHub Actions is not used as an executor. No repository-local CI executor or Android exporter is present in all-plugins. The MCP-specific findings below apply only to the legacy optional surface; they do not make MCP a requirement.
 
 **Review date:** 2026-11-18  
 **Scope:** source-level review of the prototype Worker and its security helpers  
