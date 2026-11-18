@@ -11,7 +11,7 @@ describe("unified CircleCI test result normalization", () => {
       ].join("\n")
     });
     expect(result).toMatchObject({
-      status: "available", total: 3, passed: 1, failed: 1, skipped: 1, unknown: 0,
+      status: "available", sources: "jsonl_only", total: 3, passed: 1, failed: 1, skipped: 1, unknown: 0,
       jsonl_records: 3, junit_records: 0, incomplete: false
     });
   });
@@ -30,7 +30,7 @@ describe("unified CircleCI test result normalization", () => {
       }]
     });
     expect(result).toMatchObject({
-      status: "available", total: 4, passed: 1, failed: 2, skipped: 1,
+      status: "available", sources: "junit_only", total: 4, passed: 1, failed: 2, skipped: 1,
       junit_records: 4, malformed_junit_reports: 0, incomplete: false
     });
   });
@@ -43,7 +43,7 @@ describe("unified CircleCI test result normalization", () => {
       }]
     });
     expect(result).toMatchObject({
-      total: 1, passed: 1, failed: 0, duplicate_reports_removed: 1,
+      sources: "jsonl_and_junit", total: 1, passed: 1, failed: 0, duplicate_reports_removed: 1,
       conflicting_statuses: 1, incomplete: true
     });
   });
@@ -101,6 +101,19 @@ describe("unified CircleCI test result normalization", () => {
   it("keeps XML reports without a root self-closing testsuite valid", () => {
     const result = normalizeJobTestResults({ junitArtifacts: [{ content: '<testsuite/>' }] });
     expect(result).toMatchObject({ status: "empty", malformed_junit_reports: 0, incomplete: false });
+  });
+
+
+  it("marks an unavailable JSONL source partial when JUnit records remain available", () => {
+    const result = normalizeJobTestResults({
+      jsonlUnavailable: true,
+      junitArtifacts: [{
+        content: '<testsuite><testcase classname="pkg.Math" name="from-xml"/></testsuite>'
+      }]
+    });
+    expect(result).toMatchObject({
+      status: "partial", sources: "junit_only", total: 1, passed: 1, incomplete: true
+    });
   });
 
   it("marks truncated JSONL and artifact retrieval failures incomplete", () => {
