@@ -250,7 +250,14 @@ export async function fetchAllowedArtifact(
   initialUrl: URL,
   maxRedirects = 3
 ): Promise<Response> {
-  let currentUrl = initialUrl;
+  // Enforce the allowlist at the network boundary as well as at the current
+  // caller. This prevents a future caller from turning this helper into an
+  // arbitrary HTTPS fetch primitive.
+  const allowedInitialUrl = allowedArtifactUrl(initialUrl.toString());
+  if (!allowedInitialUrl) {
+    throw new Error("Artifact download URL is not on an allowed HTTPS host.");
+  }
+  let currentUrl = allowedInitialUrl;
   for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
     const response = await fetchWithSafeErrors(currentUrl.toString(), {
       method: "GET",
