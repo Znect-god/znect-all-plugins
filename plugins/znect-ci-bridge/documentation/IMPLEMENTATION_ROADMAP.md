@@ -858,7 +858,7 @@ For every meaningful feature or fix:
 - [x] Confirm that the inspected Znect Build feature branch has no `.circleci/config.yml`, while its README, architecture, operations and roadmap still describe GitHub Actions as the execution engine **(выполнено — repository/documentation review)**.
 - [x] Confirm the `znect-ci-bridge/worker-validation` registry target remains `execution_enabled: false`; no workflow or CircleCI pipeline was triggered **(выполнено — registry review; no execution performed)**.
 - [x] Replace the Znect Build GitHub Actions execution path with an opt-in CircleCI exact-SHA validation flow while retaining Znect Build as the development/recipe source **(выполнено — CircleCI config source added; live execution pending)**.
-- [ ] Reconcile the Bridge central-build adapter and tests with CircleCI run/workflow/job/artifact identifiers and provenance; do not treat GitHub commit statuses or Actions run IDs as CircleCI evidence.
+- [x] Retire the separate GitHub Actions-based central Build adapter and its routes/tests; use the existing generic CircleCI read-only adapter for Znect Build runs and artifacts **(выполнено — source/test cleanup; live verification pending)**.
 - [x] Update Znect Build architecture, operations, security, README and both project roadmaps to match the CircleCI flow; legacy GitHub Actions jobs are inert **(выполнено — source/documentation updates)**.
 - [x] Preserve exact source-SHA verification, bounded provenance artifacts, read-only Bridge access and disabled execution/deployment safeguards **(выполнено — source/config review; runtime verification pending)**.
 
@@ -881,3 +881,19 @@ For every meaningful feature or fix:
 - [ ] Replace or retire the legacy GitHub Actions-based Znect Build adapter in CI Bridge and route central validation evidence through CircleCI.
 
 **Verification boundary:** source configuration, tests and documentation are committed on isolated feature branches. No CircleCI project connection was inspected or configured, no pipeline or test suite was run, and no Preview/Production deployment or secret change occurred.
+
+
+## 53. Retire the GitHub Actions central Build adapter — 2026-11-18
+
+- [x] Remove the separate `znect-build` provider type from the shared contract and project registry; CircleCI is now the sole CI provider **(выполнено — source implementation)**.
+- [x] Remove the GitHub Actions REST adapter, ZIP manifest extraction helper, central Build MCP tools, Browser API `/api/v1/build/*` routes and `ZNECT_BUILD_GITHUB_TOKEN` runtime requirement **(выполнено — source cleanup)**.
+- [x] Remove obsolete adapter/ZIP tests and add a regression assertion that retired GitHub Actions Browser API routes return 404 without making upstream requests **(выполнено — test source; execution pending)**.
+- [x] Update registry tests to accept CircleCI connections only and remove the reserved `znect-build` provider fixture **(выполнено — test source; execution pending)**.
+- [x] Register Znect Build as a normal CircleCI project connection in the registry documentation; document that CircleCI pipeline, workflow, job and v3 run IDs are distinct **(выполнено — documentation)**.
+- [x] Reconcile README, provider architecture, usage guide, Free access plan, Znect Build connection guide, API-contract history, plugin metadata and changelog **(выполнено — documentation/metadata source)**.
+- [ ] Add the actual Znect Build CircleCI project connection to the private runtime registry and verify it with a read-only probe.
+- [ ] Execute the current Worker typecheck and full Vitest suite through the CircleCI exact-SHA workflow after explicit authorization.
+- [ ] Verify a real CircleCI run, job, manifest artifact and exact source/recipe SHA round-trip through the generic Bridge CircleCI adapter.
+- [ ] Complete the supported private ChatGPT Free access/handoff path without MCP or weakening Browser API authentication.
+
+**Verification boundary:** the legacy GitHub Actions adapter and routes are removed from source, and the generic CircleCI adapter is the only provider implementation. Test source was updated but not executed; the Znect Build runtime CircleCI connection and live artifact round-trip remain pending. No CircleCI pipeline, Preview deployment or Production change was performed.
