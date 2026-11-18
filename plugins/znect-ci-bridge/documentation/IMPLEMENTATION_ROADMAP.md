@@ -616,3 +616,15 @@ For every meaningful feature or fix:
 - [x] Recheck the Android README and assistant-channel guide: both correctly describe the app as a manual Sharesheet report exporter and distinguish its CircleCI read-path check from ChatGPT session authentication **(выполнено — reviewed)**.
 - [ ] Continue checking older README/roadmap passages for historical claims that could be mistaken for current CI executor, secret-delivery or ChatGPT authentication behavior.
 - [ ] Connect/confirm the CircleCI project and retrieve actual Worker tests, Android tests and APK artifact from CircleCI; no run result is available in this session.
+
+## 32. Current access-channel and operating-guide reconciliation — 2026-11-18
+
+- [x] Rewrite `documentation/FREE_ACCESS_PLAN.md` to describe the private authenticated Browser JSON API, Android manual Sharesheet handoff, no required MCP, CircleCI-only validation execution, and the unverified automatic ChatGPT-authentication limitation **(выполнено)**.
+- [x] Add an authoritative changelog correction that explicitly supersedes historical GitHub Actions inbox/report collector and Znect Build executor proposals **(выполнено)**.
+- [x] Replace the stale multi-branch `documentation/USAGE_GUIDE.md` with a current CircleCI setup, Browser API, Android exporter, security and verification guide **(выполнено)**.
+- [x] Clarify in `documentation/SECURITY_REVIEW.md` that MCP-specific security findings concern only the legacy optional surface and do not define the ChatGPT access channel **(выполнено)**.
+- [ ] Continue source-level review of Worker routes, CircleCI v3 adapter ownership checks, Android lifecycle/concurrency and report validation; add focused regression tests for any concrete defect.
+- [ ] Run the CircleCI workflow for the current branch HEAD and retrieve actual Worker test results, Android test results and debug APK artifact. No such run/result is currently available.
+- [ ] Verify Android behavior on a physical device and separately resolve the supported automatic ChatGPT-to-private-API authentication limitation.
+
+**Verification boundary:** these are documentation/source commits only. They do not establish that tests passed, CircleCI ran, an APK was assembled, ChatGPT authenticated to the API, or any Preview/Production deployment occurred.
