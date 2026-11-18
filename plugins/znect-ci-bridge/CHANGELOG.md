@@ -1,3 +1,11 @@
+## 2026-11-18 — correct CircleCI v3 job execution and artifact mapping
+
+- Corrected job-detail parsing to match CircleCI's public CLI v3 acceptance-fixture model: `parallel_executions` is an array of step arrays, with the outer index identifying the zero-based execution.
+- Made `is_insignificant` optional in step parsing instead of rejecting otherwise valid step records that omit it.
+- Preserved artifact execution indexes in the provider model and artifact listings; added an optional execution selector for artifact downloads so duplicate paths across parallel executions cannot be confused.
+- Updated diagnostics to pass the artifact execution index through to the downloader and added regression-test source for nested steps and duplicate-path artifacts.
+- Updated API migration guidance and implementation roadmap. Tests and typecheck remain unexecuted; no live CircleCI API request, pipeline, deployment or credential access was performed.
+
 ## 2026-11-18 — retire GitHub Actions central Build adapter
 
 - Removed the separate `znect-build` provider type, GitHub Actions REST adapter, ZIP manifest parser, MCP tools, Browser API `/api/v1/build/*` routes and `ZNECT_BUILD_GITHUB_TOKEN` requirement.
