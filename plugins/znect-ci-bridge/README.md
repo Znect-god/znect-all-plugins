@@ -60,6 +60,9 @@ Open the root URL of a confirmed Worker deployment in a modern browser. The dash
 - `GET /api/v1/diagnostics/{run_uuid}?project_id=znect-forge&connection_id=circleci-main` — bounded failed-step logs, structured tests, and a small JUnit/test-results artifact for failed jobs.
 - `GET /api/v1/events?after=0&limit=20`
 - `GET /api/v1/event-correlations?project_id=znect-forge&connection_id=circleci-main&after=0&event_limit=20&run_limit=20` — correlates the selected project's stored webhook events with bounded recent API v3 run candidates.
+- `GET /api/v1/build/status?project_id=znect-ci-bridge` — read-only probe of the central Znect Build GitHub Actions connection.
+- `GET /api/v1/build/runs?project_id=znect-ci-bridge&limit=10` — lists verified central workflow runs (limit 1–20).
+- `GET /api/v1/build/runs/{run_id}?project_id=znect-ci-bridge` — returns verified workflow/job metadata and run-scoped artifact metadata. Job logs and archive contents are explicitly unavailable in this adapter iteration.
 
 All JSON API requests require `Authorization: Bearer <WEB_ACCESS_TOKEN>`.
 
