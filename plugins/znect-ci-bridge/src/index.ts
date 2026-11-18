@@ -817,7 +817,7 @@ function createServer(env: Env) {
       const safePayload = redactKnownSecrets(JSON.stringify({
         project: { id: registryProject.id, name: registryProject.name, provider: adapter.provider },
         run,
-        status_semantics: "GitHub Actions workflow status/conclusion, not a project build-result status; the request validation artifact is metadata-only and is not parsed here.",
+        status_semantics: "CircleCI run, workflow, and job outcomes are provider-reported execution states; they are not independently verified project-release outcomes. The Znect Build CI Bridge validation manifest is not yet parsed or trusted by this report.",
         workflows: workflowReports,
         diagnostics_summary: {
           workflows_total: workflows.length,
