@@ -12,18 +12,6 @@ const env = {
   ZNECT_PROJECT_REGISTRY: TEST_REGISTRY,
   MCP_RATE_LIMITER: { limit: async () => ({ success: true }) }
 };
-const BUILD_REGISTRY = JSON.stringify({ version: 1, projects: [{
-  id: "znect-ci-bridge",
-  name: "Znect CI Bridge",
-  repositories: [{ fullName: "Znect-god/znect-all-plugins" }],
-  components: [],
-  connections: [{ id: "build-main", provider: "znect-build" }]
-}] });
-const buildEnv = {
-  ...env,
-  ZNECT_BUILD_GITHUB_TOKEN: "build-read-token",
-  ZNECT_PROJECT_REGISTRY: BUILD_REGISTRY
-};
 const ctx = {} as ExecutionContext;
 
 function rpcRequest(id: number, method: string, params: Record<string, unknown> = {}) {
@@ -60,57 +48,19 @@ async function parseRpc(response: Response) {
   return JSON.parse(dataLine ? dataLine.slice("data:".length).trim() : body);
 }
 
-describe("Browser API central Znect Build reads", () => {
+describe("legacy GitHub Actions central Build API retirement", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("probes the central Build provider using authenticated GET-only access", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ workflow_runs: [] }), {
-      status: 200,
-      headers: { "content-type": "application/json" }
-    }));
+  it("does not expose the retired GitHub Actions-backed build routes", async () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-
     const response = await worker.fetch(new Request(
-      "https://bridge.example/api/v1/build/status?project_id=znect-ci-bridge",
+      "https://bridge.example/api/v1/build/status?project_id=znect-forge",
       { headers: { authorization: "Bearer web-test-token" } }
-    ), buildEnv, ctx);
-    const payload = await response.json() as Record<string, unknown>;
+    ), env, ctx);
 
-    expect(response.status).toBe(200);
-    expect(payload).toMatchObject({
-      connected: true,
-      provider: "znect-build",
-      provider_availability: "available",
-      permissions: "read-only"
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "GET", redirect: "manual" });
-  });
-
-  it("lists central Build runs and rejects an excessive browser limit before network access", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ workflow_runs: [] }), {
-      status: 200,
-      headers: { "content-type": "application/json" }
-    }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const invalid = await worker.fetch(new Request(
-      "https://bridge.example/api/v1/build/runs?project_id=znect-ci-bridge&limit=21",
-      { headers: { authorization: "Bearer web-test-token" } }
-    ), buildEnv, ctx);
-    expect(invalid.status).toBe(400);
+    expect(response.status).toBe(404);
     expect(fetchMock).not.toHaveBeenCalled();
-
-    const valid = await worker.fetch(new Request(
-      "https://bridge.example/api/v1/build/runs?project_id=znect-ci-bridge&limit=10",
-      { headers: { authorization: "Bearer web-test-token" } }
-    ), buildEnv, ctx);
-    const payload = await valid.json() as { runs?: unknown[]; status_semantics?: string };
-
-    expect(valid.status).toBe(200);
-    expect(payload.runs).toEqual([]);
-    expect(payload.status_semantics).toContain("workflow status");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
