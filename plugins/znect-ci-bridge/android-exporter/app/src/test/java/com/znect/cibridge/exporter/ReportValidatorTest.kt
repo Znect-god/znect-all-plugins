@@ -79,6 +79,42 @@ class ReportValidatorTest {
         ))
     }
 
+
+    @Test fun rejectsRunFailureCountAboveReturnedCount() {
+        val report = validReport()
+        report.getJSONObject("runs").put("failed_count", 1)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
+    @Test fun rejectsNonObjectRunEntries() {
+        val report = validReport()
+        report.getJSONObject("runs")
+            .put("items", JSONArray().put("not-an-object"))
+            .put("returned", 1)
+            .put("requested", 10)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
+    @Test fun rejectsInconsistentCompletenessMetadata() {
+        val report = validReport()
+        report.getJSONObject("completeness").put("events_available", false)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
+    @Test fun rejectsRequestedLimitsOutsideContract() {
+        val report = validReport()
+        report.getJSONObject("events").put("requested", 21)
+        assertThrows(IllegalArgumentException::class.java) {
+            ReportValidator.validate(report, "project-1")
+        }
+    }
+
     private fun validReport() = JSONObject()
         .put("service", "znect-ci-bridge")
         .put("report_version", 1)
@@ -88,7 +124,7 @@ class ReportValidatorTest {
         .put("generated_at", "2026-11-18T08:00:00Z")
         .put("project", JSONObject().put("id", "project-1"))
         .put("connection", JSONObject().put("provider", "circleci").put("id", "connection-1"))
-        .put("runs", JSONObject().put("items", JSONArray()).put("returned", 0))
-        .put("events", JSONObject().put("items", JSONArray()).put("returned", 0).put("available", true))
+        .put("runs", JSONObject().put("items", JSONArray()).put("returned", 0).put("requested", 10).put("failed_count", 0))
+        .put("events", JSONObject().put("items", JSONArray()).put("returned", 0).put("requested", 20).put("next_cursor", 0).put("available", true))
         .put("completeness", JSONObject().put("runs_limited", false).put("events_available", true))
 }
