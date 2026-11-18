@@ -1,49 +1,47 @@
-# Znect CI Bridge — бесплатный read-only канал ChatGPT
+# Znect CI Bridge — бесплатный приватный канал ChatGPT
 
-**Актуальная архитектура (2026-11-18):** CircleCI — единственный исполнитель проверок CI Bridge. ChatGPT-facing канал — приватный Browser JSON API и передача ограниченного отчёта пользователем; MCP не требуется и не используется как канал ChatGPT. GitHub Actions / Znect Build не запускают проверки CI Bridge.
+**Актуальная архитектура (2026-11-18):** CircleCI — только read-only CI provider, который наблюдает Bridge. Собственная проверка и сборка CI Bridge должна проходить через центральный Znect Build. Отдельный `.circleci/config.yml` и параллельный исполнитель удалены. ChatGPT-facing источник — приватный Browser JSON API; MCP не обязателен.
 
 ## 1. Цель и текущий статус
 
-Предоставить ChatGPT актуальные сведения CircleCI по зарегистрированному проекту: статусы запусков, workflows/jobs, логи, тесты, доступные артефакты и webhook-события. Доступ к CircleCI со стороны Bridge строго read-only.
+ChatGPT должен получать актуальную диагностику зарегистрированных проектов: статусы запусков, workflows/jobs, ограниченные логи, результаты тестов, доступные артефакты и webhook-события. Интеграция с CircleCI остаётся строго read-only.
 
-Реализованы:
-- защищённые GET-only endpoints Browser JSON API с отдельным `WEB_ACCESS_TOKEN`;
+Уже реализовано в исходниках:
+- защищённые GET-only Browser JSON API endpoints с отдельным `WEB_ACCESS_TOKEN`;
 - CircleCI provider adapter и ограниченные JSON-отчёты по явно выбранным project/connection;
-- Android companion exporter для локальной проверки CircleCI read path, получения отчёта и ручной передачи через Android Sharesheet;
-- в Android-приложении секрет хранится локально с Android Keystore-backed encryption.
+- агрегированный `GET /api/v1/report` с метаданными полноты и свежести;
+- существующая dashboard-команда **Export assistant report**, которая добавляет до трёх ограниченных failed-run diagnostics и скачивает один JSON-файл;
+- regression-test source для API и dashboard export.
 
-Ограничения, которые нельзя скрывать:
-- приватный Browser JSON API существует, но это само по себе не означает, что отдельный ChatGPT conversation может автоматически вызвать его с Bearer header;
-- Android-проверка подтверждает путь Android → Bridge → CircleCI и доступность отчёта, но не аутентифицирует ChatGPT;
-- передача отчёта в ChatGPT сейчас ручная через Sharesheet; автоматический ChatGPT authentication/handoff не подтверждён и остаётся открытым platform limitation;
-- 48 Android JVM test cases написаны (8 origin + 21 report/privacy + 3 Bearer policy + 11 CircleCI status + 5 report-file expiry), но не исполнены; сборка APK и проверка на устройстве не подтверждены;
-- CircleCI workflow config находится в репозитории, однако фактический запуск и результаты для текущего HEAD ещё не получены.
+Ограничения:
+- наличие приватного Browser JSON API не означает, что ChatGPT автоматически умеет отправить к нему Bearer header;
+- ручной JSON export — это явная передача пользователем, а не автоматическая ChatGPT authentication;
+- исходники и тесты текущей ветки ещё не подтверждены фактическим запуском через Znect Build;
+- live Preview export и реальный CircleCI webhook round-trip пока не подтверждены.
 
 ## 2. Поток данных
 
 ```
-CircleCI (runs / jobs / logs / tests / artifacts)
+CircleCI (registered runs / jobs / logs / tests / artifacts)
              |
-             | HTTPS API v3, GET only
+             | authenticated HTTPS GET, read-only
              v
 Znect CI Bridge (private Worker API)
              |
-             | authenticated GET /api/v1/status
-             | authenticated GET /api/v1/report
+             | GET /api/v1/report + bounded diagnostics
              v
-Android companion exporter
+Existing browser dashboard
              |
-             | user reviews bounded report
-             | explicit Android Sharesheet
+             | explicit user-reviewed JSON export
              v
-ChatGPT conversation (manual report handoff)
+ChatGPT conversation
 ```
 
-ChatGPT-facing report API и CI execution — разные роли:
-- CircleCI выполняет проверки самого CI Bridge из `.circleci/config.yml`.
-- Browser JSON API только читает CircleCI и отдаёт ограниченные отчёты.
-- Android exporter не запускает, не отменяет, не перезапускает CircleCI pipelines/jobs и не изменяет настройки CircleCI.
-- Znect Build — отдельная система сборки других проектов Znect; она не является CI executor для CI Bridge.
+Разделение ролей:
+- CircleCI — источник диагностических данных, не исполнитель проверки самого Bridge.
+- Znect Build — центральный исполнитель проверки CI Bridge и остальных Znect проектов.
+- Browser JSON API только читает данные и формирует ограниченный отчёт.
+- Dashboard export — ручной fallback handoff, не прямая автоматическая аутентификация ChatGPT.
 
 ## 3. Безопасность
 
@@ -52,24 +50,25 @@ ChatGPT-facing report API и CI execution — разные роли:
 - Не отключать Bearer authentication, не публиковать unauthenticated endpoint и не передавать токены в чат.
 - Browser API принимает только разрешённые GET-запросы, ограничивает объём ответов и проверяет project/connection scope.
 - CircleCI API client использует фиксированный origin, GET-only, ограниченные ответы, таймауты и безопасную обработку ошибок.
-- Android хранит введённую учётную информацию локально с использованием Android Keystore; отчёт остаётся в app-private cache до явной передачи пользователем.
-- Любые production deployment, изменение secrets, CircleCI project settings или pipeline mutation требуют отдельного явного разрешения.
+- Любые production deployment, изменение secrets, CI settings или pipeline mutation требуют отдельного явного разрешения.
 
 ## 4. Условия готовности
 
-Канал нельзя объявлять полностью автоматическим, пока не подтверждены:
-1. поддерживаемый механизм, позволяющий ChatGPT безопасно обращаться к приватному Browser JSON API с Bearer authentication без обязательного MCP;
-2. полный round-trip ChatGPT → private report source → ChatGPT на реальных данных;
-3. отсутствие утечек токенов и корректная project/connection изоляция.
+1. Подтвердить центральный Znect Build target/recipe для CI Bridge и его безопасное выполнение на точном source SHA.
+2. Получить реальные typecheck, unit-test, audit и Worker bundle validation результаты; не считать наличие тестового кода доказательством прохождения.
+3. Проверить существующий Preview: Bearer auth, project/connection isolation, report freshness, pagination/truncation, redaction и partial diagnostics.
+4. Подтвердить реальный CircleCI webhook delivery и round-trip через private report.
+5. Установить поддерживаемый способ private ChatGPT access. До этого ручной JSON export остаётся только явным fallback handoff.
+6. Пройти release/security gates и подготовить завершённый Reporting / Diagnostics v1 к переносу в `Znect-god/znect-build`.
 
-Отдельно для Android:
-1. CircleCI запускает job `ci-bridge-android-exporter`;
-2. все 40 JVM тестов проходят;
-3. debug APK собирается и доступен как CircleCI artifact;
-4. приложение проверено на реальном Android устройстве.
+Никаких автоматических сборок, запусков CI, Preview deployment, Production changes или secret access без отдельного разрешения.
 
-До выполнения этих условий корректный статус: **private API и ручной Android report handoff реализованы на уровне исходников; автоматическая ChatGPT authentication и live CircleCI verification не подтверждены**.
+## 5. Исключения
 
-## 5. Исторические схемы
+- Нет обязательного MCP.
+- Нет отдельного CircleCI executor или второго параллельного CI.
+- Нет GitHub Actions обходного пути мимо Znect Build.
+- Нет публичного unauthenticated API, query-string token или передачи секрета в чат.
+- Bridge не запускает, не перезапускает и не отменяет наблюдаемые CircleCI pipelines/jobs.
 
-Прежние предложения с приватным Forge inbox, GitHub Actions report collector, Actions artifacts, GitHub Actions CI executor или MCP как основным ChatGPT каналом не являются текущей архитектурой CI Bridge. Они не должны использоваться как инструкция к активации, сборке или диагностике. Исторические записи в changelog сохраняются для аудита, но не отменяют этот актуальный контракт.
+Исторические записи о Android exporter и самостоятельном CircleCI validation workflow не являются текущим планом и не должны восстанавливаться.
