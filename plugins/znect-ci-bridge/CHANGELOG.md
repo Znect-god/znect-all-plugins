@@ -1,3 +1,11 @@
+## 2026-11-18 — remove redundant CI executor and Android handoff prototype
+
+- Removed the standalone root `.circleci/config.yml`; CI Bridge validation must use central `Znect-god/znect-build`, not a parallel CircleCI workflow.
+- Removed the optional Android exporter application, unexecuted Android JVM tests, Gradle wrapper, APK job wiring and Android-specific setup/design guides. The app was a redundant manual transport and did not authenticate a ChatGPT session.
+- Preserved the existing Cloudflare Worker, CircleCI read-only provider adapter, Browser JSON API, webhook inbox, dashboard and bounded assistant-report download.
+- Updated the current roadmap, README, assistant-channel, free-access, security and usage documentation. Historical entries below are retained as audit history and are superseded by this entry.
+- No tests, Znect Build run, Preview deployment or Production change were performed as part of cleanup.
+
 ## 2026-11-18 — browser-dashboard assistant report export
 
 - Extended the existing Znect CI Bridge dashboard with an explicit **Export assistant report** action; reused the existing Worker and authenticated Browser JSON API rather than creating a parallel bridge.
