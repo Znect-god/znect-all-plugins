@@ -12,8 +12,8 @@ import { createHmac, randomUUID } from "node:crypto";
  * This script is deliberately pinned to the named Preview alias. It refuses
  * Production and arbitrary hosts. It performs only:
  *   GET /health
- *   GET /api/v1/status
- *   POST /mcp: server/discover, tools/list, and check_connection
+ *   GET /api/v1/status, /api/v1/runs, /api/v1/report, diagnostics and events
+ *   POST /mcp: server/discover, tools/list, check_connection and event inbox read
  *
  * The MCP POST requests are JSON-RPC transport calls. No pipeline mutation
  * tool is invoked or exposed by this script.
@@ -23,6 +23,11 @@ const PREVIEW_ORIGIN = process.env.PREVIEW_ORIGIN ?? "";
 const APPROVED_PREVIEW_HOST =
   "feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev";
 const PROTOCOL_VERSION = "2026-07-28";
+const PROJECT_ID = "znect-forge";
+const CONNECTION_ID = "forge-circleci";
+const PROJECT_SLUG = "gh/Znect-god/znect-forge";
+const SCOPE_QUERY = "project_id=" + encodeURIComponent(PROJECT_ID) +
+  "&connection_id=" + encodeURIComponent(CONNECTION_ID);
 const TIMEOUT_MS = 15_000;
 
 function fail(message) {
@@ -143,7 +148,7 @@ async function main() {
   }
   console.log("PASS: public health endpoint");
 
-  const status = await request(PREVIEW_ORIGIN + "/api/v1/status", {
+  const status = await request(PREVIEW_ORIGIN + "/api/v1/status?" + SCOPE_QUERY, {
     headers: { authorization: "Bearer " + webToken }
   });
   if (!status.ok) {
@@ -158,14 +163,16 @@ async function main() {
   const statusData = await status.json();
   if (
     statusData.connected !== true ||
+    statusData.provider !== "circleci" ||
     statusData.permissions !== "read-only" ||
-    statusData.project?.slug !== "gh/Znect-god/znect-forge"
+    statusData.project?.id !== PROJECT_ID ||
+    statusData.connection?.id !== CONNECTION_ID
   ) {
     throw new Error("Browser API did not confirm read-only access to the fixed Forge project.");
   }
   console.log("PASS: authenticated browser API and CircleCI project access");
 
-  const recentRunsResponse = await request(PREVIEW_ORIGIN + "/api/v1/runs?limit=1", {
+  const recentRunsResponse = await request(PREVIEW_ORIGIN + "/api/v1/runs?limit=1&" + SCOPE_QUERY, {
     headers: { authorization: "Bearer " + webToken }
   });
   if (!recentRunsResponse.ok) {
@@ -174,7 +181,7 @@ async function main() {
   const recentRunsData = await recentRunsResponse.json();
   const latestRunId = recentRunsData.runs?.[0]?.id;
   if (typeof latestRunId === "string" && /^[0-9a-f-]{36}$/i.test(latestRunId)) {
-    const diagnosticsResponse = await request(PREVIEW_ORIGIN + "/api/v1/diagnostics/" + latestRunId, {
+    const diagnosticsResponse = await request(PREVIEW_ORIGIN + "/api/v1/diagnostics/" + latestRunId + "?" + SCOPE_QUERY, {
       headers: { authorization: "Bearer " + webToken }
     });
     if (!diagnosticsResponse.ok) {
@@ -193,7 +200,50 @@ async function main() {
     console.log("NOT RUN: no valid recent CircleCI run ID was available for diagnostics verification.");
   }
 
-  const eventsResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?limit=50", {
+  const reportResponse = await request(PREVIEW_ORIGIN + "/api/v1/report?run_limit=10&event_limit=20&after=0&" + SCOPE_QUERY, {
+    headers: { authorization: "Bearer " + webToken }
+  });
+  if (!reportResponse.ok) {
+    throw new Error("/api/v1/report returned HTTP " + reportResponse.status + ".");
+  }
+  const assistantReport = await reportResponse.json();
+  const handoff = assistantReport.assistant_handoff;
+  if (
+    assistantReport.service !== "znect-ci-bridge" ||
+    assistantReport.provider !== "circleci" ||
+    assistantReport.permissions !== "read-only" ||
+    assistantReport.read_only !== true ||
+    handoff?.mode !== "user_reviewed_json_attachment" ||
+    handoff?.automatic_api_access !== false ||
+    handoff?.mcp_required !== false ||
+    handoff?.bearer_token_included !== false ||
+    handoff?.test_summary_count_scope !== "observed_records" ||
+    !Array.isArray(assistantReport.runs?.diagnostics) ||
+    !Array.isArray(assistantReport.events?.items) ||
+    !assistantReport.completeness
+  ) {
+    throw new Error("Aggregate assistant report is missing required read-only handoff or completeness metadata.");
+  }
+  const diagnosticLinks = assistantReport.runs.diagnostics.slice(0, 3);
+  for (const item of diagnosticLinks) {
+    if (typeof item.run_id !== "string" || !/^[0-9a-f-]{36}$/i.test(item.run_id)) {
+      throw new Error("Aggregate report contains an invalid diagnostic run ID.");
+    }
+    const diagnosticResponse = await request(
+      PREVIEW_ORIGIN + "/api/v1/diagnostics/" + encodeURIComponent(item.run_id) + "?" + SCOPE_QUERY,
+      { headers: { authorization: "Bearer " + webToken } }
+    );
+    if (!diagnosticResponse.ok) {
+      throw new Error("Aggregate report diagnostic round-trip returned HTTP " + diagnosticResponse.status + ".");
+    }
+    const diagnostic = await diagnosticResponse.json();
+    if (diagnostic.run?.id !== item.run_id || !Array.isArray(diagnostic.workflows) || !diagnostic.diagnostics_summary) {
+      throw new Error("Aggregate report diagnostic round-trip returned a mismatched or incomplete report.");
+    }
+  }
+  console.log("PASS: authenticated aggregate assistant report and diagnostic round-trip");
+
+  const eventsResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?limit=50&project_id=" + encodeURIComponent(PROJECT_ID), {
     headers: { authorization: "Bearer " + webToken }
   });
   if (!eventsResponse.ok) {
@@ -212,7 +262,7 @@ async function main() {
   }
   let eventCursor = eventsData.next_cursor;
   for (let pageIndex = 0; pageIndex < 10 && eventsData.events.length === 50; pageIndex++) {
-    const pageResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?after=" + eventCursor + "&limit=50", {
+    const pageResponse = await request(PREVIEW_ORIGIN + "/api/v1/events?after=" + eventCursor + "&limit=50&project_id=" + encodeURIComponent(PROJECT_ID), {
       headers: { authorization: "Bearer " + webToken }
     });
     if (!pageResponse.ok) throw new Error("Event inbox pagination returned HTTP " + pageResponse.status + ".");
@@ -267,7 +317,7 @@ async function main() {
 
   const connection = await rpc(mcpToken, 3, "tools/call", {
     name: "check_connection",
-    arguments: {}
+    arguments: { project_id: PROJECT_ID, connection_id: CONNECTION_ID }
   });
   if (connection?.isError === true || !Array.isArray(connection?.content)) {
     throw new Error("MCP check_connection did not return a successful tool result.");
@@ -279,7 +329,8 @@ async function main() {
   if (
     !resultText.includes('"connected": true') ||
     !resultText.includes('"permissions": "read-only"') ||
-    !resultText.includes("gh/Znect-god/znect-forge")
+    !resultText.includes(PROJECT_ID) ||
+    !resultText.includes(CONNECTION_ID)
   ) {
     throw new Error("MCP check_connection did not confirm the fixed read-only CircleCI project.");
   }
@@ -287,7 +338,7 @@ async function main() {
 
   const eventFeed = await rpc(mcpToken, 4, "tools/call", {
     name: "list_recent_events",
-    arguments: { after: 0, limit: 50 }
+    arguments: { project_id: PROJECT_ID, after: 0, limit: 50 }
   });
   if (eventFeed?.isError === true || !Array.isArray(eventFeed?.content)) {
     throw new Error("MCP list_recent_events did not return a successful tool result.");
@@ -304,7 +355,7 @@ async function main() {
 
   const webhookSecret = process.env.CIRCLECI_WEBHOOK_SECRET;
   if (!webhookSecret || !webhookSecret.trim()) {
-    console.log("NOT RUN: CIRCLECI_WEBHOOK_SECRET is not configured in GitHub Actions; signed webhook delivery test was skipped.");
+    console.log("NOT RUN: CIRCLECI_WEBHOOK_SECRET is not configured for this Preview smoke run; signed webhook delivery test was skipped.");
   } else {
     const eventId = randomUUID();
     const workflowId = randomUUID();
@@ -313,7 +364,7 @@ async function main() {
       id: eventId,
       type: "workflow-completed",
       happened_at: new Date().toISOString(),
-      project: { slug: "gh/Znect-god/znect-forge" },
+      project: { slug: PROJECT_SLUG },
       workflow: {
         id: workflowId,
         name: "preview-webhook-smoke",
