@@ -135,6 +135,25 @@ describe("CircleCI API v3 client", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("filter%5Bslug%5D=gh%2FZnect-god%2Fznect-forge");
   });
 
+  it("resolves the explicitly supported github/ CircleCI API v3 slug alias", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: PROJECT_ID, attributes: { slug: "github/Znect-god/znect-forge" } }]
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(resolveCircleCiProject("token", "github/Znect-god/znect-forge"))
+      .resolves.toMatchObject({ id: PROJECT_ID });
+    expect(fetchMock.mock.calls[0][0]).toContain("filter%5Bslug%5D=github%2FZnect-god%2Fznect-forge");
+  });
+
+  it("rejects unsupported CircleCI project slug prefixes before network access", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(resolveCircleCiProject("token", "gitlab/Znect-god/znect-forge"))
+      .rejects.toThrow("Invalid CircleCI GitHub project slug.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("rejects zero, multiple, or explicitly mismatched project resolutions", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
