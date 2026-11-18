@@ -1,7 +1,7 @@
 # Znect CI Bridge Android Report Exporter
 
 **Version:** 0.1.0 — source prototype  
-**Status:** implementation started; build and device verification pending.
+**Status:** initial Android source implementation and origin-policy test source added; build and device verification pending.
 
 A native Android helper for a user-initiated, manual handoff of the private CI Bridge report to ChatGPT. It is not direct ChatGPT API access.
 
@@ -36,4 +36,16 @@ The app does not include a default API origin or project identifier. Do not past
 - This is an initial source implementation, not a verified APK.
 - The user must explicitly configure the API origin, project and token locally.
 - The exported report can contain private project/run metadata; review it before sharing.
-- No automated tests, build, installation, live API request, or deployment has been run.
+- Unit-test source for HTTPS origin validation has been added but not executed. No build, installation, live API request, or deployment has been run.
+
+## Implemented in this source prototype
+
+- Native Kotlin Activity with local origin/project/connection configuration.
+- AES-GCM credential encryption using a non-exportable Android Keystore key; the app does not display a saved token.
+- Strict HTTPS origin policy, fixed report endpoint, GET-only request and redirect rejection.
+- 100 KB response cap, report identity/read-only validation and defensive credential-like field scan.
+- Local temporary JSON export and explicit Android Sharesheet handoff through FileProvider.
+- Cleartext traffic disabled and system trust anchors required.
+- Unit-test source for accepted/rejected API origins.
+
+The first implementation intentionally has no background worker, scheduled polling, analytics, telemetry or server-side component.
