@@ -77,6 +77,7 @@ async function collectJobReportArtifacts(
   for (const artifact of candidates.slice(0, MAX_REPORT_ARTIFACTS_PER_JOB)) {
     if (remainingBytes <= 0 || (typeof artifact.size === "number" && artifact.size > remainingBytes)) {
       incomplete = true;
+      limitReached = true;
       continue;
     }
     try {
