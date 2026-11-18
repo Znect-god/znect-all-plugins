@@ -1201,6 +1201,7 @@ For every meaningful feature or fix:
 - [x] Pass required project/connection arguments to MCP check_connection and project scope to list_recent_events, including the post-webhook verification read.
 - [x] Extend the smoke preflight to retrieve /api/v1/report, validate the explicit assistant-handoff/no-token metadata, and round-trip up to three diagnostic UUIDs using locally reconstructed same-origin paths.
 - [x] Add regression-test source for Preview smoke request scoping, report handoff validation, read-only MCP calls and the approved Preview host boundary.
+- [x] Make the dashboard export status reflect overall report completeness: run-list truncation, event-store availability and successful inclusion of all available failed-run diagnostics; preserve explicit partial-export messaging.
 - [ ] Execute the smoke-script contract tests and complete Bridge test/typecheck suite through Stage 80's authorized CircleCI exact-SHA workflow.
 - [ ] Run the corrected smoke test against the authorized Preview and review a real exported JSON report, diagnostics, redaction and completeness fields.
 - [ ] Verify live CircleCI read-only connectivity and representative successful/failed run, logs, JSONL/JUnit and artifact retrieval.
