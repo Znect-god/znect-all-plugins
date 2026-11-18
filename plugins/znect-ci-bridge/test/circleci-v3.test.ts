@@ -434,7 +434,7 @@ describe("CircleCI API v3 client", () => {
         data: [{ id: WORKFLOW_ID }], page: { next: null }
       }), { status: 200 })));
     await expect(listCircleCiWorkflows("token", RUN_ID))
-      .rejects.toThrow("repeated a workflow ID across pagination pages");
+      .rejects.toThrow("repeated a workflow ID in a paginated collection");
   });
 
   it("enforces a caller-selected page ceiling for workflow collections", async () => {
