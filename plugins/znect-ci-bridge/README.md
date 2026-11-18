@@ -130,3 +130,10 @@ A validation-only CI Bridge target (`znect-ci-bridge/worker-validation`) and cen
 ## Relationship to Znect Forge
 
 The Bridge is being generalized to serve multiple Znect projects. The MCP diagnostic path is project-scoped and verifies run/job ownership. Core API v3 MCP and browser diagnostics use the provider-neutral CircleCI adapter; the legacy v1.1 tools remain an explicit CircleCI-only compatibility path. Project-scoped webhook ingestion and event inbox routing use the registry. The Bridge must not modify project source/configuration, trigger or retry builds, or alter release/freeze decisions. Testing should use the next ordinary Forge workflow; do not create unnecessary builds solely to generate an event.
+
+
+## Central Znect Build visibility
+
+CI Bridge includes a read-only adapter and authenticated Browser JSON API for central Znect Build runs. The endpoints `/api/v1/build/status`, `/api/v1/build/runs`, and `/api/v1/build/runs/{run_id}` expose verified run metadata, exact source SHA, job/step outcomes, and private validation-artifact metadata. Ownership is checked against the central request-validation artifact fingerprint. The Browser API uses `WEB_ACCESS_TOKEN`; the adapter uses a separate repository-scoped `ZNECT_BUILD_GITHUB_TOKEN`. Neither credential grants or invokes build execution. See `documentation/ZNECT_BUILD_CONNECTION.md` for the runtime registry entry and least-privilege configuration.
+
+The central recipe's manifest is uploaded as a private GitHub Actions artifact. This API iteration exposes its metadata only; it does not download/unpack ZIP content. Logs and structured test report ingestion remain future work. The central target is still disabled and no live connection is claimed.
