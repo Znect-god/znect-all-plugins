@@ -29,6 +29,8 @@ function runRecord() {
     name: "Znect Central Build",
     display_title: `Znect Build / ${PROJECT_ID} / request-12345678`,
     workflow_id: Number(WORKFLOW_ID),
+    path: ".github/workflows/central-build.yml",
+    repository: { full_name: "Znect-god/znect-build" },
     status: "completed",
     conclusion: "success",
     head_branch: "main",
@@ -108,6 +110,22 @@ describe("Znect Build GitHub Actions read-only adapter", () => {
 
     expect(runs).toHaveLength(20);
     expect(fetchMock).toHaveBeenCalledTimes(21);
+  });
+
+  it("rejects runs from another workflow file or a non-default central branch", async () => {
+    const wrongWorkflow = vi.fn().mockResolvedValueOnce(response({
+      ...runRecord(),
+      path: ".github/workflows/other.yml"
+    }));
+    vi.stubGlobal("fetch", wrongWorkflow);
+    await expect(adapter().getRun(scope, RUN_ID)).rejects.toThrow(/trusted central Build workflow/i);
+
+    const wrongBranch = vi.fn().mockResolvedValueOnce(response({
+      ...runRecord(),
+      head_branch: "feature/test"
+    }));
+    vi.stubGlobal("fetch", wrongBranch);
+    await expect(adapter().getRun(scope, RUN_ID)).rejects.toThrow(/trusted central Build workflow/i);
   });
 
   it("rejects direct run reads when the run title belongs to another project", async () => {
