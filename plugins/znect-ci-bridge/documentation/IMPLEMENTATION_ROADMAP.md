@@ -461,3 +461,11 @@ For every meaningful feature or fix:
 - Added JVM tests for underscore and other allowed characters, whitespace/CRLF header-injection rejection, empty input and the 4096-character boundary **(выполнено — test source added; execution pending)**.
 - The Android app still accepts credentials only through its local UI and stores them encrypted with Android Keystore. No token was requested, copied, or transmitted during this change.
 - Remaining validation is unchanged: CircleCI run, APK artifact and physical-device check are not yet verified.
+
+
+## 16. Android report validation and disconnect hardening — 2026-11-18
+
+- Tightened the report validator to enforce requested/returned limits, failed-run count bounds, object-only run/event entries, non-negative event cursor and consistency between event availability and completeness metadata **(выполнено — source fix)**.
+- Added JVM test cases for inconsistent failed counts, malformed item types, mismatched completeness flags and out-of-contract requested limits **(выполнено — test source added; execution pending)**.
+- Updated Disconnect to clear all locally stored settings, encrypted credential data and cached report files, and to report separately if Android Keystore alias cleanup cannot be verified **(выполнено — source fix)**.
+- Runtime tests, CircleCI execution and device verification remain pending; no build success is claimed.
