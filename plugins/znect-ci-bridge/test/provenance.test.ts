@@ -50,6 +50,11 @@ describe("CI Bridge provenance manifest schema", () => {
     expect(parseCiBridgeManifest(JSON.stringify(failed)).recipe_outcome).toBe("failed");
   });
 
+  it("rejects obsolete API v1 build number and URL metadata", () => {
+    const legacyCircleCi = { ...manifest.circleci, build_num: "123", build_url: "https://circleci.com/123" };
+    expect(() => parseCiBridgeManifest(JSON.stringify({ ...manifest, circleci: legacyCircleCi })))
+      .toThrow("manifest_circleci_invalid");
+  });
   it("rejects unknown fields instead of silently trusting schema drift", () => {
     expect(() => parseCiBridgeManifest(JSON.stringify({ ...manifest, access_token: "secret" })))
       .toThrow("manifest_fields_invalid");
