@@ -453,3 +453,11 @@ For every meaningful feature or fix:
 - Added CircleCI test-result collection and debug APK artifact storage after the Android test/build command **(выполнено — CircleCI configuration)**.
 - The artifact is a debug APK for manual review/install only; no release signing, publishing, deployment, or automatic device installation is configured.
 - Documented the artifact path in the Android exporter README. Artifact availability remains conditional on a successful CircleCI job; no APK artifact is currently verified.
+
+
+## 15. Android Bearer credential validation hardening — 2026-11-18
+
+- Extracted Bearer token validation into a separately testable policy and aligned the accepted characters with RFC 6750 `b64token`, including underscore. The previous validator rejected tokens containing `_`, which could block valid CircleCI-style credentials **(выполнено — source fix)**.
+- Added JVM tests for underscore and other allowed characters, whitespace/CRLF header-injection rejection, empty input and the 4096-character boundary **(выполнено — test source added; execution pending)**.
+- The Android app still accepts credentials only through its local UI and stores them encrypted with Android Keystore. No token was requested, copied, or transmitted during this change.
+- Remaining validation is unchanged: CircleCI run, APK artifact and physical-device check are not yet verified.
