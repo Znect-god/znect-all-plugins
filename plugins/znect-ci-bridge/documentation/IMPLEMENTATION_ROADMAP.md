@@ -149,7 +149,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Bounded 100 KB report retrieval, redirect rejection, credential-field scan and explicit FileProvider/Sharesheet export **(выполнено — source implementation)**.
 - [x] Validate report identity, CircleCI provider, read-only permissions, ISO timestamp, project/connection metadata, bounded run/event arrays and completeness metadata **(выполнено — source implementation; not yet compiled)**.
 - [x] Eight origin-policy unit-test cases authored **(выполнено — test source only)**.
-- [x] Ten report-schema/privacy unit-test cases authored with a JVM JSON test dependency **(выполнено — test source only)**.
+- [x] Eighteen report-schema/privacy unit-test cases authored with a JVM JSON test dependency **(выполнено — test source only; supersedes earlier historical counts below)**.
 - [x] Add a local disconnect action that removes the encrypted token, Android Keystore key entry and temporary report **(выполнено — source implementation; device verification pending)**.
 - [x] Extract report-schema validation from Activity code and add focused JVM unit-test source for valid reports, provider/permission/project rejection, malformed timestamps, run bounds/counts, event counts, completeness and recursive sensitive-key detection **(выполнено — test source added; execution pending)**.
 - [x] Add an explicit connection-check action that validates authenticated `/api/v1/status`, CircleCI provider identity, project/connection scope, read-only permission and a live recent-run probe **(выполнено — source implementation; CircleCI execution pending)**.
