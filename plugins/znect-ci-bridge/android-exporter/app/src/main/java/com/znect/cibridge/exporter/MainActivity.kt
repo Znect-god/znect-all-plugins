@@ -18,7 +18,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
@@ -383,19 +382,7 @@ class MainActivity : Activity() {
         return generator.generateKey()
     }
 
-    private fun normalizeOrigin(raw: String): String? {
-        return try {
-            val uri = URI(raw.trim())
-            if (uri.scheme != "https" || uri.host.isNullOrBlank() ||
-                uri.rawUserInfo != null || uri.rawQuery != null || uri.rawFragment != null ||
-                (uri.rawPath.isNotEmpty() && uri.rawPath != "/") ||
-                (uri.port != -1 && uri.port != 443)
-            ) return null
-            "https://" + uri.host.lowercase()
-        } catch (_: Exception) {
-            null
-        }
-    }
+    private fun normalizeOrigin(raw: String): String? = OriginPolicy.normalize(raw)
 
     private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
 
