@@ -605,3 +605,13 @@ For every meaningful feature or fix:
 - [x] Correct the assistant-channel guide: Android authenticates to the private Bridge API and shares a validated report manually through Sharesheet; it does not authenticate a ChatGPT conversation or provide automatic direct API access **(выполнено — documentation corrected)**.
 - [ ] Continue reviewing historical roadmap entries and supporting docs for stale architecture statements; latest CircleCI-first sections remain authoritative where older notes conflict.
 - [ ] Execute the current source on CircleCI and retrieve actual Worker test results, Android test results and the debug APK artifact.
+
+
+## 31. Historical documentation consistency pass — 2026-11-18
+
+- [x] Remove the stale statement that a current GitHub Actions Preview workflow installs `CIRCLECI_WEBHOOK_SECRET`; the GitHub Actions workflow is retired/inert and is not a secret-delivery path **(выполнено — README corrected)**.
+- [x] Reconcile the Android README test breakdown to 8 origin + 18 report/privacy + 3 Bearer-token + 11 CircleCI status cases = 40 authored JVM tests **(выполнено — documentation corrected; execution pending)**.
+- [x] Keep the CircleCI setup guide explicit that validation jobs require no CircleCI API token and that a configuration commit alone is not proof of a successful run **(выполнено — reviewed)**.
+- [x] Recheck the Android README and assistant-channel guide: both correctly describe the app as a manual Sharesheet report exporter and distinguish its CircleCI read-path check from ChatGPT session authentication **(выполнено — reviewed)**.
+- [ ] Continue checking older README/roadmap passages for historical claims that could be mistaken for current CI executor, secret-delivery or ChatGPT authentication behavior.
+- [ ] Connect/confirm the CircleCI project and retrieve actual Worker tests, Android tests and APK artifact from CircleCI; no run result is available in this session.
