@@ -116,7 +116,7 @@
     "pending": [
       "Verify the Znect Build CircleCI project connection and free-plan resource availability without enabling paid add-ons.",
       "After explicit authorization, run dependency install, npm audit --audit-level=high, TypeScript typecheck, full Vitest suite, smoke-script syntax check and Wrangler deploy --dry-run through the CircleCI exact-SHA workflow.",
-      "Replace or retire the legacy GitHub Actions-based Znect Build adapter and routes; verify CircleCI run, job, log and artifact reads through the existing read-only CircleCI adapter.",
+      "Register Znect Build as a normal CircleCI project connection in the runtime registry and verify its run, job, log, test and manifest-artifact reads through the generic CircleCI adapter.",
       "Verify the existing isolated Cloudflare Preview against the exact reviewed source after separate explicit deployment authorization.",
       "Verify real CircleCI workflow webhook delivery, event inbox persistence, correlation and bounded diagnostics.",
       "Establish a supported private ChatGPT Free access mechanism without MCP, public unauthenticated access, query-string secrets or manual secret sharing.",
@@ -148,7 +148,7 @@
     ],
     "provider_boundary": "CircleCI executes source validation. CI Bridge observes CircleCI through its existing read-only API v3 adapter and must not trigger, retry, cancel, approve or modify pipelines.",
     "assistant_access": "Read-only inspection of CircleCI runs, workflows, jobs, logs, tests and allowlisted artifacts; no pipeline mutation.",
-    "current_state": "CircleCI configuration, exact-SHA checkout, provenance manifest and source contract tests are committed on the isolated Znect Build feature branch. CircleCI project connectivity and live execution remain unverified; no pipeline has been triggered.",
+    "current_state": "CircleCI configuration, exact-SHA checkout, provenance manifest and source contract tests are committed on the isolated Znect Build feature branch. The GitHub Actions-based Znect Build adapter and /api/v1/build/* routes have been removed; Znect Build must be registered as an ordinary CircleCI project. CircleCI project connectivity and live execution remain unverified; no pipeline has been triggered.",
     "checks": [
       "npm ci",
       "npm audit --audit-level=high",
