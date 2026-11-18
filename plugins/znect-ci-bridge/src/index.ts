@@ -215,6 +215,7 @@ async function readEventPage(
       try { workflowUrl = new URL(String(event.workflow_url)); }
       catch { throw new Error("Event storage returned an invalid event page."); }
       if (workflowUrl.protocol !== "https:" || workflowUrl.hostname !== "app.circleci.com" ||
+          (workflowUrl.port !== "" && workflowUrl.port !== "443") ||
           workflowUrl.username || workflowUrl.password || workflowUrl.toString() !== event.workflow_url) {
         throw new Error("Event storage returned an invalid event page.");
       }
