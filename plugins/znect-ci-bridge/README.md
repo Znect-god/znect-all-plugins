@@ -2,10 +2,10 @@
 
 **Status: `in-development` — experimental; not production-ready.**  
 **Version:** `0.1.0`  
-**Current CI diagnostics providers:** CircleCI Cloud and central Znect Build via GitHub Actions (read-only; Build adapter live verification pending). Projects and CI connections are explicitly registered; no project is injected as a default. All Znect project builds are centrally orchestrated by Znect Build, whose executor is GitHub Actions.  
-**Architecture:** one Bridge instance with a validated multi-project registry and provider-neutral read-only adapters for CircleCI and central Znect Build (GitHub Actions). The Znect Build adapter is source-implemented but not yet validated against a live central workflow.
+**Current CI diagnostics provider:** CircleCI Cloud (read-only; live API verification remains separate from source implementation). Projects and CI connections are explicitly registered; no project is injected as a default. All Znect project builds are centrally orchestrated by Znect Build, whose executor is GitHub Actions.  
+**Architecture:** one Bridge instance with a validated multi-project registry and a provider-neutral, read-only CircleCI adapter. CircleCI also runs CI Bridge's own validation pipeline; that execution role is separate from the Bridge's read-only CircleCI diagnostics API.
 
-Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting CI events and inspecting CircleCI runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. The supported ChatGPT access path is the private on-demand report handoff orchestrated and executed through Znect Build plus the authenticated Browser JSON API. MCP is not required and is not the assistant communication channel.
+Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for collecting CI events and inspecting CircleCI runs, workflows, jobs, logs, test results and artifacts. Its project registry separates Znect products, components, repositories and CI connections. The supported ChatGPT access path is the free authenticated Browser JSON API plus a private report handoff. MCP is not required and GitHub Actions / Znect Build are not used to execute CI Bridge validation or the ChatGPT report request.
 
 > **Development notice:** Treat every feature as unverified unless this repository explicitly marks the exact check as passed. Unit tests, mocked API tests, Wrangler dry-runs and synthetic webhook tests do not prove full live integration. Do not use this prototype for production decisions or as the only CI monitoring channel.
 
@@ -82,7 +82,11 @@ The inbox does **not** push unsolicited messages into an open ChatGPT conversati
 
 ## Free ChatGPT access (no MCP)
 
-The supported request/response path is a private command in the Forge inbox issue, a GitHub Actions workflow that calls the authenticated read-only CircleCI Browser API, and a short-lived private report artifact that ChatGPT reads through the existing GitHub integration. It uses included/free-tier quotas only; GitHub Actions and Cloudflare usage remain subject to their free-tier limits. No CircleCI build minutes are consumed by read-only API requests. See `documentation/ASSISTANT_CHANNEL.md`.
+The supported assistant interface is the authenticated Browser JSON API. ChatGPT access must use a private report handoff that reads this API directly; MCP is not required and is not the supported channel. GitHub Actions report workflows are not part of the active CI Bridge access path. Until a direct private handoff is available in the ChatGPT environment, an authorized user can retrieve a bounded report from the authenticated dashboard/API and provide that report to ChatGPT.
+
+CircleCI runs CI Bridge's own validation pipeline from the repository's root `.circleci/config.yml`. This is distinct from the Bridge's read-only CircleCI adapter, which inspects registered projects' pipelines and never starts, retries, cancels or modifies them.
+
+See `documentation/ASSISTANT_CHANNEL.md` for the supported access boundary and `documentation/IMPLEMENTATION_ROADMAP.md` for remaining handoff work.
 
 ## Secrets and configuration
 
@@ -137,3 +141,8 @@ The Bridge is being generalized to serve multiple Znect projects. The MCP diagno
 CI Bridge includes a read-only adapter and authenticated Browser JSON API for central Znect Build runs. The endpoints `/api/v1/build/status`, `/api/v1/build/runs`, `/api/v1/build/runs/{run_id}`, and `/api/v1/build/runs/{run_id}/validation-manifest` expose verified run metadata, exact source SHA, job/step outcomes, private validation-artifact metadata, and (through the dedicated endpoint) the validated manifest JSON. Ownership is checked against the central request-validation artifact fingerprint. The Browser API uses `WEB_ACCESS_TOKEN`; the adapter uses a separate repository-scoped `ZNECT_BUILD_GITHUB_TOKEN`. Neither credential grants or invokes build execution. See `documentation/ZNECT_BUILD_CONNECTION.md` for the runtime registry entry and least-privilege configuration.
 
 The central recipe's manifest is uploaded as a private GitHub Actions artifact. Source code now implements bounded retrieval of only the manifest JSON from that ZIP; job-log ZIP parsing and structured test report ingestion remain future work. This retrieval code has not yet been executed or live-verified. The central target is still disabled and no live connection is claimed.
+
+
+## CircleCI validation pipeline
+
+The root `.circleci/config.yml` defines the CI Bridge validation workflow on CircleCI using Node.js 24.11.0. It installs package dependencies, runs typecheck and unit tests, validates the smoke-test script syntax, and performs Wrangler dry-run only. It does not deploy, access Cloudflare credentials, or mutate monitored CircleCI pipelines. Pipeline execution status must be verified separately in CircleCI; adding the config is not evidence that checks passed.
