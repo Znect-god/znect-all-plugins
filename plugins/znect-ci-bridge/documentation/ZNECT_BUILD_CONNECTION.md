@@ -1,54 +1,54 @@
-# Znect Build read-only Browser API connection
+# Znect Build CircleCI project connection
 
-This connection lets the authenticated CI Bridge Browser JSON API expose central Znect Build workflow metadata to ChatGPT without MCP. It is a read-only consumer; it never dispatches or changes workflows. Znect Build is also the sole intended executor for CI Bridge source validation; the Bridge repository must not define a parallel CircleCI or GitHub Actions validation workflow.
+Znect Build is the development and central recipe repository. CircleCI executes its checks and the opt-in exact-SHA CI Bridge validation workflow. CI Bridge observes those runs through the same read-only CircleCI API v3 adapter used for other registered projects; there is no separate Znect Build provider or GitHub Actions connection.
 
-## Runtime configuration
+## Runtime registry configuration
 
-Append this project entry to the existing JSON value supplied through `ZNECT_PROJECT_REGISTRY` (do not replace the other registered projects):
+Append this project to the existing JSON value supplied through `ZNECT_PROJECT_REGISTRY`; do not replace other registered projects:
 
 ```json
 {
-  "id": "znect-ci-bridge",
-  "name": "Znect CI Bridge",
+  "id": "znect-build",
+  "name": "Znect Build",
   "repositories": [
-    { "fullName": "Znect-god/znect-all-plugins" }
+    { "fullName": "Znect-god/znect-build" }
   ],
-  "components": [
-    {
-      "id": "ci-bridge",
-      "name": "CI Bridge",
-      "repository": "Znect-god/znect-all-plugins",
-      "pathPrefix": "plugins/znect-ci-bridge"
-    }
-  ],
+  "components": [],
   "connections": [
-    { "id": "znect-build-main", "provider": "znect-build" }
+    {
+      "id": "circleci-main",
+      "provider": "circleci",
+      "projectSlug": "gh/Znect-god/znect-build"
+    }
   ]
 }
 ```
 
-Configure `ZNECT_BUILD_GITHUB_TOKEN` as a server-side secret with the minimum read permissions required to list workflow runs, jobs and run artifacts in `Znect-god/znect-build`. It must not have Actions write, workflow dispatch, repository contents write, administration, or deployment permissions. Never put its value in the registry, source files, report, or logs.
+Use the exact project slug shown by CircleCI. The registry accepts the explicitly supported `gh/` and `github/` GitHub slug forms. A configured entry does not prove live connectivity; provider availability remains `not_checked` until a successful authenticated read probe.
 
-The Bridge also requires its existing `WEB_ACCESS_TOKEN` for the Browser JSON API. Keep that token separate from the central GitHub read credential and from any legacy MCP token. Preview and Production configuration are independent.
+The Worker requires its existing server-side `CIRCLECI_TOKEN` for CircleCI reads and a separate `WEB_ACCESS_TOKEN` for the private Browser JSON API. Do not add `ZNECT_BUILD_GITHUB_TOKEN`; the GitHub Actions-based provider has been removed. Keep all token values out of the registry, source files, reports, URLs and chat.
 
-## Browser JSON API
+## Browser API
 
-All requests use `GET` and the Browser API Bearer token:
+Use the generic project-scoped CircleCI endpoints:
 
-- `/api/v1/build/status?project_id=znect-ci-bridge&connection_id=znect-build-main`
-- `/api/v1/build/runs?project_id=znect-ci-bridge&connection_id=znect-build-main&limit=10`
-- `/api/v1/build/runs/{run_id}?project_id=znect-ci-bridge&connection_id=znect-build-main`
-- `/api/v1/build/runs/{run_id}/validation-manifest?project_id=znect-ci-bridge&connection_id=znect-build-main`
+- `GET /api/v1/status?project_id=znect-build&connection_id=circleci-main`
+- `GET /api/v1/runs?project_id=znect-build&connection_id=circleci-main&limit=10`
+- `GET /api/v1/runs/{run_uuid}?project_id=znect-build&connection_id=circleci-main`
+- `GET /api/v1/diagnostics/{run_uuid}?project_id=znect-build&connection_id=circleci-main`
+- `GET /api/v1/report?project_id=znect-build&connection_id=circleci-main&run_limit=10&event_limit=20&after=0`
 
-The central run must be from `Znect-god/znect-build`, workflow `.github/workflows/central-build.yml`, on `main`, and have the expected project run-name prefix. Before exposing it, the adapter verifies an unexpired central request-validation artifact whose name binds the registered project ID, SHA-256 of the registered source repository, exact 40-character source SHA, and central run ID.
+The run UUID is the CircleCI API v3 run identifier. Do not substitute the CircleCI pipeline ID, workflow ID, job ID, or legacy v1.1 build number. Use the returned workflow/job references to inspect the validation job and its artifacts.
 
-The run-details response exposes the verified source SHA, request-fingerprint artifact metadata, validation-manifest artifact metadata, workflow jobs and step outcomes. The dedicated manifest endpoint downloads only the exact run-scoped validation ZIP after ownership verification, follows one approved HTTPS Azure Blob redirect without forwarding the GitHub token, enforces compressed/decompressed size ceilings, checks ZIP CRC, and extracts only `ci-bridge-validation-manifest.json`. It validates project, registered source repository, exact source SHA, central run identity, recipe outcome and the explicit no-deploy/no-CircleCI-mutation flags. Other archive entries are never returned. Job logs and structured test reports remain unavailable.
+## Validation manifest
+
+The Znect Build CircleCI exact-SHA workflow stores `ci-bridge-validation-manifest.json` and `resolved-source-sha.txt` as job artifacts. Use the generic CircleCI artifact listing and bounded artifact retrieval methods to inspect the manifest after ownership checks. The manifest records source SHA, recipe SHA, validation commands and CircleCI pipeline/workflow/job identity. Pipeline ID and API v3 run UUID are different identifier types.
 
 ## Safety and current gate
 
-- Central registry target `znect-ci-bridge/worker-validation` remains `execution_enabled: false`.
-- The adapter only issues authenticated GitHub API GET requests; the signed artifact-storage GET carries no GitHub Authorization header.
-- ZIP parsing rejects encrypted, Zip64/oversized, duplicate, malformed or path-mismatched manifest entries; decompressed output is capped at 64 KiB.
-- No workflow dispatch, build, retry, cancellation, artifact deletion, deployment, or CircleCI mutation is exposed.
-- The central Node/Cloudflare Worker validation recipe currently lives on the isolated Znect Build branch `feat/ci-bridge-node-worker-recipe`, and the registry target remains `execution_enabled: false`. The recipe must be reviewed and merged to Znect Build `main` through the approved process before the adapter can verify new runs against it. Its declared checks are `npm ci`, `npm audit --audit-level=high`, `npm run check` (TypeScript plus full Vitest suite), `node --check scripts/preview-smoke-test.mjs`, and `npx --no-install wrangler deploy --dry-run`. The dry-run does not deploy.
-- A configured token or registry entry does not prove live connectivity. Keep provider availability unverified until a separately authorized read-only probe succeeds.
+- CircleCI reads from CI Bridge are GET-only.
+- CI Bridge does not trigger, retry, cancel, approve or modify CircleCI pipelines or project settings.
+- The exact-SHA validation workflow defaults to disabled and requires an explicit CircleCI pipeline parameter.
+- The recipe performs dependency installation, high-severity audit, TypeScript/Vitest checks, smoke-script syntax validation and Wrangler dry-run only.
+- No deploy, signing, publishing, Preview or Production operation is part of this workflow.
+- CircleCI project connectivity, free-plan quota availability and live manifest retrieval remain unverified. No pipeline has been triggered by this documentation change.
