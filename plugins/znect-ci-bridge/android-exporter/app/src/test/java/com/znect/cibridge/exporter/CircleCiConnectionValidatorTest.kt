@@ -69,6 +69,20 @@ class CircleCiConnectionValidatorTest {
         }
     }
 
+    @Test fun rejectsNegativeRecentRunCount() {
+        val response = validStatus().put("read_probe", JSONObject().put("recent_runs_available", -1))
+        assertThrows(IllegalArgumentException::class.java) {
+            CircleCiConnectionValidator.validate(response, "project-1")
+        }
+    }
+
+    @Test fun rejectsFractionalRecentRunCount() {
+        val response = validStatus().put("read_probe", JSONObject().put("recent_runs_available", 1.5))
+        assertThrows(IllegalArgumentException::class.java) {
+            CircleCiConnectionValidator.validate(response, "project-1")
+        }
+    }
+
     private fun validStatus() = JSONObject()
         .put("service", "znect-ci-bridge")
         .put("connected", true)
