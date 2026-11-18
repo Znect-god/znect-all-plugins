@@ -173,7 +173,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;b
         report.completeness.diagnostics_included=diagnosticsReturned===diagnostics.length&&failedCount<=diagnostics.length;
         report.completeness.diagnostics_returned=diagnosticsReturned;
         report.completeness.diagnostics_limited=failedCount>diagnostics.length;
-        report.completeness.export_complete=report.completeness.runs_limited!==true&&report.events?.available===true&&report.completeness.diagnostics_included===true;
+        report.completeness.export_complete=report.completeness.runs_limited!==true&&report.completeness.events_limited!==true&&report.events?.available===true&&report.completeness.diagnostics_included===true;
         var serialized=JSON.stringify(report,null,2);
         var blob=new Blob([serialized],{type:"application/json"});
         if(blob.size>600000)throw new Error("The combined assistant report exceeds the 600 KB export limit.");
