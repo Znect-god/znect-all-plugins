@@ -798,6 +798,7 @@ function createServer(env: Env) {
             jsonl: testResultsContent,
             jsonlTruncated: testResultsState === "partial",
             jsonlUnavailable: testResultsError !== undefined,
+            junitIncomplete: artifactCollectionIncomplete,
             junitArtifacts: artifacts
           });
           if (testSummary.incomplete) reportDataIncomplete = true;
@@ -1270,6 +1271,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
             jsonl: testResultsContent,
             jsonlTruncated: testResultsState === "partial",
             jsonlUnavailable: testResultsError !== undefined,
+            junitIncomplete: artifactCollectionIncomplete,
             junitArtifacts: reportArtifacts
           });
           if (testSummary.incomplete) reportDataIncomplete = true;
