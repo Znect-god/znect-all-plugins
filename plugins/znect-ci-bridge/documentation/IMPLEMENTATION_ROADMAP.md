@@ -446,3 +446,10 @@ For every meaningful feature or fix:
 - Confirmed the configured `cimg/android:2024.01.1` Docker image is a published CircleCI Android image with JDK 17 and Android SDK tooling; the job installs API 35 platform/build-tools explicitly **(выполнено — official image metadata/documentation review)**.
 - The branch's latest GitHub commit currently has no check runs or commit statuses. This does not prove that CircleCI is disconnected, but no CircleCI execution result is presently available to verify.
 - No workflow dispatch, pipeline mutation, deployment, or secret access was performed.
+
+
+## 14. Android CI artifact handoff — 2026-11-18
+
+- Added CircleCI test-result collection and debug APK artifact storage after the Android test/build command **(выполнено — CircleCI configuration)**.
+- The artifact is a debug APK for manual review/install only; no release signing, publishing, deployment, or automatic device installation is configured.
+- Documented the artifact path in the Android exporter README. Artifact availability remains conditional on a successful CircleCI job; no APK artifact is currently verified.
