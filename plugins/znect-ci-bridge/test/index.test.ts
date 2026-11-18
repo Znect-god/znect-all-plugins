@@ -146,6 +146,7 @@ describe("Browser API aggregate CircleCI assistant report", () => {
     const payload = await response.json() as {
       provider?: string;
       permissions?: string;
+      assistant_handoff?: { mode?: string; automatic_api_access?: boolean; mcp_required?: boolean; bearer_token_included?: boolean; test_summary_count_scope?: string };
       runs?: { returned?: number; failed_count?: number; items?: Array<{ commitMessage?: string }>; diagnostics?: Array<{ run_id: string; status: string; endpoint: string }> };
       completeness?: { diagnostics_included?: boolean; diagnostics_note?: string };
       events?: { available?: boolean; returned?: number; next_cursor?: number };
@@ -157,6 +158,13 @@ describe("Browser API aggregate CircleCI assistant report", () => {
     expect(payload).toMatchObject({
       provider: "circleci",
       permissions: "read-only",
+      assistant_handoff: {
+        mode: "user_reviewed_json_attachment",
+        automatic_api_access: false,
+        mcp_required: false,
+        bearer_token_included: false,
+        test_summary_count_scope: "observed_records"
+      },
       runs: {
         returned: 1,
         failed_count: 1,
