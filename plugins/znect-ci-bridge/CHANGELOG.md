@@ -442,3 +442,12 @@
 - Added a fail-closed guard for adapter responses that exceed the remaining byte budget.
 - Added focused regression-test source for parallel execution identity, duplicate paths, count/byte caps, unknown sizes, oversized artifacts, partial failures, truncation and filtering.
 - Tests and typecheck were not executed. No CircleCI API calls, pipeline execution, deployment or runtime configuration changes were performed.
+
+
+## 2026-11-18 — Explicit diagnostic completeness across MCP and Browser API
+
+- Centralized diagnostic summary construction so MCP and Browser JSON API apply the same overall incompleteness rules.
+- Ensured artifact-count/byte-limit indicators independently force the overall diagnostic `incomplete` flag.
+- Added per-job source statuses for structured test results, JUnit artifacts and failed-step logs, distinguishing available, partial, empty/not-found, unavailable and not-applicable states.
+- Added focused regression-test source for source classification and shared completeness semantics.
+- Tests and TypeScript checks were not executed. No CircleCI API requests, pipeline execution, deployment or runtime configuration changes were performed.
