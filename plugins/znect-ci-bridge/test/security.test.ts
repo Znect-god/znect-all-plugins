@@ -60,7 +60,7 @@ describe("redactKnownSecrets", () => {
 
 
   it("redacts the central Znect Build GitHub token from returned output", () => {
-    const buildToken = "github_pat_" + "z".repeat(30);
+    const buildToken = "build-secret-value";
     const output = redactKnownSecrets("central API token " + buildToken, {
       ZNECT_BUILD_GITHUB_TOKEN: buildToken
     });
