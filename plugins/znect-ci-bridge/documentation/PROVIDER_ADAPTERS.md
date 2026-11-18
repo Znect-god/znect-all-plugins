@@ -1,6 +1,6 @@
 # CI provider adapter architecture
 
-**Status:** CircleCI adapter implemented for core MCP reads; migration remains in progress. Znect Build adapter is not implemented because its API is still a proposed contract.
+**Status:** CircleCI adapter implemented for core MCP reads; migration remains in progress. Znect Build's executor is GitHub Actions. There is no separate Znect Build read API; the planned Bridge integration should use GitHub Actions' documented read-only REST API.
 
 ## Shared contract
 
@@ -38,27 +38,21 @@ The browser JSON API and dashboard now consume the provider-neutral run/workflow
 
 ## Znect Build adapter
 
-The shared contract is intended to be implemented by a future `ZnectBuildReadOnlyAdapter`. Do not add guessed HTTP routes or assume an API exists. Before implementation, Znect Build must provide:
-- a confirmed versioned API and capabilities response;
-- project-scoped read-only credentials;
-- signed event delivery and key rotation details;
-- run/workflow/job ownership references;
-- cursor pagination and documented payload/log/artifact limits;
-- test report and artifact retrieval semantics.
+The shared contract can be implemented as a `ZnectBuildReadOnlyAdapter` backed by GitHub Actions REST endpoints in `Znect-god/znect-build`, not by speculative routes hosted by Znect Build. The adapter must use a repository-scoped read-only token and the documented endpoints for workflow runs, run details, jobs and job logs. Run-level artifacts must remain explicitly run-scoped; do not attach them to a job unless the API provides a verifiable relationship. GitHub Actions does not expose CircleCI-style per-step stdout/stderr or a generic per-job test-report endpoint in the same shape, so unsupported fields must be omitted or marked unavailable rather than fabricated.
 
-The proposed route/schema contract is documented separately in [ZNECT_BUILD_API_CONTRACT.md](ZNECT_BUILD_API_CONTRACT.md). A registry entry with provider `znect-build` is only configuration metadata; it does not activate a working adapter.
+Before enabling this integration, define and test the mapping for workflow runs, jobs, logs and run artifacts; verify project ownership against the fixed registered repository; apply pagination, byte limits, redirect-host checks and secret redaction. A registry entry with provider `znect-build` is only configuration metadata; it does not activate a working adapter.
 
 ## Migration order
 
 1. Keep the CircleCI v3 adapter and the explicit v1.1 compatibility API isolated; preserve their distinct identifier and response contracts.
 2. Preserve the browser API and dashboard's alignment with the shared model. The MCP and browser diagnostics paths both use normalized step/action/execution types; extend those types deliberately if another provider needs additional diagnostic detail.
 3. Decide whether legacy v1.1 build tools should be represented as a compatibility API or replaced by provider-neutral run/job operations.
-4. Implement Znect Build only after its real API and credentials are available.
+4. Implement Znect Build using the documented GitHub Actions read API and a repository-scoped read-only credential; do not assume a separate Build API exists.
 5. Maintain focused compatibility tests for the three v1.1 tools, including project-scoped URLs and artifact URL validation. Add provider contract tests and provider-specific fixture tests before switching any registered project from CircleCI to Znect Build.
 
 ## Verification status
 
-GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) passed on PR #2 commit `2840dc49c0165b220b69344ff779624a83c03268`, not on the later feature-branch head. Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed for that earlier commit. The install emitted a non-fatal npm warning that install scripts for `core-js-pure`, `esbuild` and `workerd` are not covered by `allowScripts`. The subsequent compatibility-test changes and current branch head remain unverified by this run. This run did not deploy the Worker. The real CircleCI workflow-completed delivery and Znect Build API integration remain separate pending work.
+GitHub Actions run [#43581613616](https://github.com/Znect-god/znect-all-plugins/actions/runs/43581613616) passed on PR #2 commit `2840dc49c0165b220b69344ff779624a83c03268`, not on the later feature-branch head. Dependency installation, `npm audit` (zero vulnerabilities), TypeScript typecheck, 103 Vitest tests, smoke-test syntax validation and Wrangler dry-run passed for that earlier commit. The install emitted a non-fatal npm warning that install scripts for `core-js-pure`, `esbuild` and `workerd` are not covered by `allowScripts`. The subsequent compatibility-test changes and current branch head remain unverified by this run. This run did not deploy the Worker. The real CircleCI workflow-completed delivery and GitHub Actions read-only integration for Znect Build remain separate pending work.
 
 
 ## Webhook event persistence
