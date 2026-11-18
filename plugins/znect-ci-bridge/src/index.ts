@@ -801,6 +801,10 @@ function createServer(env: Env) {
             failed_step_logs_status: failedStepLogsStatus({
               failedActionsCount: failedSteps.reduce((count, step) => count + step.actions.length, 0),
               logsCount: failedStepLogs.length,
+              successfulLogsCount: failedStepLogs.filter((entry) =>
+                (typeof entry.stdout === "string" && entry.stdout !== "Unable to retrieve this output stream.") ||
+                (typeof entry.stderr === "string" && entry.stderr !== "Unable to retrieve this output stream.")
+              ).length,
               incomplete: failedStepLogsIncomplete
             }),
             test_results: testResults,
