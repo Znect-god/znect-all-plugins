@@ -130,7 +130,7 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Implement `GET /api/v1/report` as a bounded direct CircleCI assistant report: registered project/connection, recent runs, failed-run diagnostic links, webhook event page, correlation candidates, freshness timestamp and completeness indicators. **(выполнено — source implementation; regression execution pending)**
 - [x] Protect the report with the existing Browser API Bearer authentication, rate limiter, GET-only guard, project/connection scope, secret redaction and response-size limit. **(выполнено — static source inspection)**
 - [x] Add focused API regression tests for report authentication, project scope and query bounds. **(выполнено — test source added; execution pending)**
-- [ ] Add further report regression tests for event-store failures, redaction and correlation output.
+- [x] Add report regression coverage for successful aggregation, event-to-run correlation, provider-field secret redaction and graceful event-store failure. **(выполнено — test source added; execution pending)**
 - [ ] Verify ChatGPT can consume the report without MCP, GitHub Actions, paid intermediaries or manual secret sharing.
 - [ ] Verify freshness, pagination/truncation indicators and failure behavior; stale reports must not be presented as current.
 - [ ] Confirm operation stays within CircleCI and Cloudflare free/included quotas; quotas are finite.
