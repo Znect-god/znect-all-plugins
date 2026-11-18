@@ -91,6 +91,23 @@ describe("project registry", () => {
     }))).toThrow(/unsupported CI provider/i);
   });
 
+  it("rejects dot segments, encoded traversal, backslashes and ambiguous component paths", () => {
+    for (const pathPrefix of [
+      "./app",
+      "app/./src",
+      "app/%2e%2e/secrets",
+      "app\\\\..\\\\secrets",
+      "app//src",
+      "app?query",
+      "app#fragment"
+    ]) {
+      expect(() => parseProjectRegistry(JSON.stringify({
+        version: 1,
+        projects: [{ ...forge, components: [{ id: "android-app", name: "App", pathPrefix }] }]
+      }))).toThrow(/relative safe path/i);
+    }
+  });
+
   it("rejects malformed or oversized configuration", () => {
     expect(() => parseProjectRegistry("{")).toThrow(/valid JSON/i);
     expect(() => parseProjectRegistry(JSON.stringify({ version: 2, projects: [] }))).toThrow(/schema version/i);
