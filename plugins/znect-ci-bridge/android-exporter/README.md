@@ -55,3 +55,8 @@ The app does not include a default API origin or project identifier. Do not past
 - Isolated report validator with unit-test source for identity, read-only permission, project scope, timestamp, collection bounds/counts, completeness and recursive sensitive-key detection.
 
 The first implementation intentionally has no background worker, scheduled polling, analytics, telemetry or server-side component.
+
+
+## CircleCI build outputs
+
+The `ci-bridge-android-exporter` CircleCI job runs the JVM unit tests and assembles a debug APK. On a successful run it stores the JUnit test results and the APK as CircleCI artifacts at `android-exporter/app-debug.apk`. This is a debug build for manual review/install only; it is not a release or deployment.
