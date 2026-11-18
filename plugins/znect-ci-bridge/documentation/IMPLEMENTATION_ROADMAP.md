@@ -1005,7 +1005,7 @@ For every meaningful feature or fix:
 **Verification boundary:** the test fixture now models CircleCI's documented API v3 vocabulary. The test has not been executed.
 ## 64. Keep CircleCI run links distinct from VCS commit links — 2026-11-18
 
-- [x] Stop mapping an embedded VCS commit URL into the shared CircleCI run URL field; only an explicit `web_url` supplied on the run resource may populate `CiRun.url` **(выполнено — adapter source correction)**.
+- [x] Stop mapping an embedded VCS commit URL into the shared CircleCI run URL field; after checking the machine-readable API v3 Run schema, omit `CiRun.url` entirely because `web_url` is not a documented Run response field **(выполнено — official OpenAPI/source correction)**.
 - [x] Extend the run adapter fixture with a GitHub commit URL while asserting the normalized CircleCI run result does not expose it as a run URL **(выполнено — test source added; execution pending)**.
 - [ ] Execute the CircleCI adapter tests and verify any explicit run `web_url` behavior against a real API v3 response.
 
@@ -1029,6 +1029,7 @@ For every meaningful feature or fix:
 - [x] Inspect CircleCI's machine-readable API v3 OpenAPI response schema: `GET /api/v3/runs/:id` defines VCS revision at `references.event.attributes.vcs.revision`; update the mapper to use only that documented path and add a regression-test source rejecting the undocumented top-level `vcs_revision` alias **(выполнено — official OpenAPI/source/test-source alignment; execution pending)**.
 - [ ] Verify the documented `references.event.attributes.vcs.revision` shape against a real, authorized CircleCI API v3 run response. The machine-readable OpenAPI schema now confirms the field path, but the configured project's live response has not been observed.
 - [x] Align the existing adapter fixture with the documented nested VCS response and add a negative test rejecting undocumented top-level VCS aliases **(выполнено — test source update; execution pending)**.
+- [x] Map only the documented Run `attributes.created_at` as `CiRun.createdAt`; stop treating it as `startedAt` or inventing run-level completion timestamps, and make event correlation use that creation timestamp as a point-in-time fallback when no execution interval exists **(выполнено — provider contract, adapter, dashboard and correlation source/test updates; execution pending)**.
 - [ ] Run adapter tests and TypeScript checks through the authorized opt-in CircleCI workflow after explicit authorization.
 
 **Verification boundary:** official API documentation and source were inspected; no CircleCI API request, test run, or pipeline execution was performed. VCS revision mapping remains explicitly unverified.
