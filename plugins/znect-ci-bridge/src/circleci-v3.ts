@@ -123,7 +123,7 @@ export async function resolveCircleCiProject(
   token: string,
   projectSlug: string
 ): Promise<V3Resource<Record<string, unknown>>> {
-  if (!/^(?:gh|github)\\/[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(projectSlug)) {
+  if (!/^(?:gh|github)\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(projectSlug)) {
     throw new Error("Invalid CircleCI GitHub project slug.");
   }
   const query = new URLSearchParams({ "filter[slug]": projectSlug });
