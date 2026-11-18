@@ -857,9 +857,27 @@ For every meaningful feature or fix:
 - [x] Identify that the current Znect Build central workflow and its read-only Bridge adapter still depend on GitHub Actions endpoints and metadata **(выполнено — source inventory; architectural mismatch confirmed)**.
 - [x] Confirm that the inspected Znect Build feature branch has no `.circleci/config.yml`, while its README, architecture, operations and roadmap still describe GitHub Actions as the execution engine **(выполнено — repository/documentation review)**.
 - [x] Confirm the `znect-ci-bridge/worker-validation` registry target remains `execution_enabled: false`; no workflow or CircleCI pipeline was triggered **(выполнено — registry review; no execution performed)**.
-- [ ] Replace the Znect Build GitHub Actions execution path with a CircleCI-based validation flow while retaining Znect Build as the central development/recipe source.
+- [x] Replace the Znect Build GitHub Actions execution path with an opt-in CircleCI exact-SHA validation flow while retaining Znect Build as the development/recipe source **(выполнено — CircleCI config source added; live execution pending)**.
 - [ ] Reconcile the Bridge central-build adapter and tests with CircleCI run/workflow/job/artifact identifiers and provenance; do not treat GitHub commit statuses or Actions run IDs as CircleCI evidence.
-- [ ] Update Znect Build architecture, operations, security, README and both project roadmaps to match the implemented CircleCI flow; keep any legacy GitHub Actions files inert or remove them after the CircleCI replacement is complete.
-- [ ] Preserve exact source-SHA verification, artifact ownership, size bounds, read-only Bridge access and disabled execution/deployment safeguards.
+- [x] Update Znect Build architecture, operations, security, README and both project roadmaps to match the CircleCI flow; legacy GitHub Actions jobs are inert **(выполнено — source/documentation updates)**.
+- [x] Preserve exact source-SHA verification, bounded provenance artifacts, read-only Bridge access and disabled execution/deployment safeguards **(выполнено — source/config review; runtime verification pending)**.
 
 **Verification boundary:** this stage is a completed source/architecture audit and roadmap correction only. The CircleCI migration has not yet been implemented or run. No CircleCI pipeline was triggered, no GitHub Actions workflow was used, no tests were executed, and no Preview/Production deployment or secret change occurred.
+
+
+## 52. Implement CircleCI validation in Znect Build — 2026-11-18
+
+- [x] Add `Znect-god/znect-build/.circleci/config.yml` with automatic Znect Build contract checks and an opt-in CI Bridge exact-SHA validation workflow **(выполнено — source implementation)**.
+- [x] Require `run_ci_bridge_validation=true` and a full lowercase 40-character source SHA; default remains false **(выполнено — source implementation)**.
+- [x] Check out public `Znect-god/znect-all-plugins` at the exact requested commit and verify the resolved SHA before executing package scripts **(выполнено — source implementation)**.
+- [x] Execute the existing central Znect Build recipe, preserving dependency audit, TypeScript/Vitest checks, syntax validation and Wrangler dry-run **(выполнено — CircleCI recipe wiring)**.
+- [x] Generate a provenance manifest with source SHA, recipe SHA, command list, CircleCI pipeline/workflow/job identity and explicit no-deploy/no-pipeline-mutation fields **(выполнено — source implementation)**.
+- [x] Preserve failure provenance by storing the manifest before propagating the original recipe exit code **(выполнено — source implementation)**.
+- [x] Disable the legacy GitHub Actions central and validation jobs in the Znect Build feature branch **(выполнено — workflow source; no Actions run used)**.
+- [x] Add regression-test source for CircleCI workflow parameters, exact-SHA checkout, provenance fields, disabled-by-default behavior and inert GitHub Actions workflows **(выполнено — test source; execution pending)**.
+- [x] Reconcile Znect Build README, architecture, operations, security, roadmap and registry notes; update CI Bridge assistant-channel docs, plugin metadata and changelog **(выполнено — documentation/metadata updates)**.
+- [ ] Configure/verify the Znect Build CircleCI project using free/included resources only.
+- [ ] Execute the Znect Build contract tests and an explicitly authorized exact-SHA CI Bridge pipeline; capture actual run and artifact evidence.
+- [ ] Replace or retire the legacy GitHub Actions-based Znect Build adapter in CI Bridge and route central validation evidence through CircleCI.
+
+**Verification boundary:** source configuration, tests and documentation are committed on isolated feature branches. No CircleCI project connection was inspected or configured, no pipeline or test suite was run, and no Preview/Production deployment or secret change occurred.
