@@ -367,7 +367,13 @@ class MainActivity : Activity() {
                 throw IllegalStateException("The private report could not be finalized safely.")
             }
             val previousFiles = dir.listFiles()
-                ?: throw IllegalStateException("Private report storage could not be inspected for cleanup.")
+            if (previousFiles == null) {
+                val currentRemoved = destination.delete()
+                if (!currentRemoved && destination.exists()) {
+                    throw IllegalStateException("Private report storage inspection failed and the current report could not be removed.")
+                }
+                throw IllegalStateException("Private report storage could not be inspected for cleanup.")
+            }
             previousFiles.filter { it != destination }.forEach { oldFile ->
                 val removed = if (oldFile.isDirectory) oldFile.deleteRecursively() else oldFile.delete()
                 if (!removed && oldFile.exists()) {
@@ -380,7 +386,9 @@ class MainActivity : Activity() {
             }
             return destination
         } finally {
-            if (temporary.exists()) temporary.delete()
+            if (temporary.exists() && !temporary.delete() && temporary.exists()) {
+                throw IllegalStateException("Temporary report cleanup could not be verified.")
+            }
         }
     }
 
