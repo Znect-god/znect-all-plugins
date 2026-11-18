@@ -765,7 +765,7 @@ function createServer(env: Env) {
             reportDataIncomplete = true;
           }
 
-          let artifacts: Array<{ path?: string; size?: number; content?: string; error?: string }> = [];
+          let artifacts: Array<{ path?: string; size?: number; execution?: number; content?: string; error?: string }> = [];
           try {
             const listed = await adapter.listArtifacts(scope, job.id);
             const reportCandidates = listed.filter((artifact) =>
