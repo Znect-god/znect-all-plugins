@@ -1326,3 +1326,16 @@ For every meaningful feature or fix:
 - [ ] Inspect a real automatic CircleCI run and take the tested source SHA from its manifest and `resolved-source-sha.txt`; confirm that the resolved checkout includes TypeScript-fix commit `97f18a82b94f68ebbf5a2e9604bfaf6f95413be1`.
 
 **Verification boundary:** the configuration commit is present on the feature branch. It does not itself prove that CircleCI project integration is configured or that a pipeline ran. The prior manifest for source SHA `bd939319ddc1b4c774cd4bf65e2f926451b26226` is historical evidence for an older source revision and does not validate the TypeScript fixes at `1d2ed3c2811b1a6f2ec27fc7f73bc25fb1df8759`. No new pipeline, tests or deployment are claimed.
+
+
+## 8.13 Verify automatic CircleCI delivery and separate runtime readiness — 2026-11-19
+
+- [x] Verify the automatic GitHub-push-to-CircleCI path on the Znect Build recipe branch: commit `50aa518e87894d99b332d764e59bd0e58cead6bd` reports `ci/circleci: validate-ci-bridge-source = success`; CircleCI job `06b87f8a-f766-44eb-bd2a-e37d3dc25fd0`.
+- [x] Independently confirm that the canonical source branch `ci-bridge` pointed to `988bb2594d5429df3cedabf9aca08c017bbac3f7` when the successful status was checked.
+- [x] Correct the assistant-channel and README statements that previously said no CircleCI pipeline had run. The successful status verifies the automatic recipe-branch validation path, not live Bridge runtime connectivity.
+- [ ] Retrieve the fresh CircleCI validation log and provenance manifest; the source `logs/` directory still contains only the older build 24/26/27/29 logs, so the manifest's exact checked-out source SHA has not yet been independently confirmed.
+- [ ] Verify the deployed Worker has a non-empty `ZNECT_PROJECT_REGISTRY` and valid `CIRCLECI_TOKEN`. Source inspection confirms that an absent optional `ZNECT_PROJECT_REGISTRY` falls back to an empty registry; runtime configuration has not been inspected or changed.
+- [ ] Register the Znect Build CircleCI project in the existing private runtime registry without replacing any other projects, then perform an authenticated read-only status/run/job/artifact probe.
+- [ ] Verify real webhook delivery and diagnostic round-trips (runs, workflows, jobs, logs, tests and allowlisted artifacts) through the live adapter.
+
+**Verification boundary:** the CircleCI combined status is confirmed successful for the recipe commit above. No new source test results are inferred beyond that status, no manifest/log artifact was retrieved, no Worker secrets or runtime variables were accessed or changed, no live CircleCI API probe or webhook round-trip was performed, and no Preview/Production deployment was made. The next blocker is runtime configuration and authorized read-only connectivity, not the already successful recipe-branch status.
