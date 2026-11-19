@@ -314,7 +314,7 @@ describe("Read-only browser API run details", () => {
       expect.objectContaining({ path: "junit/results-a.xml", error: "Unable to retrieve this report artifact." }),
       expect.objectContaining({ path: "test-results/results-b.xml", error: "Unable to retrieve this report artifact." })
     ]));
-    expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock).toHaveBeenCalledTimes(12);
   });
 
   it("returns 404 for unknown API paths without contacting CircleCI", async () => {
