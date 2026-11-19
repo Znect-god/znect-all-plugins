@@ -291,11 +291,11 @@ describe("Read-only browser API run details", () => {
     expect(body).toContain("AssertionError");
     expect(body).toContain("Test suite failed");
     expect(body).toContain("sample test");
-    expect(body).toContain('"provider":"circleci"');
     expect(body).toContain('"failed_steps"');
     expect(body).toContain("[REDACTED]");
     expect(body).not.toContain("web-test-token");
     const payload = JSON.parse(body);
+    expect(payload.project).toMatchObject({ provider: "circleci" });
     expect(payload.workflows[0].failed_jobs[0].test_summary).toMatchObject({
       status: "partial",
       sources: "jsonl_only",
