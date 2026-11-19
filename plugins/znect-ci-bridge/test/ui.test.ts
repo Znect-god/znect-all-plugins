@@ -27,7 +27,7 @@ describe("browser dashboard security", () => {
     expect(DASHBOARD_HTML).toContain('request("/api/v1/runs?limit=20&"+scopeQuery())');
     expect(DASHBOARD_HTML).toContain("run.commitMessage||run.branch||run.commitSha||run.id");
     expect(DASHBOARD_HTML).toContain("workflow.name||workflow.id||\"Workflow\"");
-    expect(DASHBOARD_HTML).toContain('"?project_id="+encodeURIComponent(currentProject)');
+    expect(DASHBOARD_HTML).toContain('encodeURIComponent(runId)+"?"+scopeQuery()');
   });
 
   it("shows webhook event correlation results for the selected project and connection", () => {
