@@ -1339,3 +1339,17 @@ For every meaningful feature or fix:
 - [ ] Verify real webhook delivery and diagnostic round-trips (runs, workflows, jobs, logs, tests and allowlisted artifacts) through the live adapter.
 
 **Verification boundary:** the CircleCI combined status is confirmed successful for the recipe commit above. No new source test results are inferred beyond that status, no manifest/log artifact was retrieved, no Worker secrets or runtime variables were accessed or changed, no live CircleCI API probe or webhook round-trip was performed, and no Preview/Production deployment was made. The next blocker is runtime configuration and authorized read-only connectivity, not the already successful recipe-branch status.
+
+
+## 8.14 Document runtime configuration and read-only verification contract — 2026-11-19
+
+- [x] Trace the actual Worker environment contract from source: `CIRCLECI_TOKEN`, `WEB_ACCESS_TOKEN`, `MCP_ACCESS_TOKEN`, optional `ZNECT_PROJECT_REGISTRY`, and the separately required webhook secret `CIRCLECI_WEBHOOK_SECRET`.
+- [x] Confirm the declared Cloudflare bindings: `MCP_RATE_LIMITER` and SQLite-backed `EVENT_STORE`.
+- [x] Confirm that absent `ZNECT_PROJECT_REGISTRY` intentionally resolves to an empty registry; `/health` alone therefore cannot establish project registration or CircleCI connectivity.
+- [x] Add `documentation/RUNTIME_READINESS.md` with a non-secret registry schema example, safe verification order, endpoint interpretation and explicit no-secret-sharing boundary.
+- [ ] Verify Preview runtime binding/secret presence by name only and confirm a non-empty registry without exposing secret values.
+- [ ] Perform authenticated `GET /api/v1/projects` and `GET /api/v1/status` against the current Preview Worker; record only redacted response metadata.
+- [ ] Verify bounded run/job/log/test/artifact reads and the durable event inbox against the current Preview deployment.
+- [ ] Verify a real CircleCI-signed webhook delivery only after separately authorized webhook configuration.
+
+**Verification boundary:** this stage adds an operator runbook and source-derived configuration inventory only. No Cloudflare environment or secret access, API request, runtime configuration change, CircleCI webhook mutation, Preview/Production deployment or live provider verification was performed. The current session does not expose Cloudflare controls or a CircleCI credential; runtime readiness remains an external operational check.
