@@ -91,6 +91,7 @@ describe("MCP event correlation tool", () => {
             id: EVENT_ID,
             type: "workflow-completed",
             project_slug: "gh/Znect-god/znect-forge",
+            project_slug: "gh/Znect-god/znect-forge",
             happened_at: "2026-11-17T18:00:30.000Z",
             branch: "work/bridge",
             revision: REVISION
