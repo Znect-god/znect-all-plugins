@@ -296,6 +296,10 @@ export async function listCircleCiRuns(
       `/api/v3/runs?${query.toString()}`
     );
     if (!Array.isArray(page.data)) throw new Error("CircleCI API v3 returned an invalid runs collection.");
+    const next = readNextCursor(page, "runs");
+    if (next !== null && seenCursors.has(next)) {
+      throw new Error("CircleCI API v3 repeated a pagination cursor.");
+    }
     const requestedPageSize = Math.min(20, limit - runs.length);
     if (page.data.length > requestedPageSize) {
       throw new Error("CircleCI API v3 returned more runs than the requested page limit.");
@@ -306,9 +310,7 @@ export async function listCircleCiRuns(
     }
     assertUniqueResourceIds(page.data, "run", seenRunIds);
     runs.push(...page.data);
-    const next = readNextCursor(page, "runs");
     if (next === null) break;
-    if (seenCursors.has(next)) throw new Error("CircleCI API v3 repeated a pagination cursor.");
     seenCursors.add(next);
     cursor = next;
     if (pageIndex === 1 && runs.length < limit) {
@@ -359,11 +361,14 @@ async function listCircleCiCollection(
     if (page.data.length > COLLECTION_PAGE_SIZE) {
       throw new Error(`CircleCI API v3 returned more ${resourceLabel}s than the requested page limit.`);
     }
+    const next = readNextCursor(page, resourceLabel);
+    if (next !== null && seenCursors.has(next)) {
+      throw new Error(`CircleCI API v3 repeated a pagination cursor while listing ${resourceLabel}s.`);
+    }
     for (const resource of page.data) assertUuid(resource.id, `${resourceLabel} ID`);
     assertUniqueResourceIds(page.data, resourceLabel, seenWorkflowIds);
     resources.push(...page.data);
 
-    const next = readNextCursor(page, resourceLabel);
     if (next === null) return resources;
     if (seenCursors.has(next)) {
       throw new Error(`CircleCI API v3 repeated a pagination cursor while listing ${resourceLabel}s.`);
