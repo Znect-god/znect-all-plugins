@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Added and documented automatic CircleCI validation for commits to the dedicated Znect Build recipe branch. The job resolves the current `ci-bridge` source HEAD when no explicit SHA is supplied; the explicit exact-SHA workflow remains available. CircleCI GitHub/VCS event delivery and actual test execution are still unverified.
+
 - Documented the verified ChatGPT Free/no-MCP platform boundary: the authenticated dashboard JSON attachment remains the supported free handoff; automatic private Browser API calls are not established for a personal Free account. No authentication weakening or public endpoint was introduced.
 - Updated the roadmap and assistant-channel/free-access docs; automatic connector work is explicitly platform-blocked pending an official compatible path and end-to-end verification.
 
