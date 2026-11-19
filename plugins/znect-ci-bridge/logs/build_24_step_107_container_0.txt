@@ -1,0 +1,24 @@
+===== CI Bridge validation log (last 250 lines) =====
+Installing lockfile-pinned CI Bridge dependencies.
+
+added 247 packages, and audited 248 packages in 12s
+
+67 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+Auditing production and development dependency advisories.
+found 0 vulnerabilities
+Running TypeScript typecheck and Vitest suite.
+
+> znect-ci-bridge@0.1.0 check
+> npm run typecheck && npm run test
+
+
+> znect-ci-bridge@0.1.0 typecheck
+> tsc --noEmit
+
+src/events.ts(270,49): error TS2339: Property 'acceptedProjectSlugs' does not exist on type 'BuildEventStore'.
+===== End CI Bridge validation log =====
+
+Exited with code exit status 2
