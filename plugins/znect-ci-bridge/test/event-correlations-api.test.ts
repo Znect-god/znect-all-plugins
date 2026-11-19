@@ -97,8 +97,8 @@ describe("read-only browser event correlation API", () => {
         status: "candidate",
         candidates: [{
           run: { id: RUN_UUID, commitSha: REVISION, branch: "work/bridge" },
-          time_delta_ms: 30_000,
-          match_basis: "commit+branch+time"
+          time_delta_ms: 90_000,
+          match_basis: "commit+branch+created-at"
         }]
       }],
       next_cursor: 1
