@@ -239,3 +239,68 @@ These are strong source-based inferences, not a verified reading of Cloudflare's
 - Continue the user's project named **Znect Forge** (repository `Znect-god/znect-forge`) rather than treating the Cloudflare branch discrepancy as a reason to restart the whole investigation.
 - Before asking the user for anything, inspect existing repository state and prior project notes. Ask only for a genuinely necessary, specific missing item.
 - Keep all credentials and secret values out of this file. Record only non-secret identifiers, findings, and evidence links.
+
+
+## 11. Separate active project: Znect Forge Android development — 2026-11-19
+
+**Important distinction:** Znect Forge is the user's active Android product-development project. CI Bridge is a separate integration/workstream and must not replace or narrow Forge development. Do not introduce Jenkins into this workflow. The user expects continued feature development in Forge, not another CI Bridge investigation loop.
+
+### Repository and active milestone
+
+- Repository: `Znect-god/znect-forge`.
+- Product: Android-first mobile development workstation; target device documented as Blackview BV9200, Android 12 / API 31 / arm64-v8a.
+- Active milestone: 0.7.0, “Forge Workspace, File Manager integration, Aedra and Daedra”.
+- Active implementation branch: `work/0.7.0-finish-daedric-workshop`.
+- Draft PR: https://github.com/Znect-god/znect-forge/pull/1
+- PR title: `WIP: Znect Forge 0.7.0 completion`.
+- PR base: `develop/0.7.0-daedric-workshop`; head: `work/0.7.0-finish-daedric-workshop`.
+- PR head SHA observed: `dd66b32003e04159016d368b5e8eeb88de1396f2`; base SHA observed: `01e053b86f42932351ebd2622fcbb5c4ffc8e481`.
+- PR was open, draft, and mergeable at the time checked; 167 changed files, 42,226 additions, 653 deletions. Do not merge without explicit authorization.
+- Forge README says 0.6.1 is the retained practical baseline. 0.7.0 implementation, CI verification and physical-device testing are separate gates.
+
+### Forge source/verification rules
+
+- Implement the agreed Android 0.7.0 scope before starting CI/build troubleshooting.
+- Before editing a file, fetch its current content and blob SHA from the active work branch; use that SHA for updates.
+- Preserve working behavior. Keep domain/storage logic separate from Activity UI where practical.
+- No feature is complete merely because source code exists. Record source implementation, tests, CI/APK and BV9200 device verification separately.
+- Do not trigger or mutate CircleCI/GitHub Actions or dispatch workflows unless the user explicitly authorizes it. The user's Forge PR describes a CircleCI Android CI job; source review alone is not a CI result.
+- Do not claim build/tests/APK/device checks passed unless actual results exist. Do not merge or release/tag without explicit authorization.
+- No Jenkins is part of the agreed Forge workflow.
+
+### Key project docs
+
+- `docs/0.7.0-implementation-plan.md` — ordered workstreams, priorities, acceptance criteria.
+- `docs/KNOWN_ISSUES_0.7.0.md` — canonical feature/problem register; consult before each task and update without duplicating existing items.
+- `docs/0.7.0_COMPLETION_PLAN.md`, `docs/RELEASE_0.7.0_PLAN.md`, `docs/RELEASE_0.7.0_CANDIDATE.md` — completion and release gates.
+- `docs/file-manager-reference-audit.md` and `docs/FILE_MANAGER_3.6.3_FEATURE_MATRIX.md` — reference File Manager 3.6.3 parity work.
+- `docs/network-file-system-adapter-contract.md` — FTP/FTPS/SFTP/SMB/network provider contract and limits.
+- `docs/SECURITY_MODEL.md` — security requirements.
+
+### Current confirmed development finding: F07-087 text editor gap
+
+- Canonical issue: F07-087 in `docs/KNOWN_ISSUES_0.7.0.md`.
+- In `WorkspaceActivity.kt`, `showPhoneStoragePreview()` reads at most 512 KiB as UTF-8 and opens `showCopyableInfoDialog()`. There is no edit buffer, Save action, dirty-state confirmation or write-back in this path.
+- The preference key `file_manager_internal_text_editor` therefore currently selects a read-only preview, despite the old key name. The issue register already changed the visible setting labels to “Internal text preview” / “Внутренний просмотр текста”.
+- `FileManagerEngine.createTextFileAtPath()` can create new files and write UTF-8 content up to 1 MiB. For WORKSPACE/PHONE_STORAGE it creates a new document then writes via `ContentResolver.openOutputStream(uri, "wt")`; on failure it attempts to delete the newly created file. This is not a safe generic existing-file replacement contract.
+- Project storage uses `projects.createTextFile(...)` for creation. Do not assume it supplies an edit/replace operation without inspecting its implementation.
+- Network provider contract documents staged upload, backup/rename publication and provider-specific limits; SAF downloads may write directly and cannot promise atomic rollback. Root/Direct/Network/SAF providers have different guarantees.
+- Safe next engineering step: inspect existing storage-provider write/replace APIs and policies, then design a bounded UTF-8 editor with dirty-state confirmation, capability checks and safe staged replacement only for providers that can guarantee it. Keep preview-only/Open-with behavior for providers without safe replacement. Add policy/provider regression tests before exposing Save.
+- Do not implement generic `openOutputStream(uri, "wt")` overwrite for arbitrary existing files; it risks truncation/data loss on partial failure.
+- At the last source inspection, `WorkspaceActivity.kt` blob SHA was `7b3e2a50c9a9effdea7186612cb72e4e406fb4f8`; `FileManagerEngine.kt` blob SHA was `347ba8e1677cc6c5ccfad5dec1e3d8b494c59ad4`. Re-fetch before edits.
+- No Forge source files were changed and no tests/build/CI/APK/device checks were run during this investigation.
+
+### Other open Forge parity/verification facts
+
+- F07-034: full global File Manager 3.6.3 integration remains in progress; static source dimensions/navigation review does not prove runtime parity. Gesture/edge-swipe, orientation, artwork, viewer transitions, TalkBack and BV9200 acceptance remain open.
+- Archive support is source-integrated for ZIP/JAR and split ZIP/7z paths, but dependency resolution and real provider/device fixtures remain unverified.
+- Network protocol adapters (FTP/FTPS/SFTP/SMB3 and cloud providers) are source-integrated; no live-server interoperability/device verification is established.
+- README records several remaining gaps: read-only text preview vs editor, safe/licensed external FFmpeg implementation, runtime subtitle rendering, removable media/live provider compatibility, archive/media matrices, OEM dual-app coverage, accessibility, task history/recovery, theme portrait/landscape validation and device acceptance.
+- README says English/Russian string keys currently match 993/993 with no duplicates; this is source-level inventory, not runtime localization acceptance.
+- The Android CircleCI config runs `:app:testDebugUnitTest` and `:app:assembleDebug` on matching branch patterns. Do not dispatch it or claim a result without actual read-only evidence/authorization.
+
+### User communication
+
+- The user has explicitly said Forge is in active development and wants work to continue across all agreed 0.7.0 scope, not only CI Bridge.
+- Do not ask the user to repeat known project context or send logs already available in GitHub.
+- Give one concrete next action/result at a time; avoid cycling through setup questions.
