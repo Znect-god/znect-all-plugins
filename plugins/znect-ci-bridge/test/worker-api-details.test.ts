@@ -68,7 +68,7 @@ describe("Read-only browser API run details", () => {
         branch: "feature/example",
         commitSha: "abc123",
         commitMessage: "Fix CI diagnostics",
-        startedAt: "2026-11-15T10:00:00.000Z"
+        createdAt: "2026-11-15T10:00:00.000Z"
       }]
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -107,7 +107,7 @@ describe("Read-only browser API run details", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await worker.fetch(
-      new Request(`https://bridge.example/api/v1/runs/${runId}`, {
+      new Request(`https://bridge.example/api/v1/runs/${runId}?project_id=znect-forge`, {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
@@ -167,7 +167,7 @@ describe("Read-only browser API run details", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await worker.fetch(
-      new Request(`https://bridge.example/api/v1/runs/${runId}`, {
+      new Request(`https://bridge.example/api/v1/runs/${runId}?project_id=znect-forge`, {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
@@ -193,7 +193,7 @@ describe("Read-only browser API run details", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await worker.fetch(
-      new Request(`https://bridge.example/api/v1/runs/${runId}`, {
+      new Request(`https://bridge.example/api/v1/runs/${runId}?project_id=znect-forge`, {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
@@ -279,7 +279,7 @@ describe("Read-only browser API run details", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await worker.fetch(
-      new Request(`https://bridge.example/api/v1/diagnostics/${runId}`, {
+      new Request(`https://bridge.example/api/v1/diagnostics/${runId}?project_id=znect-forge`, {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
