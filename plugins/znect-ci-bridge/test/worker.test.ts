@@ -542,7 +542,7 @@ describe("Worker HTTP boundary", () => {
   it("returns CircleCI connection status through the authenticated API", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: projectId, attributes: { slug: "gh/Znect-god/znect-forge" } }]
+        data: [{ id: "123e4567-e89b-42d3-a456-426614174000", attributes: { slug: "gh/Znect-god/znect-forge" } }]
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: [], page: { next: null }
@@ -616,7 +616,7 @@ describe("Worker HTTP boundary", () => {
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const response = await worker.fetch(
-      new Request("https://bridge.example/api/v1/runs?limit=5", {
+      new Request("https://bridge.example/api/v1/runs?limit=5&project_id=znect-forge", {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
@@ -663,7 +663,7 @@ describe("Worker HTTP boundary", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await worker.fetch(
-      new Request(`https://bridge.example/api/v1/runs/${runId}`, {
+      new Request(`https://bridge.example/api/v1/runs/${runId}?project_id=znect-forge`, {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
@@ -691,7 +691,7 @@ describe("Worker HTTP boundary", () => {
       new Error("upstream transport failed: circle-test-token web-test-token bridge-test-token")
     ));
     const response = await worker.fetch(
-      new Request("https://bridge.example/api/v1/status", {
+      new Request("https://bridge.example/api/v1/status?project_id=znect-forge", {
         headers: { authorization: "Bearer web-test-token" }
       }),
       env,
@@ -856,7 +856,7 @@ describe("Worker HTTP boundary", () => {
       : JSON.parse(responseText);
     const tools = payload.result?.tools;
     expect(Array.isArray(tools)).toBe(true);
-    expect(tools).toHaveLength(13);
+    expect(tools).toHaveLength(15);
     expect(tools.every((tool: { annotations?: { readOnlyHint?: boolean } }) =>
       tool.annotations?.readOnlyHint === true
     )).toBe(true);
@@ -896,7 +896,7 @@ describe("Worker HTTP boundary", () => {
           method: "tools/call",
           params: {
             name: "check_connection",
-            arguments: {},
+            arguments: { project_id: "znect-forge" },
             _meta: {
               "io.modelcontextprotocol/protocolVersion": "2026-07-28",
               "io.modelcontextprotocol/clientCapabilities": {}
