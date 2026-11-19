@@ -188,7 +188,7 @@ describe("unified CircleCI test result normalization", () => {
       jsonl: JSON.stringify({ classname: "pkg.Math", name: "bad-execution", result: "success", execution: -1 })
     });
     expect(result).toMatchObject({
-      status: "partial", total: 0, malformed_jsonl_records: 1, incomplete: true
+      status: "unavailable", total: 0, malformed_jsonl_records: 1, incomplete: true
     });
   });
 
