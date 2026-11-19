@@ -434,11 +434,11 @@ function createServer(env: Env) {
     {
       description: "List registered Znect projects and their configured CI connections. Registration, CI configuration, and live provider availability are reported separately. Read-only.",
       annotations: { readOnlyHint: true },
-      inputSchema: {}
+      inputSchema: z.object({})
     },
-    async () => {
+    async (_args: Record<string, never>) => {
       const projects = getProjectRegistry(env).projects.map(describeProjectStatus);
-      return { content: [{ type: "text", text: stringifyBoundedJson({ projects }, 20_000) }] };
+      return { content: [{ type: "text" as const, text: stringifyBoundedJson({ projects }, 20_000) }] };
     }
   );
 
@@ -706,14 +706,14 @@ function createServer(env: Env) {
             ))
             .map((step) => ({
               name: step.name,
-              execution_index: step.execution,
+              execution_index: step.execution_index,
               actions: step.actions
                 .filter((action) => (action.status === "failed" || action.outcome === "failed") && action.isInsignificant !== true)
                 .map((action) => ({
                   name: action.name,
                   status: action.status,
                   exit_code: action.exitCode,
-                  step_num: action.stepNumber
+                  step_num: action.step_num
                 }))
             }));
 
@@ -726,7 +726,7 @@ function createServer(env: Env) {
                 failedStepLogsIncomplete = true;
                 break;
               }
-              const stepNum = action.stepNumber;
+              const stepNum = action.step_num;
               if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) {
                 reportDataIncomplete = true;
                 failedStepLogsIncomplete = true;
@@ -738,7 +738,7 @@ function createServer(env: Env) {
                 try {
                   const result = await adapter.getJobLogs(scope, job.id, {
                     step: stepNum,
-                    execution: step.execution,
+                    execution: step.execution_index,
                     stream,
                     maxBytes: 12_000 * 4
                   });
@@ -758,7 +758,7 @@ function createServer(env: Env) {
               }
               failedStepLogs.push({
                 step_num: stepNum,
-                execution: step.execution,
+                execution: step.execution_index,
                 action_name: action.name,
                 stdout: output.stdout,
                 stderr: output.stderr
@@ -770,7 +770,7 @@ function createServer(env: Env) {
           let testResults = "";
           let testResultsContent = "";
           let testResultsError: string | undefined;
-          let testResultsState: "available" | "partial" | "unavailable" | "empty" = "unavailable";
+          let testResultsState: "available" | "partial" | "unavailable" | "empty" | "none_found" = "unavailable";
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResultsContent = report.content;
@@ -1256,7 +1256,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
           let testResults: string | undefined;
           let testResultsContent = "";
           let testResultsError: string | undefined;
-          let testResultsState: "available" | "partial" | "unavailable" | "empty" = "unavailable";
+          let testResultsState: "available" | "partial" | "unavailable" | "empty" | "none_found" = "unavailable";
           try {
             const report = await adapter.getTestReport(scope, job.id, 200_000);
             testResultsContent = report.content;
