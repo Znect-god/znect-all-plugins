@@ -65,3 +65,11 @@ Do not overwrite an existing registry with this example. Merge a verified entry 
 ## Current execution limitation
 
 The current development session has GitHub repository read/write access but no Cloudflare Worker environment/secret inspection or deployment control and no direct CircleCI API credential. Therefore runtime bindings, secret presence, live API reads and real webhook delivery cannot be truthfully marked verified from this session. No attempt should be made to bypass that boundary by exposing credentials or weakening authentication.
+
+## Legacy Preview smoke-test boundary
+
+The checked-in `scripts/preview-smoke-test.mjs` is pinned to the historical Preview alias `feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev` and the fixed project/connection `znect-forge` / `forge-circleci`. It is not a generic current-head test and must not be treated as proof that the current `ci-bridge` source is deployed or that the Znect Build project is registered.
+
+Both repository workflows `.github/workflows/znect-ci-bridge-preview.yml` and `.github/workflows/znect-ci-bridge.yml` are explicitly retired and inert (`if: false`, empty permissions). Central Znect Build owns source validation; Preview deployment is a separate manually authorized operation. Do not reactivate either retired workflow as a shortcut.
+
+A public unauthenticated `GET /health` is a safe preliminary check, but it proves only that a responding Worker identifies itself as CI Bridge in read-only mode. It does not prove registry contents, secret presence or CircleCI API access. The current session could not reach the historical Preview hostname because outbound DNS resolution was unavailable; no runtime response is claimed.
