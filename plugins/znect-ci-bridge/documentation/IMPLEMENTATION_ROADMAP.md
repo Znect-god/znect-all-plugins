@@ -1,7 +1,7 @@
 # Znect CI Bridge — implementation roadmap
 
 **Status:** `in-development`; isolated engineering branch only.  
-**Updated:** 2026-11-18 (ChatGPT Free no-MCP platform boundary)  
+**Updated:** 2026-11-19 (automatic CircleCI validation workflow documented)  
 **Development repository:** `Znect-god/znect-all-plugins`  
 **Build system:** `Znect-god/znect-build` (separate repository and responsibility)  
 **Active working branch:** `ci-bridge` (the single permanent CI Bridge development branch)
@@ -21,6 +21,7 @@ This is the living implementation roadmap. Update it with every meaningful imple
 - The root `.circleci/config.yml` and the optional native Android exporter were removed as redundant paths. Do not recreate them without a new explicit architectural decision.
 - GitHub Actions workflows in this repository remain inert/historical and are not an execution path for CI Bridge validation.
 - The central CircleCI recipe checks an exact source SHA from `Znect-god/znect-all-plugins`; the Bridge may observe the resulting CircleCI run and provenance artifacts only through its read-only provider.
+- The dedicated Znect Build recipe branch now has an automatic validation workflow for commits to that branch; it resolves and validates the current `ci-bridge` source HEAD without requiring manual pipeline parameters. This is configured in source, but actual CircleCI VCS event delivery and a live run are not yet verified.
 
 No PR merge, Znect Build execution, Preview refresh, Production change, secret access or deployment is authorized by this roadmap alone.
 
@@ -153,6 +154,8 @@ The Bridge must remain read-only with respect to CI execution and project source
 - [x] Confirm the central Node.js/Cloudflare Worker recipe is present on `feat/ci-bridge-node-worker-recipe` and matches the current Bridge package scripts **(выполнено — source review)**.
 - [x] Add `npm audit --audit-level=high` to the central recipe and its provenance manifest; update the Bridge read-only manifest validator and add regression coverage for both the complete validation list and omission of the audit step **(выполнено — source/test implementation; execution pending)**.
 - [x] Register the `znect-ci-bridge/worker-validation` target in the isolated Znect Build feature branch with the source repository and validation recipe; keep it disabled until reviewed and explicitly authorized **(выполнено — registry source exists; target remains disabled)**.
+- [x] Add automatic CircleCI validation on commits to `feat/ci-bridge-node-worker-recipe`, resolving the current `ci-bridge` HEAD when no explicit SHA is supplied **(выполнено — config source committed; live trigger unverified)**.
+- [ ] Confirm CircleCI project GitHub/VCS connection and branch event delivery for `feat/ci-bridge-node-worker-recipe`.
 - [ ] Validate dependency install, typecheck, full Vitest suite, audit and Wrangler bundle dry-run through Znect Build on the exact candidate SHA.
 - [ ] Retrieve the private report/validation manifest through the existing read-only Znect Build adapter and confirm source SHA ownership.
 - [ ] Do not create an independent `.circleci/config.yml`, GitHub Actions runner or Android companion app as a workaround.
@@ -1312,3 +1315,14 @@ For every meaningful feature or fix:
 - [ ] Execute the focused provider, Browser API and MCP diagnostic tests, full Vitest suite, and TypeScript checks through the authorized opt-in CircleCI exact-SHA workflow.
 
 **Verification boundary:** source and regression-test updates are committed on the canonical `ci-bridge` branch. CircleCI API v3 documents job detail as including steps and parallel executions, and its log endpoints accept an explicit `filter[execution]`; the implementation preserves that index end to end. No tests, typecheck, live CircleCI API request, CircleCI pipeline, Preview/Production deployment, secret access or runtime configuration change was performed.
+
+
+## 8.12 Automatic CI Bridge source validation — 2026-11-19
+
+- [x] Add a branch-scoped `ci-bridge-auto-validation` workflow for commits to `feat/ci-bridge-node-worker-recipe`; it runs `validate-ci-bridge-source` without requiring manual pipeline parameters **(выполнено — CircleCI config commit `6c1f63426ad3ad2bdadb6c0593910819abe196fb`)**.
+- [x] Resolve the current `ci-bridge` branch HEAD when no explicit source SHA is supplied, while retaining full-SHA validation and detached checkout for reproducible explicit-SHA runs **(выполнено — static config inspection)**.
+- [x] Preserve the separate opt-in exact-SHA workflow for historical/reproducible checks **(выполнено — config source)**.
+- [ ] Verify that the CircleCI project is connected to the GitHub repository and receives pushes to `feat/ci-bridge-node-worker-recipe`.
+- [ ] Inspect a real CircleCI run for source SHA `97f18a82b94f68ebbf5a2e9604bfaf6f95413be1`, including job logs, manifest and `resolved-source-sha.txt`.
+
+**Verification boundary:** the configuration commit is present on the feature branch. It does not itself prove that CircleCI project integration is configured or that a pipeline ran. The prior manifest for source SHA `bd939319ddc1b4c774cd4bf65e2f926451b26226` is historical evidence for an older source revision and does not validate the TypeScript fixes at `97f18a82b94f68ebbf5a2e9604bfaf6f95413be1`. No new pipeline, tests or deployment are claimed.
