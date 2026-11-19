@@ -113,12 +113,14 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
   }
   const result: CiJobStep[] = [];
   // CircleCI API v3 encodes parallel_executions as an array of step arrays
-  // ([][]JobStep). The outer array position is the zero-based execution index.
+  // ([][]JobStep). Each inner array is one execution containing its ordered actions.
   for (let executionIndex = 0; executionIndex < executions.length; executionIndex++) {
     const execution = executions[executionIndex];
     if (!Array.isArray(execution)) {
       throw new Error("CircleCI API v3 returned malformed job parallel-execution data.");
     }
+    const actions: CiJobStep["actions"] = [];
+    let executionName: string | undefined;
     for (const step of execution) {
       if (step === null || typeof step !== "object" || Array.isArray(step)) {
         throw new Error("CircleCI API v3 returned malformed job step data.");
@@ -139,21 +141,21 @@ function mapJobSteps(attrs: Record<string, unknown>): CiJobStep[] {
         throw new Error("CircleCI API v3 returned malformed job step data.");
       }
       const name = text(stepRecord.name);
+      executionName ??= name;
       const outcome = text(stepRecord.outcome);
       const phase = text(stepRecord.phase);
-      result.push({
-        execution: executionIndex,
+      actions.push({
         ...(name ? { name } : {}),
-        actions: [{
-          ...(name ? { name } : {}),
-          ...(outcome ?? phase ? { status: outcome ?? phase } : {}),
-          ...(outcome ? { outcome } : {}),
-          ...(typeof stepRecord.exit_code === "number" ? { exitCode: stepRecord.exit_code } : {}),
-          stepNumber: stepRecord.num,
-          ...(typeof stepRecord.is_insignificant === "boolean"
-            ? { isInsignificant: stepRecord.is_insignificant } : {})
-        }]
+        ...(outcome ?? phase ? { status: outcome ?? phase } : {}),
+        ...(outcome ? { outcome } : {}),
+        ...(typeof stepRecord.exit_code === "number" ? { exitCode: stepRecord.exit_code } : {}),
+        stepNumber: stepRecord.num,
+        ...(typeof stepRecord.is_insignificant === "boolean"
+          ? { isInsignificant: stepRecord.is_insignificant } : {})
       });
+    }
+    if (actions.length > 0) {
+      result.push({ execution: executionIndex, ...(executionName ? { name: executionName } : {}), actions });
     }
   }
   return result;
