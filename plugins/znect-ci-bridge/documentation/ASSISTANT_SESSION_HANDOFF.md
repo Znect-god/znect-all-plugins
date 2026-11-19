@@ -333,3 +333,6 @@ These are strong source-based inferences, not a verified reading of Cloudflare's
 
 - Follow-up hardening: editor drafts, target URI/name and original SHA-256 digest are stored in Activity saved state and restored after Activity recreation. Dirty checks compare against the original digest; hashing is kept off each keystroke. Save re-reads the bounded source and compares its digest before opening the staged provider write stream.
 - Final Forge branch head after this hardening and issue-register update: `55701201b461c647ef32e871c826ed1b10af3128`. CircleCI config includes `work/*` branch filters and runs `:app:testDebugUnitTest` then `:app:assembleDebug`, but no CI status was visible for the head; do not claim those jobs ran or passed. The user-facing workflow keeps CircleCI read-only and no manual pipeline action was taken.
+
+- Final editor hardening also caps the EditText input length at 512 KiB characters while enforcing the exact 512 KiB UTF-8 byte limit at Save; the canonical issue register documents both. Final Forge head after all editor changes: `a402ca1c75b1982ba09d9d8d0f1f750becf9143e`.
+- Standalone local Kotlin smoke checks passed for provider allowlisting, SHA-256 conflict fingerprint stability/change detection and strict UTF-8 rejection. This is not a substitute for the Android Gradle/JUnit build.
