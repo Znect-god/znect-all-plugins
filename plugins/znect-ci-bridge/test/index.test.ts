@@ -516,7 +516,7 @@ describe("MCP tool schemas and error boundary", () => {
     const response = await worker.fetch(
       rpcRequest(3, "tools/call", {
         name: "get_run_details",
-        arguments: { run_id: RUN_ID }
+        arguments: { project_id: "znect-forge", run_id: RUN_ID }
       }),
       env,
       ctx
