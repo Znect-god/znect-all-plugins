@@ -1323,6 +1323,6 @@ For every meaningful feature or fix:
 - [x] Resolve the current `ci-bridge` branch HEAD when no explicit source SHA is supplied, while retaining full-SHA validation and detached checkout for reproducible explicit-SHA runs **(выполнено — static config inspection)**.
 - [x] Preserve the separate opt-in exact-SHA workflow for historical/reproducible checks **(выполнено — config source)**.
 - [ ] Verify that the CircleCI project is connected to the GitHub repository and receives pushes to `feat/ci-bridge-node-worker-recipe`.
-- [ ] Inspect a real CircleCI run for source SHA `1d2ed3c2811b1a6f2ec27fc7f73bc25fb1df8759`, including job logs, manifest and `resolved-source-sha.txt`.
+- [ ] Inspect a real automatic CircleCI run and take the tested source SHA from its manifest and `resolved-source-sha.txt`; confirm that the resolved checkout includes TypeScript-fix commit `97f18a82b94f68ebbf5a2e9604bfaf6f95413be1`.
 
 **Verification boundary:** the configuration commit is present on the feature branch. It does not itself prove that CircleCI project integration is configured or that a pipeline ran. The prior manifest for source SHA `bd939319ddc1b4c774cd4bf65e2f926451b26226` is historical evidence for an older source revision and does not validate the TypeScript fixes at `1d2ed3c2811b1a6f2ec27fc7f73bc25fb1df8759`. No new pipeline, tests or deployment are claimed.
