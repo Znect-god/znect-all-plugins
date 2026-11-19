@@ -44,7 +44,10 @@ function statusOf(resource: V3Resource): string {
 /** CircleCI Run outcomes can change on reruns; current_outcome is authoritative. */
 function runStatusOf(resource: V3Resource): string {
   const attrs = attributes(resource);
-  return text(attrs.current_outcome) ?? text(attrs.phase) ?? text(attrs.status) ?? "unknown";
+  const status = text(attrs.current_outcome) ?? text(attrs.phase) ?? text(attrs.status) ?? "unknown";
+  // Expose provider-neutral run states to API consumers; CircleCI calls a successful
+  // run "succeeded", while the bridge contract uses "success".
+  return status === "succeeded" ? "success" : status;
 }
 
 function iso(value: unknown): string | undefined {
