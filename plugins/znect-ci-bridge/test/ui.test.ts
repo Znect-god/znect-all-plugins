@@ -22,8 +22,9 @@ describe("browser dashboard security", () => {
   it("loads registered projects and scopes dashboard reads to the selected project", () => {
     expect(DASHBOARD_HTML).toContain('id="project"');
     expect(DASHBOARD_HTML).toContain('request("/api/v1/projects")');
-    expect(DASHBOARD_HTML).toContain('"/api/v1/status?project_id="+encodeURIComponent(currentProject)');
-    expect(DASHBOARD_HTML).toContain('"/api/v1/runs?limit=20&project_id="+encodeURIComponent(currentProject)');
+    expect(DASHBOARD_HTML).toContain('function scopeQuery(){return "project_id="+encodeURIComponent(currentProject)+"&connection_id="+encodeURIComponent(currentConnection);}');
+    expect(DASHBOARD_HTML).toContain('request("/api/v1/status?"+scopeQuery())');
+    expect(DASHBOARD_HTML).toContain('request("/api/v1/runs?limit=20&"+scopeQuery())');
     expect(DASHBOARD_HTML).toContain("run.commitMessage||run.branch||run.commitSha||run.id");
     expect(DASHBOARD_HTML).toContain("workflow.name||workflow.id||\"Workflow\"");
     expect(DASHBOARD_HTML).toContain('"?project_id="+encodeURIComponent(currentProject)');
