@@ -218,7 +218,10 @@ describe("Worker HTTP boundary", () => {
     expect(payload.projects).toEqual([{
       id: "znect-forge",
       name: "Znect Forge",
-      providers: ["circleci"]
+      status: "registered",
+      ci_status: "configured",
+      providers: ["circleci"],
+      connections: [{ id: "forge-circleci", provider: "circleci", status: "configured", provider_availability: "not_checked" }]
     }]);
     expect(JSON.stringify(payload)).not.toContain("token");
   });
@@ -228,7 +231,7 @@ describe("Worker HTTP boundary", () => {
     const storeFetch = vi.fn().mockResolvedValue(Response.json({ events: [{ cursor: 7, ...event }], next_cursor: 7 }));
     const namespace = { idFromName: vi.fn(() => "forge"), get: vi.fn(() => ({ fetch: storeFetch })) };
     const response = await worker.fetch(
-      new Request("https://bridge.example/api/v1/events?after=3&limit=10", {
+      new Request("https://bridge.example/api/v1/events?after=3&limit=10&project_id=znect-forge", {
         headers: { authorization: "Bearer web-test-token" }
       }),
       { ...env, EVENT_STORE: namespace },
@@ -267,7 +270,7 @@ describe("Worker HTTP boundary", () => {
       get: () => ({ fetch: async () => { throw new Error("private storage detail"); } })
     };
     const response = await worker.fetch(
-      new Request("https://bridge.example/api/v1/events", {
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
         headers: { authorization: "Bearer web-test-token" }
       }),
       { ...env, EVENT_STORE: namespace },
@@ -285,7 +288,7 @@ describe("Worker HTTP boundary", () => {
       get: () => ({ fetch: async () => new Response("{not-json", { status: 200 }) })
     };
     const response = await worker.fetch(
-      new Request("https://bridge.example/api/v1/events", {
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
         headers: { authorization: "Bearer web-test-token" }
       }),
       { ...env, EVENT_STORE: namespace },
@@ -306,7 +309,7 @@ describe("Worker HTTP boundary", () => {
       get: () => ({ fetch: async () => new Response(body, { status: 200 }) })
     };
     const response = await worker.fetch(
-      new Request("https://bridge.example/api/v1/events", {
+      new Request("https://bridge.example/api/v1/events?project_id=znect-forge", {
         headers: { authorization: "Bearer web-test-token" }
       }),
       { ...env, EVENT_STORE: namespace },
@@ -697,12 +700,13 @@ describe("Worker HTTP boundary", () => {
       env,
       ctx
     );
-    expect(response.status).toBe(502);
+    expect(response.status).toBe(200);
     const body = await response.text();
+    expect(body).toContain("Provider read probe failed; check provider credentials and connectivity.");
     expect(body).not.toContain(env.CIRCLECI_TOKEN);
     expect(body).not.toContain(env.WEB_ACCESS_TOKEN);
     expect(body).not.toContain(env.MCP_ACCESS_TOKEN);
-    expect(body).toContain("CircleCI API request failed due to a network or TLS error.");
+    expect(body).not.toContain("upstream transport failed");
   });
 
   it("completes an authenticated MCP initialize handshake over Streamable HTTP", async () => {
