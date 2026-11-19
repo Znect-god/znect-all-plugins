@@ -201,8 +201,16 @@ export function normalizeCircleCiWebhook(
 /** SQLite-backed Durable Object event inbox. CircleCI event IDs are unique for deduplication. */
 export class BuildEventStore {
   private readonly sql: SqlStorage;
+  private readonly acceptedProjectSlugs: ReadonlySet<string>;
 
-  constructor(state: DurableObjectState) {
+  constructor(state: DurableObjectState, env?: { ZNECT_PROJECT_REGISTRY?: string }) {
+    this.acceptedProjectSlugs = env
+      ? new Set(loadProjectRegistry(env.ZNECT_PROJECT_REGISTRY).projects.flatMap((project) =>
+          project.connections
+            .filter((connection) => connection.provider === "circleci" && connection.projectSlug)
+            .map((connection) => connection.projectSlug!)
+        ))
+      : DEFAULT_PROJECT_SLUGS;
     this.sql = state.storage.sql;
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS build_events (
