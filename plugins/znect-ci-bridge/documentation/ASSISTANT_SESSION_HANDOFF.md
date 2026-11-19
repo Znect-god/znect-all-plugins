@@ -217,3 +217,25 @@ These are strong source-based inferences, not a verified reading of Cloudflare's
 ### New tool limitation
 
 - The available GitHub connector can read repository contents, commit history and related GitHub resources, but its allowlist rejected the repository deployments endpoint in this investigation. Do not claim GitHub deployment records were inspected.
+
+## 11. Continuation checkpoint — 2026-11-19
+
+### Cloudflare Production branch discrepancy checked through GitHub
+
+- The user explicitly identified the Cloudflare Production branch as `feature/znect-ci-bridge-source`. Preserve this as the branch name reported from the Cloudflare dashboard; do not silently replace it with `ci-bridge`.
+- GitHub repository search confirmed the connected installation can see `Znect-god/znect-all-plugins` (default branch `main`).
+- GitHub branch search in that repository returned:
+  - `ci-bridge` exists.
+  - Exact branch `feature/znect-ci-bridge-source` was not found.
+  - Searching branches matching `feature` returned `feature/znect-screen-bridge-foundation`; this is a different branch and must not be treated as a match.
+- GitHub commit search for `znect-ci-bridge-source` within org `Znect-god` returned no matches.
+- This establishes only that the connected GitHub view did not find the reported branch in the known source repository. It does not prove the Cloudflare configuration is wrong: the branch may belong to another repository, another owner, or a repository not exposed by the current GitHub installation.
+- No branch was created, renamed, pushed, or changed. No Cloudflare configuration or deployment was touched.
+
+### User's requested working approach
+
+- The user wants the assistant to retain non-confidential operational facts in this handoff file and stop asking them to repeat already supplied information.
+- The user plans to send Cloudflare quota/configuration screenshots later, when available. Until then, continue with read-only GitHub investigation and Znect Forge work; do not block on screenshots.
+- Continue the user's project named **Znect Forge** (repository `Znect-god/znect-forge`) rather than treating the Cloudflare branch discrepancy as a reason to restart the whole investigation.
+- Before asking the user for anything, inspect existing repository state and prior project notes. Ask only for a genuinely necessary, specific missing item.
+- Keep all credentials and secret values out of this file. Record only non-secret identifiers, findings, and evidence links.
