@@ -1,0 +1,182 @@
+===== CI Bridge validation log (last 250 lines) =====
+Installing lockfile-pinned CI Bridge dependencies.
+
+added 247 packages, and audited 248 packages in 15s
+
+67 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+Auditing production and development dependency advisories.
+found 0 vulnerabilities
+Running TypeScript typecheck and Vitest suite.
+
+> znect-ci-bridge@0.1.0 check
+> npm run typecheck && npm run test
+
+
+> znect-ci-bridge@0.1.0 typecheck
+> tsc --noEmit
+
+
+> znect-ci-bridge@0.1.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/home/circleci/project/project-source/plugins/znect-ci-bridge[39m
+
+ [32m✓[39m test/worker.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 294[2mms[22m[39m
+ [31m❯[39m test/index.test.ts [2m([22m[2m24 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 368[2mms[22m[39m
+   [32m✓[39m legacy GitHub Actions central Build API retirement [2m(1)[22m
+     [32m✓[39m does not expose the retired GitHub Actions-backed build routes[32m 67[2mms[22m[39m
+   [31m❯[39m Browser API aggregate CircleCI assistant report [2m(8)[22m
+     [32m✓[39m rejects invalid report bounds before making provider or storage requests[32m 5[2mms[22m[39m
+     [32m✓[39m requires project scope for the aggregate report[32m 2[2mms[22m[39m
+[31m     [31m×[31m returns a bounded CircleCI report with webhook correlation and redacted provider fields[39m[32m 45[2mms[22m[39m
+     [32m✓[39m marks a full webhook event page as limited rather than complete[32m 6[2mms[22m[39m
+     [32m✓[39m returns a usable partial report when webhook event storage is unavailable[32m 22[2mms[22m[39m
+     [32m✓[39m does not accept the MCP credential as a Browser API credential[32m 2[2mms[22m[39m
+     [32m✓[39m rejects non-GET Browser API methods even with a valid web token[32m 1[2mms[22m[39m
+     [32m✓[39m keeps the report behind Browser API bearer authentication[32m 1[2mms[22m[39m
+   [32m✓[39m MCP tool schemas and error boundary [2m(6)[22m
+     [32m✓[39m publishes bounded, typed input schemas for diagnostic tools[32m 70[2mms[22m[39m
+     [32m✓[39m uses the correct parallel execution index when diagnose_run retrieves failed-step logs[32m 34[2mms[22m[39m
+     [32m✓[39m reports a safe MCP error when the event inbox Durable Object fails[32m 11[2mms[22m[39m
+     [32m✓[39m fails safely when correlation cannot read the event inbox[32m 10[2mms[22m[39m
+     [32m✓[39m rejects invalid tool arguments before making an upstream request[32m 16[2mms[22m[39m
+     [32m✓[39m does not expose raw CircleCI error bodies through MCP tool calls[32m 12[2mms[22m[39m
+   [32m✓[39m Worker transport and fail-closed rate limiting [2m(5)[22m
+     [32m✓[39m rejects authenticated browser API mutations with an explicit GET-only response[32m 4[2mms[22m[39m
+     [32m✓[39m fails closed when the authenticated MCP rate limit is exhausted[32m 1[2mms[22m[39m
+     [32m✓[39m fails closed when the rate-limit service throws[32m 1[2mms[22m[39m
+     [32m✓[39m rate-limits failed MCP authentication without reaching the MCP handler[32m 1[2mms[22m[39m
+     [32m✓[39m fails closed when browser API rate limiting is exhausted[32m 1[2mms[22m[39m
+   [32m✓[39m legacy CircleCI v1.1 compatibility tools [2m(4)[22m
+     [32m✓[39m lists legacy build numbers through the registered project's v1.1 endpoint[32m 10[2mms[22m[39m
+     [32m✓[39m retrieves legacy build details by numeric build number without calling API v3[32m 10[2mms[22m[39m
+     [32m✓[39m retrieves bounded legacy action logs only from a CircleCI-provided allowlisted URL[32m 24[2mms[22m[39m
+     [32m✓[39m rejects legacy build log URLs outside the artifact allowlist without fetching them[32m 10[2mms[22m[39m
+ [32m✓[39m test/circleci-v3.test.ts [2m([22m[2m43 tests[22m[2m)[22m[32m 142[2mms[22m[39m
+ [32m✓[39m test/providers-circleci.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m test/provenance.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [31m❯[39m test/worker-api-details.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 169[2mms[22m[39m
+   [31m❯[39m Read-only browser API run details [2m(6)[22m
+     [32m✓[39m returns provider-neutral run summaries from the selected project's adapter[32m 124[2mms[22m[39m
+     [32m✓[39m returns a run with workflow and job resources using GET-only upstream requests[32m 14[2mms[22m[39m
+     [32m✓[39m marks run details incomplete when a workflow has more than 40 jobs[32m 8[2mms[22m[39m
+     [32m✓[39m returns a sanitized upstream error when CircleCI rejects run-detail access[32m 3[2mms[22m[39m
+[31m     [31m×[31m returns bounded failed-step logs and test results through the authenticated diagnostics API[39m[32m 17[2mms[22m[39m
+     [32m✓[39m returns 404 for unknown API paths without contacting CircleCI[32m 1[2mms[22m[39m
+ [32m✓[39m test/events.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 304[2mms[22m[39m
+ [32m✓[39m test/event-correlations-api.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 178[2mms[22m[39m
+ [32m✓[39m test/security.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+ [32m✓[39m test/webhook-ingress.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 150[2mms[22m[39m
+ [32m✓[39m test/normalize-test-results.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m test/registry.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m test/diagnostic-artifacts.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [31m❯[39m test/mcp-event-correlation.test.ts [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 213[2mms[22m[39m
+   [31m❯[39m MCP event correlation tool [2m(2)[22m
+     [32m✓[39m does not expose upstream CircleCI failures through MCP correlation[32m 172[2mms[22m[39m
+[31m     [31m×[31m returns candidate API v3 runs for a signed webhook inbox event[39m[32m 38[2mms[22m[39m
+ [32m✓[39m test/correlation.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m test/ui.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m test/diagnostic-completeness.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m test/circleci.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+ [32m✓[39m test/preview-smoke-test.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m test/index.test.ts[2m > [22mBrowser API aggregate CircleCI assistant report[2m > [22mreturns a bounded CircleCI report with webhook correlation and redacted provider fields
+[31m[1mAssertionError[22m: expected { service: 'znect-ci-bridge', …(14) } to match object { provider: 'circleci', …(7) }
+(17 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[33m@@ -24,18 +24,12 @@[39m
+[2m    },[22m
+[2m    "permissions": "read-only",[22m
+[2m    "provider": "circleci",[22m
+[2m    "read_only": true,[22m
+[2m    "runs": {[22m
+[32m-     "diagnostics": [[39m
+[32m-       {[39m
+[32m-         "endpoint": "/api/v1/diagnostics/123e4567-e89b-42d3-a456-426614174001?project_id=znect-forge&connection_id=forge-circleci",[39m
+[32m-         "run_id": "123e4567-e89b-42d3-a456-426614174001",[39m
+[32m-         "status": "failed",[39m
+[32m-       },[39m
+[32m-     ],[39m
+[32m-     "failed_count": 1,[39m
+[31m+     "diagnostics": [],[39m
+[31m+     "failed_count": 0,[39m
+[2m      "items": [[22m
+[2m        {[22m
+[2m          "commitMessage": "[REDACTED]",[22m
+[2m        },[22m
+[2m      ],[22m
+
+[36m [2m❯[22m test/index.test.ts:[2m158:21[22m[39m
+    [90m156|[39m
+    [90m157|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m158|[39m     [34mexpect[39m(payload)[33m.[39m[34mtoMatchObject[39m({
+    [90m   |[39m                     [31m^[39m
+    [90m159|[39m       provider[33m:[39m [32m"circleci"[39m[33m,[39m
+    [90m160|[39m       permissions[33m:[39m [32m"read-only"[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m test/mcp-event-correlation.test.ts[2m > [22mMCP event correlation tool[2m > [22mreturns candidate API v3 runs for a signed webhook inbox event
+[31m[1mAssertionError[22m: expected [ Array(1) ] to match object [ { event: { …(2) }, …(2) } ]
+(3 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[33m@@ -4,11 +4,11 @@[39m
+[2m        {[22m
+[2m          "run": {[22m
+[2m            "commitSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",[22m
+[2m            "id": "123e4567-e89b-42d3-a456-426614174001",[22m
+[2m          },[22m
+[32m-         "time_delta_ms": 30000,[39m
+[31m+         "time_delta_ms": 90000,[39m
+[2m        },[22m
+[2m      ],[22m
+[2m      "event": {[22m
+[2m        "cursor": 1,[22m
+[2m        "id": "3888f21b-eaa7-4383-8f3d-75a63bba0001",[22m
+
+[36m [2m❯[22m test/mcp-event-correlation.test.ts:[2m141:33[22m[39m
+    [90m139|[39m     [34mexpect[39m(payload[33m.[39mresult[33m?.[39misError)[33m.[39mnot[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m140|[39m     [35mconst[39m result [33m=[39m [33mJSON[39m[33m.[39m[34mparse[39m(payload[33m.[39mresult[33m.[39mcontent[[34m0[39m][33m.[39mtext)[33m;[39m
+    [90m141|[39m     [34mexpect[39m(result[33m.[39mcorrelations)[33m.[39m[34mtoMatchObject[39m([{
+    [90m   |[39m                                 [31m^[39m
+    [90m142|[39m       event[33m:[39m { id[33m:[39m [33mEVENT_ID[39m[33m,[39m cursor[33m:[39m [34m1[39m }[33m,[39m
+    [90m143|[39m       status[33m:[39m [32m"candidate"[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m test/worker-api-details.test.ts[2m > [22mRead-only browser API run details[2m > [22mreturns bounded failed-step logs and test results through the authenticated diagnostics API
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called 11 times, but got 12 times[39m
+[36m [2m❯[22m test/worker-api-details.test.ts:[2m317:23[22m[39m
+    [90m315|[39m       expect.objectContaining({ path: "test-results/results-b.xml", er…
+    [90m316|[39m     ]))[33m;[39m
+    [90m317|[39m     [34mexpect[39m(fetchMock)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m11[39m)[33m;[39m
+    [90m   |[39m                       [31m^[39m
+    [90m318|[39m   })[33m;[39m
+    [90m319|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m16 passed[39m[22m[90m (19)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m287 passed[39m[22m[90m (290)[39m
+[2m   Start at [22m 08:06:34
+[2m   Duration [22m 8.40s[2m (tests 48%, import 33%, transform 16%, worker 3%)[22m
+
+[2m    Isolate [22m [33m19 workers spawned[39m[2m · ~171ms startup each (spawn + environment, per file)[22m
+[2m            [22m [2mat least ~3.08s faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+
+===== End CI Bridge validation log =====
+
+Exited with code exit status 1
