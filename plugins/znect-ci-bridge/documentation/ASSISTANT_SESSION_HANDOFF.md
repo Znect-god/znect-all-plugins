@@ -179,3 +179,41 @@ Read `RUNTIME_READINESS.md` before runtime work. Important facts:
 ## 9. Security
 
 This file intentionally contains operational identifiers, public repository paths, non-secret build metadata and verification state only. It must never contain token values, secret values, private keys, passwords, authorization headers, signed URLs, or unredacted private artifact URLs.
+
+
+## 10. Additional deployment-source investigation — 2026-11-19
+
+### Confirmed repository evidence
+
+- Private repository `Znect-god/znect-forge` is an Android/Kotlin project. Its current `main` root contains `.github/`, `README.md`, `app/`, `scripts/` and `журналы/`; there is no root `package.json`, `wrangler.toml` or Cloudflare Worker source in the complete recursive tree. Therefore its current `main` root is not the source directory used by the recorded Wrangler Worker build.
+- The Forge workflows are separate from the Worker deployment:
+  - `.github/workflows/znect-build-request.yml` is `workflow_dispatch` only. It dispatches a request to `Znect-god/znect-build` and explicitly logs that Forge execution is disabled; it is not a Worker deploy.
+  - `.github/workflows/znect-ci-bridge-request.yml` is an on-demand private diagnostic workflow, pinned to the historical Preview hostname `feat-ci-bridge-circleci-webhooks-znect-ci-bridge.znect699.workers.dev` and the Forge CircleCI project. It is not the Production deployment workflow.
+- The Worker source and Wrangler project are in `Znect-god/znect-all-plugins`, branch `ci-bridge`, directory `plugins/znect-ci-bridge/`.
+- That directory contains:
+  - `package.json` with `deploy: wrangler deploy` and Wrangler `4.160.0`.
+  - `package-lock.json`.
+  - `wrangler.toml` with Worker name `znect-ci-bridge`, entrypoint `src/index.ts`, compatibility date `2026-11-11`, and the declared rate-limit and Durable Object bindings.
+- The Production build log's sequence (`npm clean-install`, a configured `npm ci`, then `npx wrangler deploy`) is consistent with a Cloudflare Workers Builds configuration rooted at `plugins/znect-ci-bridge/` in the source repository. This is a strong match, but the actual Cloudflare Git integration configuration has not been read.
+
+### Strong timestamp correlation for the recorded Production deployment
+
+- Production log first timestamp: `2026-11-12T07:45:12Z`.
+- GitHub commit `060b159375da2ce153f0dcaa4bff98a56ad940bb` was created at `2026-11-12T07:45:08Z`, four seconds earlier.
+- That commit changes only `plugins/znect-ci-bridge/src/index.ts`, adding the read-only `get_job_details` MCP tool.
+- The time correlation strongly suggests that this is the source commit that triggered the recorded Production build. However, the build log itself contains no commit SHA. Do not mark this commit as proven deployed until Cloudflare deployment metadata or build configuration explicitly ties the Version ID `920f2af4-18b4-4c1e-957e-d87f6e7e174b` to it.
+- Another earlier source commit `32ef124c293f10c9aa36a392c7a1cb8398e52d48` at `2026-11-12T00:06:36Z` is explicitly titled `chore: trigger Cloudflare Workers build`; it may correspond to a different build. Do not conflate it with the 07:45:12Z log.
+
+### Remaining exact evidence needed
+
+GitHub source inspection has narrowed the likely Cloudflare source to:
+- Repository: `Znect-god/znect-all-plugins`
+- Branch: likely `ci-bridge` (the correlated commit is on this branch)
+- Root directory: likely `plugins/znect-ci-bridge`
+- Deploy command: likely `npx wrangler deploy` (explicitly recorded in the Production log and package script)
+
+These are strong source-based inferences, not a verified reading of Cloudflare's configuration. The single remaining configuration evidence is the Cloudflare Worker project's **Builds & deployments** configuration showing the connected repository, production branch, root directory, build command and deploy command. Request only those non-secret fields if no read-only Cloudflare tool becomes available. Do not ask for a broad screenshot, credentials, or another log already analyzed.
+
+### New tool limitation
+
+- The available GitHub connector can read repository contents, commit history and related GitHub resources, but its allowlist rejected the repository deployments endpoint in this investigation. Do not claim GitHub deployment records were inspected.
