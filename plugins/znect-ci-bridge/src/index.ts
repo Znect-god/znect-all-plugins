@@ -497,7 +497,8 @@ function createServer(env: Env) {
     "get_run_details",
     {
       description: "Read one CircleCI API v3 run by UUID for a selected registered project, including its workflows and jobs. Read-only; use a run UUID returned by list_recent_runs for the same project.",
-      annotations: { readOnlyHint: true },      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().uuid() }
+      annotations: { readOnlyHint: true },
+      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().uuid() }
     },
     async ({ project_id, connection_id, run_id }) => {
       const { project: registryProject, scope, adapter } = getCircleCiAdapter(env, project_id, connection_id);
@@ -996,7 +997,8 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       if (!project) return json({ error: "Unknown Znect project." }, 404);
       try {
         const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
-          .fetch(`https://event-store/events?after=${after}&limit=${limit}`);        const result = await readEventPage(response, limit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
+          .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
+        const result = await readEventPage(response, limit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
         return boundedJson(JSON.stringify(result), 60_000);
       } catch {
         return json({ error: "Event storage is temporarily unavailable or returned invalid data." }, 503);
