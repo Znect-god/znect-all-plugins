@@ -17,13 +17,13 @@ Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for inspecting
 - **GitHub Actions:** not used as an executor. Legacy GitHub Actions workflows in Znect Build are inert.
 - **ChatGPT access:** MCP is optional/legacy and not required. The private Browser JSON API uses a separate Bearer token; the dashboard can export a bounded JSON report for explicit user-reviewed handoff. Direct authenticated ChatGPT Free access to the private API remains unverified.
 
-## Current implementation state — 2026-11-18
+## Current implementation state — 2026-11-19
 
 - The existing Worker and provider-neutral CircleCI read-only adapter are preserved.
 - The Browser JSON API provides project-scoped status, runs, run details, diagnostics, events, event correlations and aggregate reports.
 - The dashboard exports one bounded JSON report, including up to three failed-run diagnostic bundles, with a 600 KB byte-size ceiling and partial-data markers. Each job diagnostic includes normalized JSONL/JUnit test counts; the report declares that handoff is a user-reviewed JSON attachment, not automatic ChatGPT API access.
 - Znect Build's CircleCI exact-SHA workflow and the central validation recipe are implemented on an isolated feature branch. The workflow defaults to disabled and records source SHA, recipe SHA and CircleCI pipeline identity.
-- The Znect Build CircleCI project has not yet been configured or live-verified. No CircleCI pipeline or current-head test suite has been run.
+- The automatic CircleCI push connection for `Znect-god/znect-build` is now verified by a successful `ci/circleci: validate-ci-bridge-source` status on recipe commit `50aa518e87894d99b332d764e59bd0e58cead6bd` (job `06b87f8a-f766-44eb-bd2a-e37d3dc25fd0`). The recipe targeted source HEAD `988bb2594d5429df3cedabf9aca08c017bbac3f7`. The source repository does not yet contain a fresh run log or retrieved provenance manifest, so the exact source SHA recorded by CircleCI's artifact is not independently confirmed. This verifies the repository push-to-CircleCI path, not the Bridge runtime's CircleCI API connection.
 - The separate GitHub Actions-based Znect Build adapter, provider type, Browser/MCP routes and GitHub token requirement have been removed. Znect Build must be registered as an ordinary CircleCI project connection.
 - Direct ChatGPT Free authentication to the private Browser API is unresolved. Manual JSON export remains the honest fallback; it is not automatic connectivity.
 - No current-branch Preview deployment, Production change, release or live CircleCI event round-trip is claimed.
@@ -64,7 +64,7 @@ The recipe performs no deployment. A separate `ci-bridge-exact-sha-validation` w
 
 - Verify the Znect Build CircleCI project connection and free-plan quota availability.
 - After separate explicit authorization, run the exact-SHA validation workflow and inspect the real CircleCI manifest/artifact evidence.
-- Register the Znect Build CircleCI project in the runtime project registry and verify its run/job/manifest-artifact reads through the generic CircleCI adapter.
+- Confirm the deployed Worker has a non-empty `ZNECT_PROJECT_REGISTRY` and a valid `CIRCLECI_TOKEN`; source defaults to an empty project registry when the optional variable is absent. Then register the Znect Build CircleCI project without replacing existing entries and verify run/job/manifest-artifact reads through the generic CircleCI adapter.
 - Verify live CircleCI run/job/log/test/artifact reads and real webhook delivery through the existing CircleCI adapter.
 - Establish a supported private ChatGPT Free authentication/handoff path without MCP or weakened authentication.
 - Complete independent security review and release readiness.
