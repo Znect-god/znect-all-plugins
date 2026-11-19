@@ -314,3 +314,15 @@ These are strong source-based inferences, not a verified reading of Cloudflare's
 - Direct provider currently opens the original file directly with `ParcelFileDescriptor.open(file, modeFlags)`; do not enable global editor save there until a transactional replacement path is implemented.
 - Generic SAF `FLAG_SUPPORTS_WRITE` does not prove safe rollback. Keep generic SAF preview-only until a provider-specific transactional adapter is implemented and tested.
 - The canonical issue register `docs/KNOWN_ISSUES_0.7.0.md`, issue F07-087, was updated in commit `2d3954974543a3e5e13074cfe3b6a45224c895e6` with this architecture boundary. Global editor UI is still not implemented; no tests/build/device checks were run.
+
+
+### F07-087 global text editor implementation — 2026-11-19
+
+- Implemented in Forge branch `work/0.7.0-finish-daedric-workshop` (same draft PR #1). Global File Manager opens the editor only for exact Forge-owned Root and Network Storage content authorities; Direct Storage and third-party SAF remain read-only preview.
+- Added `GlobalTextEditorPolicy.kt` and `GlobalTextEditorPolicyTest.kt` for exact authority allowlisting.
+- `WorkspaceActivity.showPhoneStoragePreview()` now uses strict UTF-8 decoding, keeps the 512 KiB cap, and opens a Save/Close editor only for non-truncated text in approved providers. Save enforces the same byte cap, re-reads and compares original bytes to detect changes since open, then writes via `ContentResolver.openOutputStream(uri, "wt")` so the existing Root/Network staged/backup provider pipelines handle publication. Back/Close prompts before discarding dirty text; write failure keeps the editor content available.
+- Added EN/RU strings for size limit, conflict and discard confirmation.
+- Forge issue register F07-087 updated in commit `8e05987373884affbe7e6313598d00e1518c0c85`.
+- Current Forge branch head at handoff update: `8e05987373884affbe7e6313598d00e1518c0c85`.
+- A local standalone Kotlin smoke check for the provider allowlist passed. The JUnit source exists but was not run. No full Gradle tests, Android build, CircleCI run, APK or BV9200 device validation were performed. GitHub combined commit status returned no statuses for the prior source head; re-check after the final documentation commit.
+- Do not describe F07-087 as release-verified until the actual Gradle/JUnit suite, Android build and target-device checks pass.
