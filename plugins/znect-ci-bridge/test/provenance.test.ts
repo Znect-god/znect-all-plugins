@@ -229,7 +229,7 @@ describe("CI Bridge provenance manifest schema", () => {
     const workflow = { id: workflowId, runId, name: "ci-bridge-exact-sha-validation" };
     const baseRun = { id: runId, projectId: "znect-build", status: "success", commitSha: manifest.recipe_sha };
     await expect(inspectCiBridgeProvenance(adapter as never, scope, { ...baseRun, id: "123e4567-e89b-42d3-a456-426614174010" }, [workflow]))
-      .resolves.toMatchObject({ status: "invalid", reason: "circleci_identity_or_sha_mismatch" });
+      .resolves.toMatchObject({ status: "invalid", reason: "workflow_identity_mismatch" });
     await expect(inspectCiBridgeProvenance(adapter as never, scope, baseRun, [{ ...workflow, id: "123e4567-e89b-42d3-a456-426614174011" }]))
       .resolves.toMatchObject({ status: "invalid", reason: "circleci_identity_or_sha_mismatch" });
     await expect(inspectCiBridgeProvenance(adapter as never, scope, { ...baseRun, commitSha: "c".repeat(40) }, [workflow]))
