@@ -497,8 +497,7 @@ function createServer(env: Env) {
     "get_run_details",
     {
       description: "Read one CircleCI API v3 run by UUID for a selected registered project, including its workflows and jobs. Read-only; use a run UUID returned by list_recent_runs for the same project.",
-      annotations: { readOnlyHint: true },
-      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().uuid() }
+      annotations: { readOnlyHint: true },      inputSchema: { project_id: z.string().min(2).max(63), connection_id: z.string().min(2).max(63).optional(), run_id: z.string().uuid() }
     },
     async ({ project_id, connection_id, run_id }) => {
       const { project: registryProject, scope, adapter } = getCircleCiAdapter(env, project_id, connection_id);
@@ -706,14 +705,14 @@ function createServer(env: Env) {
             ))
             .map((step) => ({
               name: step.name,
-              execution_index: step.execution_index,
+              execution_index: step.execution,
               actions: step.actions
                 .filter((action) => (action.status === "failed" || action.outcome === "failed") && action.isInsignificant !== true)
                 .map((action) => ({
                   name: action.name,
                   status: action.status,
                   exit_code: action.exitCode,
-                  step_num: action.step_num
+                  step_num: action.stepNumber
                 }))
             }));
 
@@ -726,7 +725,7 @@ function createServer(env: Env) {
                 failedStepLogsIncomplete = true;
                 break;
               }
-              const stepNum = action.step_num;
+              const stepNum = action.stepNumber;
               if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) {
                 reportDataIncomplete = true;
                 failedStepLogsIncomplete = true;
@@ -738,7 +737,7 @@ function createServer(env: Env) {
                 try {
                   const result = await adapter.getJobLogs(scope, job.id, {
                     step: stepNum,
-                    execution: step.execution_index,
+                    execution: step.execution,
                     stream,
                     maxBytes: 12_000 * 4
                   });
@@ -758,7 +757,7 @@ function createServer(env: Env) {
               }
               failedStepLogs.push({
                 step_num: stepNum,
-                execution: step.execution_index,
+                execution: step.execution,
                 action_name: action.name,
                 stdout: output.stdout,
                 stderr: output.stderr
@@ -997,8 +996,7 @@ async function handleReadOnlyApi(request: Request, env: Env): Promise<Response> 
       if (!project) return json({ error: "Unknown Znect project." }, 404);
       try {
         const response = await env.EVENT_STORE.get(env.EVENT_STORE.idFromName(project.id))
-          .fetch(`https://event-store/events?after=${after}&limit=${limit}`);
-        const result = await readEventPage(response, limit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
+          .fetch(`https://event-store/events?after=${after}&limit=${limit}`);        const result = await readEventPage(response, limit, after, new Set(project.connections.filter((connection) => connection.provider === "circleci").map((connection) => connection.projectSlug!)));
         return boundedJson(JSON.stringify(result), 60_000);
       } catch {
         return json({ error: "Event storage is temporarily unavailable or returned invalid data." }, 503);
