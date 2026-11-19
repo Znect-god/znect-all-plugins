@@ -1,0 +1,254 @@
+===== CI Bridge validation log (last 250 lines) =====
+[31m+       (data.workflows||[]).forEach(function(entry){[39m
+[31m+         var workflow=entry.workflow||{};[39m
+[31m+         var section=element("section","workflow");[39m
+[31m+         section.appendChild(element("h3","",workflow.name||workflow.id||"Workflow"));[39m
+[31m+         (entry.jobs||[]).forEach(function(job){[39m
+[31m+                     var line=element("div","job");[39m
+[31m+           line.appendChild(element("span","",job.name||job.id));[39m
+[31m+           line.appendChild(element("span","pill",job.status||"unknown"));[39m
+[31m+           section.appendChild(line);[39m
+[31m+         });[39m
+[31m+         detailsBox.appendChild(section);[39m
+[31m+       });[39m
+[31m+       rawBox.textContent=JSON.stringify(data,null,2);[39m
+[31m+       detailsPanel.scrollIntoView({behavior:"smooth",block:"start"});[39m
+[31m+       setMessage("Run details loaded.","good");[39m
+[31m+     }).catch(function(error){[39m
+[31m+       if(version!==sessionVersion||requestId!==detailsRequestId)return;[39m
+[31m+       setMessage(error.message,"error");[39m
+[31m+     });[39m
+[31m+   }[39m
+[31m+   document.getElementById("connect").addEventListener("click",connect);[39m
+[31m+   document.getElementById("refresh").addEventListener("click",loadRuns);[39m
+[31m+   document.getElementById("export-report").addEventListener("click",exportAssistantReport);[39m
+[31m+   document.getElementById("refresh-events").addEventListener("click",loadEventCorrelations);[39m
+[31m+   function refreshSelectedScope(){[39m
+[31m+     eventsRequestId++;exportRequestId++;[39m
+[31m+     document.getElementById("export-report").disabled=false;[39m
+[31m+     detailsPanel.hidden=true;lastDetails=null;rawBox.textContent="";[39m
+[31m+     setMessage("Switching CI connection…");[39m
+[31m+     request("/api/v1/status?"+scopeQuery()).then(function(data){[39m
+[31m+       if(data.provider_availability==="available"){[39m
+[31m+         setMessage("Connected to "+(data.project.name||"CircleCI project")+" via "+(data.connection.id||"selected connection")+".","good");[39m
+[31m+         loadRuns();loadEventCorrelations();[39m
+[31m+       }else{[39m
+[31m+         setMessage("Project and connection are configured, but the provider is unavailable.","error");[39m
+[31m+         runsBox.replaceChildren(element("p","status error",data.error||"Provider availability could not be confirmed."));[39m
+[31m+         eventsBox.replaceChildren(element("p","status error","CircleCI must be reachable to correlate webhook events."));[39m
+[31m+       }[39m
+[31m+     }).catch(function(error){[39m
+[31m+       eventsBox.replaceChildren(element("p","status error",error.message));[39m
+[31m+       setMessage(error.message,"error");[39m
+[31m+     });[39m
+[31m+   }[39m
+[31m+   projectSelect.addEventListener("change",function(){[39m
+[31m+     selectProject(projectSelect.value);[39m
+[31m+     refreshSelectedScope();[39m
+[31m+   });[39m
+[31m+   connectionSelect.addEventListener("change",function(){[39m
+[31m+     currentConnection=connectionSelect.value;[39m
+[31m+     refreshSelectedScope();[39m
+[31m+   });[39m
+[31m+   document.getElementById("disconnect").addEventListener("click",function(){[39m
+[31m+     sessionVersion++;runsRequestId++;detailsRequestId++;eventsRequestId++;exportRequestId++;[39m
+[31m+     document.getElementById("export-report").disabled=false;[39m
+[31m+     token="";tokenInput.value="";runsPanel.hidden=true;detailsPanel.hidden=true;eventsPanel.hidden=true;lastDetails=null;[39m
+[31m+     runsBox.replaceChildren();detailsBox.replaceChildren();eventsBox.replaceChildren();rawBox.textContent="";[39m
+[31m+     setMessage("Token cleared from this tab.","");[39m
+[31m+   });[39m
+[31m+   document.getElementById("copy").addEventListener("click",function(){[39m
+[31m+     if(!lastDetails)return;[39m
+[31m+     var copiedDetails=lastDetails;[39m
+[31m+     var version=sessionVersion;[39m
+[31m+     navigator.clipboard.writeText(JSON.stringify(copiedDetails,null,2)).then(function(){[39m
+[31m+       if(version!==sessionVersion||lastDetails!==copiedDetails)return;[39m
+[31m+       setMessage("Run JSON copied.","good");[39m
+[31m+     }).catch(function(){[39m
+[31m+       if(version!==sessionVersion||lastDetails!==copiedDetails)return;[39m
+[31m+       setMessage("Clipboard access is unavailable in this browser.","error");[39m
+[31m+     });[39m
+[31m+   });[39m
+[31m+ })();[39m
+[31m+ </script>[39m
+[31m+ </body>[39m
+[31m+ </html>[39m
+
+[36m [2m❯[22m test/ui.test.ts:[2m30:28[22m[39m
+    [90m 28|[39m     expect(DASHBOARD_HTML).toContain("run.commitMessage||run.branch||r…
+    [90m 29|[39m     expect(DASHBOARD_HTML).toContain("workflow.name||workflow.id||\"Wo…
+    [90m 30|[39m     expect(DASHBOARD_HTML).toContain('"?project_id="+encodeURIComponen…
+    [90m   |[39m                            [31m^[39m
+    [90m 31|[39m   })[33m;[39m
+    [90m 32|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m test/worker-api-details.test.ts[2m > [22mRead-only browser API run details[2m > [22mreturns bounded failed-step logs and test results through the authenticated diagnostics API
+[31m[1mAssertionError[22m: expected '{\n  "project": {\n    "id": "znect-f…' to contain '"provider":"circleci"'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- "provider":"circleci"[39m
+[31m+ {[39m
+[31m+   "project": {[39m
+[31m+     "id": "znect-forge",[39m
+[31m+     "name": "Znect Forge",[39m
+[31m+     "provider": "circleci"[39m
+[31m+   },[39m
+[31m+   "run": {[39m
+[31m+     "id": "123e4567-e89b-42d3-a456-426614174001",[39m
+[31m+     "projectId": "znect-forge",[39m
+[31m+     "status": "failed"[39m
+[31m+   },[39m
+[31m+   "provenance": {[39m
+[31m+     "status": "missing",[39m
+[31m+     "reason": "validation_workflow_not_found"[39m
+[31m+   },[39m
+[31m+   "workflows": [[39m
+[31m+     {[39m
+[31m+       "workflow": {[39m
+[31m+         "id": "123e4567-e89b-42d3-a456-426614174002",[39m
+[31m+         "runId": "123e4567-e89b-42d3-a456-426614174001",[39m
+[31m+         "name": "build-and-test",[39m
+[31m+         "status": "failed"[39m
+[31m+       },[39m
+[31m+       "jobs_total": 1,[39m
+[31m+       "jobs_inspected": 1,[39m
+[31m+       "jobs_truncated": false,[39m
+[31m+       "failed_jobs_total": 1,[39m
+[31m+       "failed_jobs": [[39m
+[31m+         {[39m
+[31m+           "job": {[39m
+[31m+             "id": "123e4567-e89b-42d3-a456-426614174003",[39m
+[31m+             "projectId": "znect-forge",[39m
+[31m+             "workflowId": "123e4567-e89b-42d3-a456-426614174002",[39m
+[31m+             "status": "unknown",[39m
+[31m+             "name": "unit-tests",[39m
+[31m+             "steps": [[39m
+[31m+               {[39m
+[31m+                 "execution": 0,[39m
+[31m+                 "name": "Run tests",[39m
+[31m+                 "actions": [[39m
+[31m+                   {[39m
+[31m+                     "name": "Run tests",[39m
+[31m+                     "status": "failed",[39m
+[31m+                     "outcome": "failed",[39m
+[31m+                     "exitCode": 1,[39m
+[31m+                     "stepNumber": 0,[39m
+[31m+                     "isInsignificant": false[39m
+[31m+                   }[39m
+[31m+                 ][39m
+[31m+               }[39m
+[31m+             ][39m
+[31m+           },[39m
+[31m+           "failed_steps": [[39m
+[31m+             {[39m
+[31m+               "name": "Run tests",[39m
+[31m+               "execution": 0,[39m
+[31m+               "actions": [[39m
+[31m+                 {[39m
+[31m+                   "name": "Run tests",[39m
+[31m+                   "status": "failed",[39m
+[31m+                   "outcome": "failed",[39m
+[31m+                   "exitCode": 1,[39m
+[31m+                   "stepNumber": 0,[39m
+[31m+                   "isInsignificant": false[39m
+[31m+                 }[39m
+[31m+               ][39m
+[31m+             }[39m
+[31m+           ],[39m
+[31m+           "failed_step_logs": [[39m
+[31m+             {[39m
+[31m+               "step_num": 0,[39m
+[31m+               "execution": 0,[39m
+[31m+               "action_name": "Run tests",[39m
+[31m+               "stdout": "Authorization: Bearer [REDACTED]\nAssertionError: expected 1 to equal 2",[39m
+[31m+               "stderr": "Test suite failed"[39m
+[31m+             }[39m
+[31m+           ],[39m
+[31m+           "failed_step_logs_status": "available",[39m
+[31m+           "test_results": "{\"name\":\"sample test\",\"result\":\"failure\"}\n",[39m
+[31m+           "test_results_status": "available",[39m
+[31m+           "test_summary": {[39m
+[31m+             "status": "partial",[39m
+[31m+             "sources": "jsonl_only",[39m
+[31m+             "count_scope": "observed_records",[39m
+[31m+             "total": 1,[39m
+[31m+             "passed": 0,[39m
+[31m+             "failed": 1,[39m
+[31m+             "skipped": 0,[39m
+[31m+             "unknown": 0,[39m
+[31m+             "jsonl_records": 1,[39m
+[31m+             "junit_records": 0,[39m
+[31m+             "duplicate_reports_removed": 0,[39m
+[31m+             "duplicate_identities_retained": 0,[39m
+[31m+             "ambiguous_duplicate_groups": 0,[39m
+[31m+             "conflicting_statuses": 0,[39m
+[31m+             "malformed_jsonl_records": 0,[39m
+[31m+             "malformed_junit_reports": 2,[39m
+[31m+             "incomplete": true[39m
+[31m+           },[39m
+[31m+           "report_artifacts": [[39m
+[31m+             {[39m
+[31m+               "path": "junit/results-a.xml",[39m
+[31m+               "size": 100,[39m
+[31m+               "error": "Unable to retrieve this report artifact."[39m
+[31m+             },[39m
+[31m+             {[39m
+[31m+               "path": "test-results/results-b.xml",[39m
+[31m+               "size": 120,[39m
+[31m+               "error": "Unable to retrieve this report artifact."[39m
+[31m+             }[39m
+[31m+           ],[39m
+[31m+           "report_artifacts_status": "unavailable"[39m
+[31m+         }[39m
+[31m+       ][39m
+[31m+     }[39m
+[31m+   ],[39m
+[31m+   "diagnostics_summary": {[39m
+[31m+     "workflows_total": 1,[39m
+[31m+     "workflows_inspected": 1,[39m
+[31m+     "workflows_truncated": false,[39m
+[31m+     "failed_jobs_inspected": 1,[39m
+[31m+     "failed_job_limit_reached": false,[39m
+[31m+     "jobs_truncated": false,[39m
+[31m+     "report_data_incomplete": true,[39m
+[31m+     "report_artifact_limit_reached": true,[39m
+[31m+     "incomplete": true,[39m
+[31m+     "log_actions_inspected": 1,[39m
+[31m+     "log_action_limit_reached": false[39m
+[31m+   },[39m
+[31m+   "limits": {[39m
+[31m+     "max_workflows": 5,[39m
+[31m+     "max_jobs_per_workflow": 40,[39m
+[31m+     "max_failed_jobs_per_run": 3,[39m
+[31m+     "max_failed_actions_with_logs_per_run": 3,[39m
+[31m+     "max_report_artifacts_per_job": 4,[39m
+[31m+     "max_report_bytes_per_job": 500000[39m
+[31m+   }[39m
+[31m+ }[39m
+
+[36m [2m❯[22m test/worker-api-details.test.ts:[2m294:18[22m[39m
+    [90m292|[39m     [34mexpect[39m(body)[33m.[39m[34mtoContain[39m([32m"Test suite failed"[39m)[33m;[39m
+    [90m293|[39m     [34mexpect[39m(body)[33m.[39m[34mtoContain[39m([32m"sample test"[39m)[33m;[39m
+    [90m294|[39m     [34mexpect[39m(body)[33m.[39m[34mtoContain[39m([32m'"provider":"circleci"'[39m)[33m;[39m
+    [90m   |[39m                  [31m^[39m
+    [90m295|[39m     [34mexpect[39m(body)[33m.[39m[34mtoContain[39m([32m'"failed_steps"'[39m)[33m;[39m
+    [90m296|[39m     [34mexpect[39m(body)[33m.[39m[34mtoContain[39m([32m"[REDACTED]"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m14 passed[39m[22m[90m (19)[39m
+[2m      Tests [22m [1m[31m8 failed[39m[22m[2m | [22m[1m[32m282 passed[39m[22m[90m (290)[39m
+[2m   Start at [22m 07:57:28
+[2m   Duration [22m 6.32s[2m (tests 49%, import 33%, transform 16%, worker 3%)[22m
+
+[2m    Isolate [22m [33m19 workers spawned[39m[2m · ~136ms startup each (spawn + environment, per file)[22m
+[2m            [22m [2mat least ~2.44s faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+
+===== End CI Bridge validation log =====
+
+Exited with code exit status 1
