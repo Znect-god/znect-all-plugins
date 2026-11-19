@@ -41,7 +41,7 @@ Znect CI Bridge is a free-tier-first, read-only Cloudflare Worker for inspecting
 
 The CircleCI configuration and central recipe are maintained in [Znect Build](https://github.com/Znect-god/znect-build/tree/feat/ci-bridge-node-worker-recipe).
 
-The opt-in workflow requires `run_ci_bridge_validation=true`, a branch ref and a full 40-character source SHA. CircleCI checks out the exact commit from this public repository, verifies the resolved SHA, then runs:
+The normal development path is automatic: a push to `feat/ci-bridge-node-worker-recipe` in `Znect-god/znect-build` creates a CircleCI pipeline (provided the CircleCI GitHub/VCS project connection is active), and `ci-bridge-auto-validation` validates the current head of the canonical `ci-bridge` source branch. No pipeline parameters or manual Run Pipeline action are required for this path. The job resolves and records the source SHA, checks out that exact commit and verifies the resolved SHA before running:
 
 1. `npm ci`
 2. `npm audit --audit-level=high`
@@ -49,7 +49,7 @@ The opt-in workflow requires `run_ci_bridge_validation=true`, a branch ref and a
 4. `node --check scripts/preview-smoke-test.mjs`
 5. `npx --no-install wrangler deploy --dry-run`
 
-The workflow performs no deployment. Its default is disabled; no pipeline is started merely by editing the source or roadmap.
+The recipe performs no deployment. A separate `ci-bridge-exact-sha-validation` workflow remains available for explicitly requested historical/reproducible SHA checks via `run_ci_bridge_validation=true`. Automatic execution still depends on CircleCI receiving the GitHub push event; the repository config alone cannot establish or prove that external project connection.
 
 ## Security boundaries
 
