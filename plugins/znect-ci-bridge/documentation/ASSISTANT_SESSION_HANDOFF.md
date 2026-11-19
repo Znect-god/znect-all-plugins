@@ -304,3 +304,13 @@ These are strong source-based inferences, not a verified reading of Cloudflare's
 - The user has explicitly said Forge is in active development and wants work to continue across all agreed 0.7.0 scope, not only CI Bridge.
 - Do not ask the user to repeat known project context or send logs already available in GitHub.
 - Give one concrete next action/result at a time; avoid cycling through setup questions.
+
+
+### Forge text-editor follow-up — 2026-11-19
+
+- Further inspection found the project-scoped editor already exists: `WorkspaceActivity.showEditFileDialog()` uses the EN/RU resource strings and saves via `WorkspaceManager.writeTextFile()`.
+- `WorkspaceManager.writeTextFile()` writes and fsyncs a sibling temporary file, renames the original to a backup, publishes the replacement, and restores the backup on publication or workspace-sync failure. Reuse this design; do not duplicate project editor logic.
+- Root provider write path is staged and backup-aware. Network provider write path is staged, checks source version and publishes by rename with backup recovery. These Forge-owned provider authorities are candidates for the first global editor save path.
+- Direct provider currently opens the original file directly with `ParcelFileDescriptor.open(file, modeFlags)`; do not enable global editor save there until a transactional replacement path is implemented.
+- Generic SAF `FLAG_SUPPORTS_WRITE` does not prove safe rollback. Keep generic SAF preview-only until a provider-specific transactional adapter is implemented and tested.
+- The canonical issue register `docs/KNOWN_ISSUES_0.7.0.md`, issue F07-087, was updated in commit `2d3954974543a3e5e13074cfe3b6a45224c895e6` with this architecture boundary. Global editor UI is still not implemented; no tests/build/device checks were run.
