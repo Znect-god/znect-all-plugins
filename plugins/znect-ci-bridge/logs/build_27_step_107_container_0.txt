@@ -1,0 +1,254 @@
+===== CI Bridge validation log (last 250 lines) =====
+[2m            "status": "failed",[22m
+[2m            "stepNumber": 7,[22m
+[31m+         },[39m
+[31m+       ],[39m
+[31m+       "execution": 1,[39m
+[31m+       "name": "worker one",[39m
+[2m      },[22m
+[31m+     {[39m
+[31m+       "actions": [[39m
+[2m          {[22m
+[2m            "exitCode": 1,[22m
+[2m            "isInsignificant": true,[22m
+[31m+           "name": "allowed cleanup",[39m
+[31m+           "outcome": "failed",[39m
+[2m            "status": "failed",[22m
+[2m            "stepNumber": 8,[22m
+[2m          },[22m
+[2m        ],[22m
+[2m        "execution": 1,[22m
+[31m+       "name": "allowed cleanup",[39m
+[2m      },[22m
+[2m    ],[22m
+[2m  }[22m
+
+[36m [2m❯[22m test/providers-circleci.test.ts:[2m231:48[22m[39m
+    [90m229|[39m       })))[33m;[39m
+    [90m230|[39m     const adapter = new CircleCiReadOnlyAdapter("token", "gh/Znect-god…
+    [90m231|[39m     await expect(adapter.getJob(scope, JOB_ID)).resolves.toMatchObject…
+    [90m   |[39m                                                [31m^[39m
+    [90m232|[39m       steps[33m:[39m [
+    [90m233|[39m         { execution: 0, actions: [{ stepNumber: 0, status: "success" }…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m test/providers-circleci.test.ts[2m > [22mCircleCI read-only provider adapter[2m > [22mretries a run lookup after a transient CircleCI API failure
+[31m[1mAssertionError[22m: promise rejected "TypeError: Cannot read properties of unde…" instead of resolving[39m
+[36m [2m❯[22m test/providers-circleci.test.ts:[2m454:48[22m[39m
+    [90m452|[39m
+    [90m453|[39m     await expect(adapter.getRun(scope, RUN_ID)).rejects.toThrow("HTTP …
+    [90m454|[39m     await expect(adapter.getRun(scope, RUN_ID)).resolves.toMatchObject…
+    [90m   |[39m                                                [31m^[39m
+    [90m455|[39m       id[33m:[39m [33mRUN_ID[39m[33m,[39m
+    [90m456|[39m       projectId[33m:[39m [32m"znect-forge"[39m[33m,[39m
+
+[31m[1mCaused by: TypeError[22m: Cannot read properties of undefined (reading 'ok')[39m
+[36m [2m❯[22m circleV3Get src/circleci-v3.ts:[2m84:17[22m[39m
+[90m [2m❯[22m getCircleCiRun src/circleci-v3.ts:[2m264:18[22m[39m
+[90m [2m❯[22m getCircleCiRunForProject src/circleci-v3.ts:[2m202:22[22m[39m
+[90m [2m❯[22m src/providers/circleci.ts:[2m258:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m test/providers-circleci.test.ts[2m > [22mCircleCI read-only provider adapter[2m > [22mshares one in-flight read for concurrent requests to the same run
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'ok')[39m
+[36m [2m❯[22m circleV3Get src/circleci-v3.ts:[2m84:17[22m[39m
+    [90m 82|[39m   })[33m;[39m
+    [90m 83|[39m
+    [90m 84|[39m   [35mif[39m ([33m![39mresponse[33m.[39mok) {
+    [90m   |[39m                 [31m^[39m
+    [90m 85|[39m     [35mawait[39m [34mdiscardResponseBody[39m(response)[33m;[39m
+    [90m 86|[39m     [35mconst[39m safeMessage [33m=[39m response[33m.[39mstatus [33m===[39m [34m401[39m
+[90m [2m❯[22m getCircleCiRun src/circleci-v3.ts:[2m264:18[22m[39m
+[90m [2m❯[22m getCircleCiRunForProject src/circleci-v3.ts:[2m202:22[22m[39m
+[90m [2m❯[22m src/providers/circleci.ts:[2m258:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m test/providers-circleci.test.ts[2m > [22mCircleCI read-only provider adapter[2m > [22mretries project resolution after a transient CircleCI API failure
+[31m[1mAssertionError[22m: promise rejected "TypeError: Cannot read properties of unde…" instead of resolving[39m
+[36m [2m❯[22m test/providers-circleci.test.ts:[2m500:48[22m[39m
+    [90m498|[39m
+    [90m499|[39m     await expect(adapter.getRun(scope, RUN_ID)).rejects.toThrow("HTTP …
+    [90m500|[39m     await expect(adapter.getRun(scope, RUN_ID)).resolves.toMatchObject…
+    [90m   |[39m                                                [31m^[39m
+    [90m501|[39m     [34mexpect[39m(fetchMock)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m3[39m)[33m;[39m
+    [90m502|[39m   })[33m;[39m
+
+[31m[1mCaused by: TypeError[22m: Cannot read properties of undefined (reading 'ok')[39m
+[36m [2m❯[22m circleV3Get src/circleci-v3.ts:[2m84:17[22m[39m
+[90m [2m❯[22m getCircleCiRun src/circleci-v3.ts:[2m264:18[22m[39m
+[90m [2m❯[22m getCircleCiRunForProject src/circleci-v3.ts:[2m202:22[22m[39m
+[90m [2m❯[22m src/providers/circleci.ts:[2m258:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m test/worker-api-details.test.ts[2m > [22mRead-only browser API run details[2m > [22mreturns bounded failed-step logs and test results through the authenticated diagnostics API
+[31m[1mAssertionError[22m: expected '{\n  "project": {\n    "id": "znect-f…' not to contain 'results-b.xml'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- results-b.xml[39m
+[31m+ {[39m
+[31m+   "project": {[39m
+[31m+     "id": "znect-forge",[39m
+[31m+     "name": "Znect Forge",[39m
+[31m+     "provider": "circleci"[39m
+[31m+   },[39m
+[31m+   "run": {[39m
+[31m+     "id": "123e4567-e89b-42d3-a456-426614174001",[39m
+[31m+     "projectId": "znect-forge",[39m
+[31m+     "status": "failed"[39m
+[31m+   },[39m
+[31m+   "provenance": {[39m
+[31m+     "status": "missing",[39m
+[31m+     "reason": "validation_workflow_not_found"[39m
+[31m+   },[39m
+[31m+   "workflows": [[39m
+[31m+     {[39m
+[31m+       "workflow": {[39m
+[31m+         "id": "123e4567-e89b-42d3-a456-426614174002",[39m
+[31m+         "runId": "123e4567-e89b-42d3-a456-426614174001",[39m
+[31m+         "name": "build-and-test",[39m
+[31m+         "status": "failed"[39m
+[31m+       },[39m
+[31m+       "jobs_total": 1,[39m
+[31m+       "jobs_inspected": 1,[39m
+[31m+       "jobs_truncated": false,[39m
+[31m+       "failed_jobs_total": 1,[39m
+[31m+       "failed_jobs": [[39m
+[31m+         {[39m
+[31m+           "job": {[39m
+[31m+             "id": "123e4567-e89b-42d3-a456-426614174003",[39m
+[31m+             "projectId": "znect-forge",[39m
+[31m+             "workflowId": "123e4567-e89b-42d3-a456-426614174002",[39m
+[31m+             "status": "unknown",[39m
+[31m+             "name": "unit-tests",[39m
+[31m+             "steps": [[39m
+[31m+               {[39m
+[31m+                 "execution": 0,[39m
+[31m+                 "name": "Run tests",[39m
+[31m+                 "actions": [[39m
+[31m+                   {[39m
+[31m+                     "name": "Run tests",[39m
+[31m+                     "status": "failed",[39m
+[31m+                     "outcome": "failed",[39m
+[31m+                     "exitCode": 1,[39m
+[31m+                     "stepNumber": 0,[39m
+[31m+                     "isInsignificant": false[39m
+[31m+                   }[39m
+[31m+                 ][39m
+[31m+               }[39m
+[31m+             ][39m
+[31m+           },[39m
+[31m+           "failed_steps": [[39m
+[31m+             {[39m
+[31m+               "name": "Run tests",[39m
+[31m+               "execution": 0,[39m
+[31m+               "actions": [[39m
+[31m+                 {[39m
+[31m+                   "name": "Run tests",[39m
+[31m+                   "status": "failed",[39m
+[31m+                   "outcome": "failed",[39m
+[31m+                   "exitCode": 1,[39m
+[31m+                   "stepNumber": 0,[39m
+[31m+                   "isInsignificant": false[39m
+[31m+                 }[39m
+[31m+               ][39m
+[31m+             }[39m
+[31m+           ],[39m
+[31m+           "failed_step_logs": [[39m
+[31m+             {[39m
+[31m+               "step_num": 0,[39m
+[31m+               "execution": 0,[39m
+[31m+               "action_name": "Run tests",[39m
+[31m+               "stdout": "Authorization: Bearer [REDACTED]\nAssertionError: expected 1 to equal 2",[39m
+[31m+               "stderr": "Test suite failed"[39m
+[31m+             }[39m
+[31m+           ],[39m
+[31m+           "failed_step_logs_status": "available",[39m
+[31m+           "test_results": "{\"name\":\"sample test\",\"result\":\"failure\"}\n",[39m
+[31m+           "test_results_status": "available",[39m
+[31m+           "test_summary": {[39m
+[31m+             "status": "partial",[39m
+[31m+             "sources": "jsonl_only",[39m
+[31m+             "count_scope": "observed_records",[39m
+[31m+             "total": 1,[39m
+[31m+             "passed": 0,[39m
+[31m+             "failed": 1,[39m
+[31m+             "skipped": 0,[39m
+[31m+             "unknown": 0,[39m
+[31m+             "jsonl_records": 1,[39m
+[31m+             "junit_records": 0,[39m
+[31m+             "duplicate_reports_removed": 0,[39m
+[31m+             "duplicate_identities_retained": 0,[39m
+[31m+             "ambiguous_duplicate_groups": 0,[39m
+[31m+             "conflicting_statuses": 0,[39m
+[31m+             "malformed_jsonl_records": 0,[39m
+[31m+             "malformed_junit_reports": 2,[39m
+[31m+             "incomplete": true[39m
+[31m+           },[39m
+[31m+           "report_artifacts": [[39m
+[31m+             {[39m
+[31m+               "path": "junit/results-a.xml",[39m
+[31m+               "size": 100,[39m
+[31m+               "error": "Unable to retrieve this report artifact."[39m
+[31m+             },[39m
+[31m+             {[39m
+[31m+               "path": "test-results/results-b.xml",[39m
+[31m+               "size": 120,[39m
+[31m+               "error": "Unable to retrieve this report artifact."[39m
+[31m+             }[39m
+[31m+           ],[39m
+[31m+           "report_artifacts_status": "unavailable"[39m
+[31m+         }[39m
+[31m+       ][39m
+[31m+     }[39m
+[31m+   ],[39m
+[31m+   "diagnostics_summary": {[39m
+[31m+     "workflows_total": 1,[39m
+[31m+     "workflows_inspected": 1,[39m
+[31m+     "workflows_truncated": false,[39m
+[31m+     "failed_jobs_inspected": 1,[39m
+[31m+     "failed_job_limit_reached": false,[39m
+[31m+     "jobs_truncated": false,[39m
+[31m+     "report_data_incomplete": true,[39m
+[31m+     "report_artifact_limit_reached": true,[39m
+[31m+     "incomplete": true,[39m
+[31m+     "log_actions_inspected": 1,[39m
+[31m+     "log_action_limit_reached": false[39m
+[31m+   },[39m
+[31m+   "limits": {[39m
+[31m+     "max_workflows": 5,[39m
+[31m+     "max_jobs_per_workflow": 40,[39m
+[31m+     "max_failed_jobs_per_run": 3,[39m
+[31m+     "max_failed_actions_with_logs_per_run": 3,[39m
+[31m+     "max_report_artifacts_per_job": 4,[39m
+[31m+     "max_report_bytes_per_job": 500000[39m
+[31m+   }[39m
+[31m+ }[39m
+
+[36m [2m❯[22m test/worker-api-details.test.ts:[2m313:22[22m[39m
+    [90m311|[39m     })[33m;[39m
+    [90m312|[39m     [34mexpect[39m(body)[33m.[39m[34mtoContain[39m([32m"results-a.xml"[39m)[33m;[39m
+    [90m313|[39m     [34mexpect[39m(body)[33m.[39mnot[33m.[39m[34mtoContain[39m([32m"results-b.xml"[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m314|[39m     [34mexpect[39m(fetchMock)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m11[39m)[33m;[39m
+    [90m315|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m15 passed[39m[22m[90m (19)[39m
+[2m      Tests [22m [1m[31m7 failed[39m[22m[2m | [22m[1m[32m283 passed[39m[22m[90m (290)[39m
+[2m   Start at [22m 08:02:01
+[2m   Duration [22m 7.15s[2m (tests 48%, import 33%, transform 17%, worker 3%)[22m
+
+[2m    Isolate [22m [33m19 workers spawned[39m[2m · ~147ms startup each (spawn + environment, per file)[22m
+[2m            [22m [2mat least ~2.65s faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+
+===== End CI Bridge validation log =====
+
+Exited with code exit status 1
