@@ -124,7 +124,7 @@ describe("Browser API aggregate CircleCI assistant report", () => {
         data: [{
           id: RUN_ID,
           attributes: {
-            current_current_outcome: "failed",
+            current_outcome: "failed",
             branch: "main",
             subject: CIRCLE_TOKEN,
             created_at: happenedAt,
