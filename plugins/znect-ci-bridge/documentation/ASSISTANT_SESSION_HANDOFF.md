@@ -326,3 +326,7 @@ These are strong source-based inferences, not a verified reading of Cloudflare's
 - Current Forge branch head at handoff update: `8e05987373884affbe7e6313598d00e1518c0c85`.
 - A local standalone Kotlin smoke check for the provider allowlist passed. The JUnit source exists but was not run. No full Gradle tests, Android build, CircleCI run, APK or BV9200 device validation were performed. GitHub combined commit status returned no statuses for the prior source head; re-check after the final documentation commit.
 - Do not describe F07-087 as release-verified until the actual Gradle/JUnit suite, Android build and target-device checks pass.
+
+- Follow-up after the issue-register update: EN/RU file-manager setting labels now read “Internal text editor / preview” / “Внутренний редактор / просмотр текста”. Final Forge branch head after these resource updates: `3991ae9eb4011e9d1f7146d843f13da4df3a7ad6`.
+- Re-checked the final head: GitHub combined status list is empty and there are no GitHub Actions workflow runs associated with it. This does not establish a CircleCI result; no CircleCI run was started or inspected. PR #1 remains open and draft; no merge was performed.
+- Resource audit: both EN and RU strings files contain 999 string keys, no duplicate keys, and all six new editor/discard keys plus both text-viewer setting labels are present.
