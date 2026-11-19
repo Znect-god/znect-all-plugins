@@ -270,7 +270,7 @@ describe("CircleCI API v3 client", () => {
       id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
       references: { project: { id: PROJECT_ID } }
     }));
-    const second = Array.from({ length: 20 }, (_, i) => ({
+    const second = Array.from({ length: 10 }, (_, i) => ({
       id: `00000000-0000-4000-8001-${String(i + 1).padStart(12, "0")}`,
       references: { project: { id: PROJECT_ID } }
     }));
@@ -290,9 +290,13 @@ describe("CircleCI API v3 client", () => {
   });
 
   it("rejects collection pages with missing pagination metadata", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }]
-    }), { status: 200 })));
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: RUN_ID, references: { project: { id: PROJECT_ID } } }]
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: WORKFLOW_ID }]
+      }), { status: 200 })));
     await expect(listCircleCiRuns("token", PROJECT_ID, 10))
       .rejects.toThrow("invalid runs pagination metadata");
     await expect(listCircleCiWorkflows("token", RUN_ID))
