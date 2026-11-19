@@ -726,7 +726,7 @@ function createServer(env: Env) {
                 failedStepLogsIncomplete = true;
                 break;
               }
-              const stepNum = action.stepNumber;
+              const stepNum = action.step_num;
               if (typeof stepNum !== "number" || !Number.isInteger(stepNum) || stepNum < 0) {
                 reportDataIncomplete = true;
                 failedStepLogsIncomplete = true;
@@ -738,7 +738,7 @@ function createServer(env: Env) {
                 try {
                   const result = await adapter.getJobLogs(scope, job.id, {
                     step: stepNum,
-                    execution: step.execution,
+                    execution: step.execution_index,
                     stream,
                     maxBytes: 12_000 * 4
                   });
@@ -758,7 +758,7 @@ function createServer(env: Env) {
               }
               failedStepLogs.push({
                 step_num: stepNum,
-                execution: step.execution,
+                execution: step.execution_index,
                 action_name: action.name,
                 stdout: output.stdout,
                 stderr: output.stderr
