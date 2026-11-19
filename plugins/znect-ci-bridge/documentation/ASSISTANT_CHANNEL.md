@@ -27,7 +27,7 @@ The intended ChatGPT access path must work on the Free plan and must not require
 
 - Znect Build contains a CircleCI configuration with routine repository contract checks and an opt-in exact-SHA CI Bridge validation workflow.
 - The exact-SHA workflow defaults to disabled and records source SHA, recipe SHA and CircleCI pipeline/workflow/job identity in a provenance manifest.
-- The Znect Build CircleCI project has not yet been configured or live-verified; no CircleCI pipeline or current-head test suite has been run.
+- The automatic CircleCI push connection for `Znect-god/znect-build` has now been verified: recipe commit `50aa518e87894d99b332d764e59bd0e58cead6bd` has `ci/circleci: validate-ci-bridge-source = success` (job `06b87f8a-f766-44eb-bd2a-e37d3dc25fd0`). The recipe targeted source branch HEAD `988bb2594d5429df3cedabf9aca08c017bbac3f7`. No fresh source log or retrieved provenance manifest is present, so the exact source SHA recorded inside CircleCI artifacts is not independently confirmed. This verifies the repository push-to-CircleCI route only; it does not verify the Bridge runtime's CircleCI API credentials or project registration.
 - The CircleCI source and test configuration is committed on isolated engineering branches in both repositories; neither branch is merged into `main`.
 - The Bridge source has the generic CircleCI read-only provider adapter. The retired GitHub Actions-backed Znect Build adapter is not part of the current source.
 - Direct ChatGPT authentication to the private Browser API is not established. Do not infer it from the endpoint's existence or from the manual JSON download.
@@ -45,8 +45,9 @@ The intended ChatGPT access path must work on the Free plan and must not require
 
 ## Remaining work
 
-- [ ] Verify the Znect Build CircleCI project connection and free/included resource availability without enabling paid add-ons.
-- [ ] After separate explicit authorization, run Znect Build contract checks and the CI Bridge exact-SHA validation workflow; record actual CircleCI run/job/artifact evidence.
+- [x] Verify automatic GitHub push delivery to the Znect Build CircleCI project and a successful recipe-branch CircleCI status using free/included execution only; provenance artifact retrieval remains pending.
+- [ ] Verify the deployed Worker runtime has a non-empty `ZNECT_PROJECT_REGISTRY` and valid `CIRCLECI_TOKEN`. The source fallback is an empty registry when `ZNECT_PROJECT_REGISTRY` is absent; do not infer runtime configuration from source code.
+- [ ] After separate explicit authorization, run the opt-in exact-SHA validation workflow and retrieve its manifest/artifact evidence; the successful automatic recipe status is not a substitute for this opt-in workflow's provenance proof.
 - [ ] Register the Znect Build CircleCI project in the private runtime registry without replacing existing projects, then verify its run/job/provenance-artifact reads through the generic CircleCI adapter.
 - [ ] Verify live CircleCI run, workflow, job, log, test and artifact reads through the existing adapter.
 - [ ] Verify real CircleCI webhook delivery and the durable inbox round-trip; synthetic test fixtures are not live delivery evidence.
