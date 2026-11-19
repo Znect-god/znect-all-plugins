@@ -310,7 +310,10 @@ describe("Read-only browser API run details", () => {
       incomplete: true
     });
     expect(body).toContain("results-a.xml");
-    expect(body).not.toContain("results-b.xml");
+    expect(payload.workflows[0].failed_jobs[0].report_artifacts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "junit/results-a.xml", error: "Unable to retrieve this report artifact." }),
+      expect.objectContaining({ path: "test-results/results-b.xml", error: "Unable to retrieve this report artifact." })
+    ]));
     expect(fetchMock).toHaveBeenCalledTimes(11);
   });
 
