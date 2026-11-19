@@ -1,3 +1,5 @@
+import { loadProjectRegistry } from "./registry";
+
 export interface BridgeEvent {
   id: string;
   type: "workflow-completed" | "job-completed";
@@ -28,12 +30,12 @@ const MAX_EVENT_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_EVENTS = 500;
 const MAX_STORED_EVENT_BYTES = 8 * 1024;
 
-function isNormalizedStoredEvent(value: unknown): value is BridgeEvent {
+function isNormalizedStoredEvent(value: unknown, acceptedProjectSlugs: ReadonlySet<string>): value is BridgeEvent {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const event = value as Record<string, unknown>;
   if (typeof event.id !== "string" || !UUID_RE.test(event.id) ||
       (event.type !== "workflow-completed" && event.type !== "job-completed") ||
-      typeof event.project_slug !== "string" || event.project_slug.length > 256 || !PROJECT_SLUG_RE.test(event.project_slug) ||
+      typeof event.project_slug !== "string" || event.project_slug.length > 256 || !PROJECT_SLUG_RE.test(event.project_slug) || !acceptedProjectSlugs.has(event.project_slug) ||
       typeof event.happened_at !== "string") return false;
   const timestamp = Date.parse(event.happened_at);
   if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== event.happened_at ||
@@ -260,7 +262,12 @@ export class BuildEventStore {
       let parsed: unknown;
       try { parsed = JSON.parse(new TextDecoder().decode(bytes)); }
       catch { return Response.json({ error: "Invalid event JSON." }, { status: 400 }); }
-      if (!isNormalizedStoredEvent(parsed)) {
+      // The SQLite sequence owns pagination. Ignore any caller-supplied cursor
+      // rather than trusting it or rejecting an otherwise valid normalized event.
+      if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+        delete (parsed as Record<string, unknown>).cursor;
+      }
+      if (!isNormalizedStoredEvent(parsed, this.acceptedProjectSlugs)) {
         return Response.json({ error: "Invalid normalized event." }, { status: 400 });
       }
       const event = parsed;
