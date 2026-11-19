@@ -132,7 +132,7 @@ describe("Browser API aggregate CircleCI assistant report", () => {
           },
           references: {
             project: { id: projectId },
-            event: { attributes: { vcs: { revision: "abc123", branch: "main" } } }
+            event: { attributes: { vcs: { revision: "abc123", branch: "main", commit: { subject: CIRCLE_TOKEN } } } }
           }
         }],
         page: { next: null }
