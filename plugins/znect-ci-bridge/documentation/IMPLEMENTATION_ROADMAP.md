@@ -1353,3 +1353,15 @@ For every meaningful feature or fix:
 - [ ] Verify a real CircleCI-signed webhook delivery only after separately authorized webhook configuration.
 
 **Verification boundary:** this stage adds an operator runbook and source-derived configuration inventory only. No Cloudflare environment or secret access, API request, runtime configuration change, CircleCI webhook mutation, Preview/Production deployment or live provider verification was performed. The current session does not expose Cloudflare controls or a CircleCI credential; runtime readiness remains an external operational check.
+
+
+## 8.15 Reconcile legacy Preview tooling with current validation ownership — 2026-11-19
+
+- [x] Inspect both repository workflows: `.github/workflows/znect-ci-bridge.yml` and `.github/workflows/znect-ci-bridge-preview.yml` are retired, inert workflows with `permissions: {}` and jobs guarded by `if: false`.
+- [x] Confirm central Znect Build owns source validation; Preview deployment remains a separate explicitly authorized operation.
+- [x] Inspect `scripts/preview-smoke-test.mjs`: it is pinned to the historical Forge Preview hostname and fixed `znect-forge` / `forge-circleci` project scope, so it is not a generic current-head or Znect Build runtime check.
+- [x] Document these constraints in `documentation/RUNTIME_READINESS.md` to prevent a historical smoke-test target from being mistaken for current deployment evidence.
+- [ ] Obtain a current authorized Preview endpoint and verify its public health response.
+- [ ] After separately authorized access to the correct Preview environment, perform authenticated read-only project/status and data-read probes; do not reuse the legacy Forge scope unless it is still the intended target.
+
+**Verification boundary:** workflow and script configuration were inspected in GitHub source only. No workflow was reactivated, no deployment or secret access was performed, and no HTTP runtime response was obtained. The attempted unauthenticated health GET could not be completed because outbound DNS resolution was unavailable in this session.
