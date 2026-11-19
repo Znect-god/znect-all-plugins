@@ -141,7 +141,7 @@ describe("MCP event correlation tool", () => {
     expect(result.correlations).toMatchObject([{
       event: { id: EVENT_ID, cursor: 1 },
       status: "candidate",
-      candidates: [{ run: { id: RUN_UUID, commitSha: REVISION }, time_delta_ms: 30_000 }]
+      candidates: [{ run: { id: RUN_UUID, commitSha: REVISION }, time_delta_ms: 90_000 }]
     }]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
